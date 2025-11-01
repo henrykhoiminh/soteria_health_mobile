@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function SignupScreen() {
   const [fullName, setFullName] = useState('');
@@ -19,6 +20,8 @@ export default function SignupScreen() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const router = useRouter();
 
   const handleSignup = async () => {
@@ -66,13 +69,14 @@ export default function SignupScreen() {
         <View style={styles.content}>
           <Text style={styles.title}>Create Your Account</Text>
           <Text style={styles.subtitle}>
-            Start your journey to holistic wellness
+            Start your journey to a pain-free life!
           </Text>
 
           <View style={styles.form}>
             <TextInput
               style={styles.input}
               placeholder="Full Name"
+              placeholderTextColor="#666"
               value={fullName}
               onChangeText={setFullName}
               editable={!loading}
@@ -81,6 +85,7 @@ export default function SignupScreen() {
             <TextInput
               style={styles.input}
               placeholder="Email"
+              placeholderTextColor="#666"
               value={email}
               onChangeText={setEmail}
               autoCapitalize="none"
@@ -88,23 +93,49 @@ export default function SignupScreen() {
               editable={!loading}
             />
 
-            <TextInput
-              style={styles.input}
-              placeholder="Password"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              editable={!loading}
-            />
+            <View style={styles.passwordContainer}>
+              <TextInput
+                style={styles.passwordInput}
+                placeholder="Password"
+                placeholderTextColor="#666"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                editable={!loading}
+              />
+              <TouchableOpacity
+                style={styles.eyeIcon}
+                onPress={() => setShowPassword(!showPassword)}
+              >
+                <Ionicons
+                  name={showPassword ? 'eye-off' : 'eye'}
+                  size={24}
+                  color="#666"
+                />
+              </TouchableOpacity>
+            </View>
 
-            <TextInput
-              style={styles.input}
-              placeholder="Confirm Password"
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              secureTextEntry
-              editable={!loading}
-            />
+            <View style={styles.passwordContainer}>
+              <TextInput
+                style={styles.passwordInput}
+                placeholder="Confirm Password"
+                placeholderTextColor="#666"
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry={!showConfirmPassword}
+                editable={!loading}
+              />
+              <TouchableOpacity
+                style={styles.eyeIcon}
+                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+              >
+                <Ionicons
+                  name={showConfirmPassword ? 'eye-off' : 'eye'}
+                  size={24}
+                  color="#666"
+                />
+              </TouchableOpacity>
+            </View>
 
             <TouchableOpacity
               style={[styles.button, loading && styles.buttonDisabled]}
@@ -167,6 +198,24 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     fontSize: 16,
     color: '#1a1a1a',
+  },
+  passwordContainer: {
+    position: 'relative',
+    marginBottom: 16,
+  },
+  passwordInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 16,
+    paddingRight: 50,
+    fontSize: 16,
+    color: '#1a1a1a',
+  },
+  eyeIcon: {
+    position: 'absolute',
+    right: 16,
+    top: 16,
   },
   button: {
     backgroundColor: '#007AFF',
