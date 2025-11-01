@@ -1,16 +1,18 @@
-import { useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  Alert,
-} from 'react-native';
-import { useRouter } from 'expo-router';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { updateUserProfile } from '@/lib/utils/auth';
-import { FitnessLevel } from '@/types';
+import { FitnessLevel, JourneyFocus } from '@/types';
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
+import {
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+
+const JOURNEY_GOALS: JourneyFocus[] = ['Injury Prevention', 'Recovery'];
 
 const FITNESS_LEVELS: FitnessLevel[] = ['Beginner', 'Intermediate', 'Advanced'];
 
@@ -24,6 +26,8 @@ const GOALS = [
 ];
 
 export default function OnboardingScreen() {
+  const [step, setStep] = useState(1);
+  const [journeyFocus, setJourneyFocus] = useState<JourneyFocus | null>(null);
   const [fitnessLevel, setFitnessLevel] = useState<FitnessLevel | null>(null);
   const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -38,7 +42,28 @@ export default function OnboardingScreen() {
     );
   };
 
+  const handleNextStep = () => {
+    if (step === 1 && !journeyFocus) {
+      Alert.alert('Error', 'Please select your journey focus');
+      return;
+    }
+    if (step === 2 && !fitnessLevel) {
+      Alert.alert('Error', 'Please select your fitness level');
+      return;
+    }
+    setStep(step + 1);
+  };
+
+  const handlePreviousStep = () => {
+    setStep(step - 1);
+  };
+
   const handleComplete = async () => {
+    if (!journeyFocus) {
+      Alert.alert('Error', 'Please select your journey focus');
+      return;
+    }
+
     if (!fitnessLevel) {
       Alert.alert('Error', 'Please select your fitness level');
       return;
@@ -57,6 +82,7 @@ export default function OnboardingScreen() {
     setLoading(true);
     try {
       await updateUserProfile(user.id, {
+        journey_focus: journeyFocus,
         fitness_level: fitnessLevel,
         goals: selectedGoals,
       });
@@ -73,71 +99,140 @@ export default function OnboardingScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Complete Your Profile</Text>
       <Text style={styles.subtitle}>
-        Help us personalize your wellness journey
+        Step {step} of 3
       </Text>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>What's your fitness level?</Text>
-        <View style={styles.optionsGrid}>
-          {FITNESS_LEVELS.map((level) => (
-            <TouchableOpacity
-              key={level}
-              style={[
-                styles.option,
-                fitnessLevel === level && styles.optionSelected,
-              ]}
-              onPress={() => setFitnessLevel(level)}
-              disabled={loading}
-            >
-              <Text
+      {step === 1 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>What's your focus?</Text>
+          <Text style={styles.sectionSubtitle}>
+            Choose your primary wellness goal
+          </Text>
+          <View style={styles.largeOptionsContainer}>
+            {JOURNEY_GOALS.map((focus) => (
+              <TouchableOpacity
+                key={focus}
                 style={[
-                  styles.optionText,
-                  fitnessLevel === level && styles.optionTextSelected,
+                  styles.largeOption,
+                  journeyFocus === focus && styles.optionSelected,
                 ]}
+                onPress={() => setJourneyFocus(focus)}
+                disabled={loading}
               >
-                {level}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                <Text
+                  style={[
+                    styles.largeOptionText,
+                    journeyFocus === focus && styles.optionTextSelected,
+                  ]}
+                >
+                  {focus}
+                </Text>
+                <Text
+                  style={[
+                    styles.optionDescription,
+                    journeyFocus === focus && styles.optionDescriptionSelected,
+                  ]}
+                >
+                  {focus === 'Injury Prevention'
+                    ? 'Build strength and mobility to prevent injuries'
+                    : 'Recover and rehabilitate from existing injuries'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
-      </View>
+      )}
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>What are your goals?</Text>
-        <Text style={styles.sectionSubtitle}>Select all that apply</Text>
-        <View style={styles.optionsGrid}>
-          {GOALS.map((goal) => (
-            <TouchableOpacity
-              key={goal}
-              style={[
-                styles.option,
-                selectedGoals.includes(goal) && styles.optionSelected,
-              ]}
-              onPress={() => toggleGoal(goal)}
-              disabled={loading}
-            >
-              <Text
+      {step === 2 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>What's your fitness level?</Text>
+          <View style={styles.optionsGrid}>
+            {FITNESS_LEVELS.map((level) => (
+              <TouchableOpacity
+                key={level}
                 style={[
-                  styles.optionText,
-                  selectedGoals.includes(goal) && styles.optionTextSelected,
+                  styles.option,
+                  fitnessLevel === level && styles.optionSelected,
                 ]}
+                onPress={() => setFitnessLevel(level)}
+                disabled={loading}
               >
-                {goal}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                <Text
+                  style={[
+                    styles.optionText,
+                    fitnessLevel === level && styles.optionTextSelected,
+                  ]}
+                >
+                  {level}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
-      </View>
+      )}
 
-      <TouchableOpacity
-        style={[styles.button, loading && styles.buttonDisabled]}
-        onPress={handleComplete}
-        disabled={loading}
-      >
-        <Text style={styles.buttonText}>
-          {loading ? 'Saving...' : 'Complete Setup'}
-        </Text>
-      </TouchableOpacity>
+      {step === 3 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>What are your goals?</Text>
+          <Text style={styles.sectionSubtitle}>Select all that apply</Text>
+          <View style={styles.optionsGrid}>
+            {GOALS.map((goal) => (
+              <TouchableOpacity
+                key={goal}
+                style={[
+                  styles.option,
+                  selectedGoals.includes(goal) && styles.optionSelected,
+                ]}
+                onPress={() => toggleGoal(goal)}
+                disabled={loading}
+              >
+                <Text
+                  style={[
+                    styles.optionText,
+                    selectedGoals.includes(goal) && styles.optionTextSelected,
+                  ]}
+                >
+                  {goal}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      )}
+
+      <View style={styles.buttonContainer}>
+        {step > 1 && (
+          <TouchableOpacity
+            style={[styles.button, styles.secondaryButton]}
+            onPress={handlePreviousStep}
+            disabled={loading}
+          >
+            <Text style={[styles.buttonText, styles.secondaryButtonText]}>
+              Back
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {step < 3 ? (
+          <TouchableOpacity
+            style={[styles.button, step > 1 && styles.buttonFlex]}
+            onPress={handleNextStep}
+            disabled={loading}
+          >
+            <Text style={styles.buttonText}>Next</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={[styles.button, styles.buttonFlex, loading && styles.buttonDisabled]}
+            onPress={handleComplete}
+            disabled={loading}
+          >
+            <Text style={styles.buttonText}>
+              {loading ? 'Saving...' : 'Complete Setup'}
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
     </ScrollView>
   );
 }
@@ -149,7 +244,8 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 24,
-    paddingBottom: 40,
+    paddingTop: 80,
+    paddingBottom: 80,
   },
   title: {
     fontSize: 32,
@@ -182,12 +278,22 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 12,
   },
+  largeOptionsContainer: {
+    gap: 16,
+  },
   option: {
     borderWidth: 2,
     borderColor: '#ddd',
     borderRadius: 8,
     padding: 12,
     paddingHorizontal: 16,
+    backgroundColor: '#fff',
+  },
+  largeOption: {
+    borderWidth: 2,
+    borderColor: '#ddd',
+    borderRadius: 12,
+    padding: 24,
     backgroundColor: '#fff',
   },
   optionSelected: {
@@ -199,15 +305,42 @@ const styles = StyleSheet.create({
     color: '#1a1a1a',
     fontWeight: '500',
   },
+  largeOptionText: {
+    fontSize: 20,
+    color: '#1a1a1a',
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  optionDescription: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
+  },
+  optionDescriptionSelected: {
+    color: '#fff',
+  },
   optionTextSelected: {
     color: '#fff',
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 24,
   },
   button: {
     backgroundColor: '#007AFF',
     borderRadius: 8,
     padding: 16,
     alignItems: 'center',
-    marginTop: 24,
+    flex: 1,
+  },
+  buttonFlex: {
+    flex: 1,
+  },
+  secondaryButton: {
+    backgroundColor: '#fff',
+    borderWidth: 2,
+    borderColor: '#007AFF',
   },
   buttonDisabled: {
     opacity: 0.5,
@@ -216,5 +349,8 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  secondaryButtonText: {
+    color: '#007AFF',
   },
 });

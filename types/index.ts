@@ -1,11 +1,13 @@
 // User Types
 export type FitnessLevel = 'Beginner' | 'Intermediate' | 'Advanced'
+export type JourneyFocus = 'Injury Prevention' | 'Recovery'
 
 export interface Profile {
   id: string
   full_name: string | null
   age: number | null
   fitness_level: FitnessLevel | null
+  journey_focus: JourneyFocus | null
   injuries: string[]
   goals: string[]
   time_availability: number | null

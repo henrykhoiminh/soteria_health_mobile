@@ -1,16 +1,16 @@
+import { useAuth } from '@/lib/contexts/AuthContext';
+import { getRecommendedRoutines, getTodayProgress, getUserStats } from '@/lib/utils/dashboard';
+import { DailyProgress, Routine, UserStats } from '@/types';
+import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
   ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useAuth } from '@/lib/contexts/AuthContext';
-import { getTodayProgress, getUserStats, getRecommendedRoutines } from '@/lib/utils/dashboard';
-import { DailyProgress, UserStats, Routine } from '@/types';
 
 export default function DashboardScreen() {
   const { user, profile } = useAuth();
@@ -59,7 +59,7 @@ export default function DashboardScreen() {
         <Text style={styles.greeting}>
           Hello, {profile?.full_name || 'there'}!
         </Text>
-        <Text style={styles.subtitle}>Your wellness journey today</Text>
+        <Text style={styles.subtitle}>Let's </Text>
       </View>
 
       {/* Today's Progress */}
