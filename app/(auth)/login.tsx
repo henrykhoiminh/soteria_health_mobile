@@ -1,16 +1,16 @@
+import { signIn } from '@/lib/utils/auth';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-  View,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  Alert,
+  View,
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import { signIn } from '@/lib/utils/auth';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -41,13 +41,14 @@ export default function LoginScreen() {
       style={styles.container}
     >
       <View style={styles.content}>
-        <Text style={styles.title}>Welcome to Soteria Health</Text>
-        <Text style={styles.subtitle}>Sign in to continue your wellness journey</Text>
+        <Text style={styles.title}>Welcome to Soteria Health </Text>
+        <Text style={styles.subtitle}>Sign in to continue your journey to a pain-free life!</Text>
 
         <View style={styles.form}>
           <TextInput
             style={styles.input}
             placeholder="Email"
+            placeholderTextColor="#666"
             value={email}
             onChangeText={setEmail}
             autoCapitalize="none"
@@ -58,6 +59,7 @@ export default function LoginScreen() {
           <TextInput
             style={styles.input}
             placeholder="Password"
+            placeholderTextColor="#666"
             value={password}
             onChangeText={setPassword}
             secureTextEntry
@@ -120,6 +122,7 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 16,
     fontSize: 16,
+    color: '#1a1a1a',
   },
   button: {
     backgroundColor: '#007AFF',

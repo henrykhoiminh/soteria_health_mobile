@@ -1,17 +1,17 @@
+import { signUp } from '@/lib/utils/auth';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-  View,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  Alert,
-  ScrollView,
+  View,
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import { signUp } from '@/lib/utils/auth';
 
 export default function SignupScreen() {
   const [fullName, setFullName] = useState('');
@@ -166,6 +166,7 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 16,
     fontSize: 16,
+    color: '#1a1a1a',
   },
   button: {
     backgroundColor: '#007AFF',
