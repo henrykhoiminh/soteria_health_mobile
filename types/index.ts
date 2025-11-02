@@ -33,6 +33,7 @@ export interface Routine {
   description: string
   duration_minutes: number
   difficulty: RoutineDifficulty
+  journey_focus: JourneyFocus[] // Routines can target one or both journey focuses
   benefits: string[]
   exercises: Exercise[]
   completion_count: number

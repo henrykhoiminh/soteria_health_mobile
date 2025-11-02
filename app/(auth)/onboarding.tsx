@@ -1,8 +1,9 @@
 import { useAuth } from '@/lib/contexts/AuthContext';
+import { supabase } from '@/lib/supabase/client';
 import { updateUserProfile } from '@/lib/utils/auth';
 import { FitnessLevel, JourneyFocus } from '@/types';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Alert,
   ScrollView,
@@ -31,8 +32,41 @@ export default function OnboardingScreen() {
   const [fitnessLevel, setFitnessLevel] = useState<FitnessLevel | null>(null);
   const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
-  const { user, refreshProfile } = useAuth();
+  const { refreshProfile } = useAuth();
   const router = useRouter();
+
+  // Check if user's email is confirmed on mount
+  useEffect(() => {
+    checkEmailVerification();
+  }, []);
+
+  const checkEmailVerification = async () => {
+    try {
+      const { data: { user }, error } = await supabase.auth.getUser();
+
+      if (error || !user) {
+        Alert.alert('Error', 'Please sign in to continue');
+        router.replace('/(auth)/login');
+        return;
+      }
+
+      // Check if email is confirmed
+      if (!user.email_confirmed_at) {
+        Alert.alert(
+          'Email Not Verified',
+          'Please verify your email before completing your profile. Check your inbox for the confirmation link.',
+          [
+            {
+              text: 'OK',
+              onPress: () => router.replace('/(auth)/login'),
+            },
+          ]
+        );
+      }
+    } catch (error) {
+      console.error('Error checking email verification:', error);
+    }
+  };
 
   const toggleGoal = (goal: string) => {
     setSelectedGoals((prev) =>
@@ -74,14 +108,22 @@ export default function OnboardingScreen() {
       return;
     }
 
-    if (!user) {
-      Alert.alert('Error', 'User not found');
-      return;
-    }
-
     setLoading(true);
     try {
-      await updateUserProfile(user.id, {
+      // Get the current user directly from Supabase in case AuthContext hasn't updated yet
+      const { data: { user: currentUser }, error: userError } = await supabase.auth.getUser();
+
+      if (userError || !currentUser) {
+        Alert.alert('Error', 'Please sign in to continue');
+        router.replace('/(auth)/login');
+        return;
+      }
+
+      // Get full name from user metadata
+      const fullName = currentUser.user_metadata?.full_name || '';
+
+      await updateUserProfile(currentUser.id, {
+        full_name: fullName,
         journey_focus: journeyFocus,
         fitness_level: fitnessLevel,
         goals: selectedGoals,
@@ -244,7 +286,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 24,
-    paddingTop: 80,
+    paddingTop: 100,
     paddingBottom: 80,
   },
   title: {

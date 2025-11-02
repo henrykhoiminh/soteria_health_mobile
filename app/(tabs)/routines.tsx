@@ -6,8 +6,10 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { getRecommendedRoutines } from '@/lib/utils/dashboard';
 import { Routine, RoutineCategory } from '@/types';
 
@@ -17,6 +19,7 @@ export default function RoutinesScreen() {
   const [loading, setLoading] = useState(true);
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<RoutineCategory | 'All'>('All');
+  const [dropdownVisible, setDropdownVisible] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -47,6 +50,11 @@ export default function RoutinesScreen() {
     );
   }
 
+  const handleSelectCategory = (category: RoutineCategory | 'All') => {
+    setSelectedCategory(category);
+    setDropdownVisible(false);
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -54,29 +62,68 @@ export default function RoutinesScreen() {
         <Text style={styles.subtitle}>Choose your wellness practice</Text>
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
-        <View style={styles.filterContainer}>
-          <TouchableOpacity
-            style={[styles.filterButton, selectedCategory === 'All' && styles.filterButtonActive]}
-            onPress={() => setSelectedCategory('All')}
-          >
-            <Text style={[styles.filterText, selectedCategory === 'All' && styles.filterTextActive]}>
-              All
+      {/* Filter Dropdown */}
+      <View style={styles.filterSection}>
+        <TouchableOpacity
+          style={styles.dropdownButton}
+          onPress={() => setDropdownVisible(true)}
+        >
+          <View style={styles.dropdownContent}>
+            {selectedCategory !== 'All' && (
+              <View style={[styles.categoryDot, { backgroundColor: getCategoryColor(selectedCategory) }]} />
+            )}
+            <Text style={styles.dropdownText}>
+              {selectedCategory === 'All' ? 'All Routines' : selectedCategory}
             </Text>
-          </TouchableOpacity>
-          {CATEGORIES.map((category) => (
+          </View>
+          <Ionicons name="chevron-down" size={20} color="#666" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Dropdown Modal */}
+      <Modal
+        visible={dropdownVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDropdownVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setDropdownVisible(false)}
+        >
+          <View style={styles.modalContent}>
             <TouchableOpacity
-              key={category}
-              style={[styles.filterButton, selectedCategory === category && styles.filterButtonActive]}
-              onPress={() => setSelectedCategory(category)}
+              style={styles.modalOption}
+              onPress={() => handleSelectCategory('All')}
             >
-              <Text style={[styles.filterText, selectedCategory === category && styles.filterTextActive]}>
-                {category}
+              <Text style={[styles.modalOptionText, selectedCategory === 'All' && styles.modalOptionTextActive]}>
+                All Routines
               </Text>
+              {selectedCategory === 'All' && (
+                <Ionicons name="checkmark" size={20} color="#007AFF" />
+              )}
             </TouchableOpacity>
-          ))}
-        </View>
-      </ScrollView>
+            {CATEGORIES.map((category) => (
+              <TouchableOpacity
+                key={category}
+                style={styles.modalOption}
+                onPress={() => handleSelectCategory(category)}
+              >
+                <View style={styles.modalOptionContent}>
+                  <View style={[styles.categoryDot, { backgroundColor: getCategoryColor(category) }]} />
+                  <Text style={[styles.modalOptionText, selectedCategory === category && styles.modalOptionTextActive]}>
+                    {category}
+                  </Text>
+                </View>
+                {selectedCategory === category && (
+                  <Ionicons name="checkmark" size={20} color="#007AFF" />
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       <ScrollView style={styles.content}>
         {filteredRoutines.map((routine) => (
@@ -133,7 +180,7 @@ const styles = StyleSheet.create({
   },
   header: {
     padding: 24,
-    paddingTop: 60,
+    paddingTop: 100,
     backgroundColor: '#fff',
   },
   title: {
@@ -146,35 +193,67 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 4,
   },
-  filterScroll: {
+  filterSection: {
     backgroundColor: '#fff',
+    padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
   },
-  filterContainer: {
+  dropdownButton: {
     flexDirection: 'row',
-    padding: 16,
-    gap: 8,
-  },
-  filterButton: {
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingVertical: 12,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: '#ddd',
-    backgroundColor: '#fff',
   },
-  filterButtonActive: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
+  dropdownContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
-  filterText: {
-    fontSize: 14,
-    color: '#666',
+  dropdownText: {
+    fontSize: 16,
+    color: '#1a1a1a',
     fontWeight: '500',
   },
-  filterTextActive: {
-    color: '#fff',
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    width: '100%',
+    maxWidth: 300,
+    overflow: 'hidden',
+  },
+  modalOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  modalOptionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  modalOptionText: {
+    fontSize: 16,
+    color: '#1a1a1a',
+  },
+  modalOptionTextActive: {
+    color: '#007AFF',
+    fontWeight: '600',
   },
   content: {
     flex: 1,

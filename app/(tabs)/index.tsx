@@ -1,8 +1,8 @@
 import { useAuth } from '@/lib/contexts/AuthContext';
-import { getRecommendedRoutines, getTodayProgress, getUserStats } from '@/lib/utils/dashboard';
+import { getPersonalizedRoutines, getTodayProgress, getUserStats } from '@/lib/utils/dashboard';
 import { DailyProgress, Routine, UserStats } from '@/types';
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   ScrollView,
@@ -24,6 +24,15 @@ export default function DashboardScreen() {
     loadDashboardData();
   }, [user]);
 
+  // Refresh data when screen comes into focus (e.g., after completing a routine)
+  useFocusEffect(
+    useCallback(() => {
+      if (user) {
+        loadDashboardData();
+      }
+    }, [user, profile])
+  );
+
   const loadDashboardData = async () => {
     if (!user) return;
 
@@ -32,9 +41,10 @@ export default function DashboardScreen() {
       const [progressData, statsData, routinesData] = await Promise.all([
         getTodayProgress(user.id),
         getUserStats(user.id),
-        getRecommendedRoutines(6),
+        getPersonalizedRoutines(profile?.journey_focus || null, profile?.fitness_level || null, 6),
       ]);
 
+      console.log('Today Progress:', progressData); // Debug log
       setTodayProgress(progressData);
       setStats(statsData);
       setRecommendedRoutines(routinesData);
@@ -59,7 +69,7 @@ export default function DashboardScreen() {
         <Text style={styles.greeting}>
           Hello, {profile?.full_name || 'there'}!
         </Text>
-        <Text style={styles.subtitle}>Let's </Text>
+        <Text style={styles.subtitle}>Check out your personalized routines below.</Text>
       </View>
 
       {/* Today's Progress */}
@@ -187,7 +197,7 @@ const styles = StyleSheet.create({
   },
   header: {
     padding: 24,
-    paddingTop: 60,
+    paddingTop: 100,
     backgroundColor: '#fff',
   },
   greeting: {

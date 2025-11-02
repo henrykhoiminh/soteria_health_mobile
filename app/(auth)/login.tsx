@@ -1,4 +1,4 @@
-import { signIn } from '@/lib/utils/auth';
+import { getUserProfile, signIn } from '@/lib/utils/auth';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -28,8 +28,40 @@ export default function LoginScreen() {
 
     setLoading(true);
     try {
-      await signIn(email, password);
-      // Navigation will be handled by the auth state listener
+      const { user } = await signIn(email, password);
+
+      if (!user) {
+        Alert.alert('Error', 'Failed to sign in. Please try again.');
+        return;
+      }
+
+      // Check if email is confirmed
+      if (!user.email_confirmed_at) {
+        Alert.alert(
+          'Email Not Verified',
+          'Please check your email and click the confirmation link before signing in.',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                // User stays on login screen
+              },
+            },
+          ]
+        );
+        return;
+      }
+
+      // Email is confirmed, check if profile is complete
+      const profile = await getUserProfile(user.id);
+
+      if (!profile?.journey_focus || !profile?.fitness_level) {
+        // Profile incomplete, redirect to onboarding
+        router.replace('/(auth)/onboarding');
+      } else {
+        // Profile complete, redirect to dashboard
+        router.replace('/(tabs)');
+      }
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to sign in');
     } finally {

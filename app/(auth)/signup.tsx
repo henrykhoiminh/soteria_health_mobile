@@ -42,17 +42,28 @@ export default function SignupScreen() {
 
     setLoading(true);
     try {
-      await signUp(email, password, fullName);
-      Alert.alert(
-        'Success',
-        'Account created! Please check your email to verify your account.',
-        [
-          {
-            text: 'OK',
-            onPress: () => router.push('/(auth)/onboarding'),
-          },
-        ]
-      );
+      const { user } = await signUp(email, password, fullName);
+
+      // Check if email confirmation is required
+      if (user && !user.email_confirmed_at) {
+        // Email verification required - redirect to verify email screen
+        router.replace({
+          pathname: '/(auth)/verify-email',
+          params: { email },
+        });
+      } else {
+        // Email is already confirmed (or confirmation not required)
+        Alert.alert(
+          'Success',
+          'Account created! Complete your profile to get started.',
+          [
+            {
+              text: 'OK',
+              onPress: () => router.replace('/(auth)/onboarding'),
+            },
+          ]
+        );
+      }
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to create account');
     } finally {
