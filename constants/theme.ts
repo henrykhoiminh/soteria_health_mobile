@@ -5,7 +5,7 @@
 
 import { Platform } from 'react-native';
 
-const tintColorLight = '#0a7ea4';
+const tintColorLight = '#3533cd';
 const tintColorDark = '#fff';
 
 export const Colors = {
@@ -25,6 +25,51 @@ export const Colors = {
     tabIconDefault: '#9BA1A6',
     tabIconSelected: tintColorDark,
   },
+};
+
+// Soteria Health App Colors
+export const AppColors = {
+  // Primary Brand Colors
+  primary: '#3533cd',
+  destructive: '#FF3B30',
+
+  // Category Colors
+  mind: '#3B82F6',
+  body: '#EF4444',
+  soul: '#F59E0B',
+
+  // Background Colors
+  background: '#F8FAFC',  // Soft blue-gray main background
+  surface: '#fff',         // Card and section backgrounds
+  inputBackground: '#f5f5f5',
+
+  // Text Colors
+  textPrimary: '#1a1a1a',
+  textSecondary: '#666',
+  textTertiary: '#999',
+
+  // Border Colors
+  border: '#ddd',
+  borderLight: '#f0f0f0',
+  cardBorder: '#E2E8F0',   // Card borders for elevation
+
+  // Semantic Colors
+  success: '#34C759',
+
+  // Tag Backgrounds
+  lightBlue: '#E3F2FD',
+  lightOrange: '#FFF3E0',
+};
+
+// Card Elevation Style (for consistent card appearance)
+export const CardElevation = {
+  borderWidth: 1,
+  borderColor: AppColors.cardBorder,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 1 },
+  shadowOpacity: 0.05,
+  shadowRadius: 3,
+  elevation: 2, // For Android
 };
 
 export const Fonts = Platform.select({

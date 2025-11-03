@@ -11,15 +11,20 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { getRecommendedRoutines } from '@/lib/utils/dashboard';
+import { getRecommendedRoutines, getUserCustomRoutines } from '@/lib/utils/dashboard';
 import { Routine, RoutineCategory } from '@/types';
+import { useAuth } from '@/lib/contexts/AuthContext';
 
 const CATEGORIES: RoutineCategory[] = ['Mind', 'Body', 'Soul'];
 
+type RoutineFilter = 'all' | 'custom';
+
 export default function RoutinesScreen() {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<RoutineCategory | 'All'>('All');
+  const [selectedFilter, setSelectedFilter] = useState<RoutineFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [dropdownVisible, setDropdownVisible] = useState(false);
   const router = useRouter();
@@ -27,7 +32,7 @@ export default function RoutinesScreen() {
 
   useEffect(() => {
     loadRoutines();
-  }, []);
+  }, [selectedFilter]);
 
   useEffect(() => {
     // Apply category filter from navigation params
@@ -39,7 +44,14 @@ export default function RoutinesScreen() {
   const loadRoutines = async () => {
     try {
       setLoading(true);
-      const data = await getRecommendedRoutines(20);
+      let data: Routine[];
+
+      if (selectedFilter === 'custom' && user) {
+        data = await getUserCustomRoutines(user.id);
+      } else {
+        data = await getRecommendedRoutines(50);
+      }
+
       setRoutines(data);
     } catch (error) {
       console.error('Error loading routines:', error);
@@ -77,6 +89,53 @@ export default function RoutinesScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>Routines</Text>
         <Text style={styles.subtitle}>Choose your wellness practice</Text>
+      </View>
+
+      {/* Filter Chips */}
+      <View style={styles.filterChipsContainer}>
+        <TouchableOpacity
+          style={[
+            styles.filterChip,
+            selectedFilter === 'all' && styles.filterChipActive,
+          ]}
+          onPress={() => setSelectedFilter('all')}
+        >
+          <Ionicons
+            name="list"
+            size={16}
+            color={selectedFilter === 'all' ? '#fff' : '#666'}
+          />
+          <Text
+            style={[
+              styles.filterChipText,
+              selectedFilter === 'all' && styles.filterChipTextActive,
+            ]}
+          >
+            All Routines
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.filterChip,
+            selectedFilter === 'custom' && styles.filterChipActive,
+          ]}
+          onPress={() => setSelectedFilter('custom')}
+        >
+          <Ionicons
+            name="create"
+            size={16}
+            color={selectedFilter === 'custom' ? '#fff' : '#666'}
+          />
+          <Text
+            style={[
+              styles.filterChipText,
+              selectedFilter === 'custom' && styles.filterChipTextActive,
+            ]}
+          >
+            My Routines
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {/* Search and Filter Section */}
@@ -161,29 +220,43 @@ export default function RoutinesScreen() {
       </Modal>
 
       <ScrollView style={styles.content}>
-        {filteredRoutines.map((routine) => (
-          <TouchableOpacity
-            key={routine.id}
-            style={styles.routineCard}
-            onPress={() => router.push(`/routines/${routine.id}`)}
-          >
-            <View style={styles.routineHeader}>
-              <View style={[styles.categoryDot, { backgroundColor: getCategoryColor(routine.category) }]} />
-              <Text style={styles.routineName}>{routine.name}</Text>
-            </View>
-            <Text style={styles.routineDescription} numberOfLines={2}>
-              {routine.description}
+        {filteredRoutines.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="document-text-outline" size={64} color="#ccc" />
+            <Text style={styles.emptyStateTitle}>
+              {selectedFilter === 'custom' ? 'No custom routines yet' : 'No routines found'}
             </Text>
-            <View style={styles.routineFooter}>
-              <Text style={styles.routineDetails}>
-                {routine.duration_minutes} min • {routine.difficulty}
+            <Text style={styles.emptyStateText}>
+              {selectedFilter === 'custom'
+                ? 'Create your first custom routine using the Builder tab'
+                : 'Try adjusting your filters or search query'}
+            </Text>
+          </View>
+        ) : (
+          filteredRoutines.map((routine) => (
+            <TouchableOpacity
+              key={routine.id}
+              style={styles.routineCard}
+              onPress={() => router.push(`/routines/${routine.id}`)}
+            >
+              <View style={styles.routineHeader}>
+                <View style={[styles.categoryDot, { backgroundColor: getCategoryColor(routine.category) }]} />
+                <Text style={styles.routineName}>{routine.name}</Text>
+              </View>
+              <Text style={styles.routineDescription} numberOfLines={2}>
+                {routine.description}
               </Text>
-              <Text style={styles.completionCount}>
-                {routine.completion_count} completions
-              </Text>
-            </View>
-          </TouchableOpacity>
-        ))}
+              <View style={styles.routineFooter}>
+                <Text style={styles.routineDetails}>
+                  {routine.duration_minutes} min • {routine.difficulty}
+                </Text>
+                <Text style={styles.completionCount}>
+                  {routine.completion_count} completions
+                </Text>
+              </View>
+            </TouchableOpacity>
+          ))
+        )}
       </ScrollView>
     </View>
   );
@@ -205,13 +278,13 @@ function getCategoryColor(category: string): string {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F8FAFC',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F8FAFC',
   },
   header: {
     padding: 24,
@@ -227,6 +300,38 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
     marginTop: 4,
+  },
+  filterChipsContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 12,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    backgroundColor: '#f5f5f5',
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  filterChipActive: {
+    backgroundColor: '#3533cd',
+    borderColor: '#3533cd',
+  },
+  filterChipText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#666',
+  },
+  filterChipTextActive: {
+    color: '#fff',
   },
   filterSection: {
     backgroundColor: '#fff',
@@ -319,6 +424,13 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
   },
   routineHeader: {
     flexDirection: 'row',
@@ -355,5 +467,26 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#3533cd',
     fontWeight: '500',
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 80,
+    paddingHorizontal: 40,
+  },
+  emptyStateTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#666',
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptyStateText: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });

@@ -105,6 +105,51 @@ export async function getUserCustomRoutines(userId: string) {
 }
 
 /**
+ * Update an existing custom routine
+ */
+export async function updateCustomRoutine(
+  userId: string,
+  routineId: string,
+  routineData: RoutineBuilderData
+): Promise<void> {
+  // Convert journey focus from "Both" to array format
+  let journeyFocusArray: JourneyFocus[]
+  if (routineData.journeyFocus === 'Both') {
+    journeyFocusArray = ['Injury Prevention', 'Recovery']
+  } else {
+    journeyFocusArray = [routineData.journeyFocus as JourneyFocus]
+  }
+
+  // Calculate total duration in minutes
+  const totalSeconds = routineData.exercises.reduce(
+    (sum, exercise) => sum + exercise.duration_seconds,
+    0
+  )
+  const durationMinutes = Math.ceil(totalSeconds / 60)
+
+  // Prepare exercises data (remove temporary IDs)
+  const exercises = routineData.exercises.map(({ id, ...exercise }) => exercise)
+
+  // Update routine in database
+  const { error } = await supabase
+    .from('routines')
+    .update({
+      name: routineData.name,
+      description: routineData.description,
+      category: routineData.category,
+      difficulty: routineData.difficulty,
+      journey_focus: journeyFocusArray,
+      duration_minutes: durationMinutes,
+      exercises: exercises,
+    })
+    .eq('id', routineId)
+    .eq('created_by', userId)
+    .eq('is_custom', true)
+
+  if (error) throw error
+}
+
+/**
  * Delete a custom routine (only if created by the user)
  */
 export async function deleteCustomRoutine(userId: string, routineId: string) {

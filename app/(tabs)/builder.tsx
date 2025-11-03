@@ -1,19 +1,22 @@
 import { useAuth } from '@/lib/contexts/AuthContext';
+import { getRoutineById } from '@/lib/utils/dashboard';
 import {
   getAvailableExercises,
   publishCustomRoutine,
+  updateCustomRoutine,
   validateRoutineData,
 } from '@/lib/utils/routine-builder';
 import {
   Exercise,
   JourneyFocusOption,
+  Routine,
   RoutineBuilderData,
   RoutineBuilderExercise,
   RoutineCategory,
   RoutineDifficulty,
 } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -34,10 +37,13 @@ type BuilderStep = 'journey' | 'exercises' | 'metadata' | 'review';
 export default function RoutineBuilderScreen() {
   const { user } = useAuth();
   const router = useRouter();
+  const { editId } = useLocalSearchParams<{ editId?: string }>();
 
   const [currentStep, setCurrentStep] = useState<BuilderStep>('journey');
   const [loading, setLoading] = useState(false);
   const [availableExercises, setAvailableExercises] = useState<Exercise[]>([]);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingRoutineId, setEditingRoutineId] = useState<string | null>(null);
 
   // Builder state
   const [routineData, setRoutineData] = useState<RoutineBuilderData>({
@@ -51,7 +57,10 @@ export default function RoutineBuilderScreen() {
 
   useEffect(() => {
     loadExercises();
-  }, []);
+    if (editId) {
+      loadRoutineForEditing(editId);
+    }
+  }, [editId]);
 
   const loadExercises = async () => {
     try {
@@ -61,6 +70,54 @@ export default function RoutineBuilderScreen() {
     } catch (error) {
       console.error('Error loading exercises:', error);
       Alert.alert('Error', 'Failed to load exercises');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadRoutineForEditing = async (routineId: string) => {
+    try {
+      setLoading(true);
+      const routine = await getRoutineById(routineId);
+
+      if (!routine || !user) {
+        Alert.alert('Error', 'Routine not found');
+        return;
+      }
+
+      // Verify user owns this routine
+      if (!routine.is_custom || routine.created_by !== user.id) {
+        Alert.alert('Error', 'You can only edit your own custom routines');
+        router.replace('/(tabs)/routines');
+        return;
+      }
+
+      // Convert routine to builder format
+      const journeyFocus: JourneyFocusOption =
+        routine.journey_focus.length === 2
+          ? 'Both'
+          : (routine.journey_focus[0] as JourneyFocusOption);
+
+      const exercises: RoutineBuilderExercise[] = routine.exercises.map((ex, index) => ({
+        ...ex,
+        id: `${Date.now()}-${index}`,
+      }));
+
+      setRoutineData({
+        name: routine.name,
+        description: routine.description,
+        category: routine.category,
+        difficulty: routine.difficulty,
+        journeyFocus,
+        exercises,
+      });
+
+      setIsEditMode(true);
+      setEditingRoutineId(routineId);
+      setCurrentStep('journey');
+    } catch (error) {
+      console.error('Error loading routine for editing:', error);
+      Alert.alert('Error', 'Failed to load routine');
     } finally {
       setLoading(false);
     }
@@ -105,35 +162,53 @@ export default function RoutineBuilderScreen() {
 
     try {
       setLoading(true);
-      const routineId = await publishCustomRoutine(user.id, routineData);
 
-      Alert.alert(
-        'Success!',
-        'Your custom routine has been published!',
-        [
-          {
-            text: 'View Routine',
-            onPress: () => router.push(`/routines/${routineId}`),
-          },
-          {
-            text: 'Create Another',
-            onPress: () => {
-              setRoutineData({
-                name: '',
-                description: '',
-                category: 'Mind',
-                difficulty: 'Beginner',
-                journeyFocus: 'Injury Prevention',
-                exercises: [],
-              });
-              setCurrentStep('journey');
+      if (isEditMode && editingRoutineId) {
+        // Update existing routine
+        await updateCustomRoutine(user.id, editingRoutineId, routineData);
+
+        Alert.alert(
+          'Success!',
+          'Your routine has been updated!',
+          [
+            {
+              text: 'View Routine',
+              onPress: () => router.replace(`/routines/${editingRoutineId}`),
             },
-          },
-        ]
-      );
+          ]
+        );
+      } else {
+        // Create new routine
+        const routineId = await publishCustomRoutine(user.id, routineData);
+
+        Alert.alert(
+          'Success!',
+          'Your custom routine has been published!',
+          [
+            {
+              text: 'View Routine',
+              onPress: () => router.push(`/routines/${routineId}`),
+            },
+            {
+              text: 'Create Another',
+              onPress: () => {
+                setRoutineData({
+                  name: '',
+                  description: '',
+                  category: 'Mind',
+                  difficulty: 'Beginner',
+                  journeyFocus: 'Injury Prevention',
+                  exercises: [],
+                });
+                setCurrentStep('journey');
+              },
+            },
+          ]
+        );
+      }
     } catch (error) {
-      console.error('Error publishing routine:', error);
-      Alert.alert('Error', 'Failed to publish routine. Please try again.');
+      console.error('Error publishing/updating routine:', error);
+      Alert.alert('Error', `Failed to ${isEditMode ? 'update' : 'publish'} routine. Please try again.`);
     } finally {
       setLoading(false);
     }
@@ -196,6 +271,7 @@ export default function RoutineBuilderScreen() {
             onPublish={handlePublish}
             onBack={() => setCurrentStep('metadata')}
             loading={loading}
+            isEditMode={isEditMode}
           />
         );
     }
@@ -204,7 +280,9 @@ export default function RoutineBuilderScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Routine Builder</Text>
+        <Text style={styles.title}>
+          {isEditMode ? 'Edit Routine' : 'Routine Builder'}
+        </Text>
         <TouchableOpacity onPress={handleReset}>
           <Ionicons name="refresh" size={24} color="#3533cd" />
         </TouchableOpacity>
@@ -603,11 +681,13 @@ function ReviewStep({
   onPublish,
   onBack,
   loading,
+  isEditMode = false,
 }: {
   data: RoutineBuilderData;
   onPublish: () => void;
   onBack: () => void;
   loading: boolean;
+  isEditMode?: boolean;
 }) {
   const totalDuration = Math.ceil(
     data.exercises.reduce((sum, ex) => sum + ex.duration_seconds, 0) / 60
@@ -683,8 +763,14 @@ function ReviewStep({
             <ActivityIndicator size="small" color="#fff" />
           ) : (
             <>
-              <Ionicons name="cloud-upload" size={20} color="#fff" />
-              <Text style={styles.publishButtonText}>Publish</Text>
+              <Ionicons
+                name={isEditMode ? "checkmark-circle" : "cloud-upload"}
+                size={20}
+                color="#fff"
+              />
+              <Text style={styles.publishButtonText}>
+                {isEditMode ? 'Update' : 'Publish'}
+              </Text>
             </>
           )}
         </TouchableOpacity>
@@ -709,7 +795,7 @@ function getCategoryColor(category: string): string {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F8FAFC',
   },
   header: {
     flexDirection: 'row',
@@ -828,6 +914,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 12,
     padding: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
   },
   selectedExerciseHeader: {
     flexDirection: 'row',
@@ -876,7 +969,7 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F8FAFC',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -975,6 +1068,13 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
   },
   exerciseListItemName: {
     fontSize: 16,
@@ -1042,6 +1142,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
   },
   reviewSectionTitle: {
     fontSize: 18,

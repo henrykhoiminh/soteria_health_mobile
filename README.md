@@ -78,19 +78,26 @@ This is the mobile companion app to the Soteria Health web application, built wi
 - **Soul Amber:** `#F59E0B` - Soul-related routines and indicators
 
 #### UI Colors
-- **Background:** `#f5f5f5` - Main background
+- **Background:** `#F8FAFC` - Soft blue-gray main background
 - **Surface:** `#fff` - Card and section backgrounds
 - **Primary Text:** `#1a1a1a` - Main text color
 - **Secondary Text:** `#666` - Subtitles and labels
 - **Tertiary Text:** `#999` - Metadata and less important text
 - **Border:** `#ddd` - Input borders and dividers
 - **Light Border:** `#f0f0f0` - Subtle dividers
+- **Card Border:** `#E2E8F0` - Card elevation borders
 - **Light Background:** `#E3F2FD` - Goal tags (Mind)
 - **Warning Background:** `#FFF3E0` - Injury tags
+- **Input Background:** `#f5f5f5` - Form inputs and select buttons
+
+#### Card Elevation
+All cards in the app use consistent elevation styling for visual separation:
+- **Border:** 1px solid `#E2E8F0`
+- **Shadow:** Subtle shadow (iOS) / Elevation 2 (Android)
+- **Effect:** Creates depth and clearly separates cards from background
 
 #### Semantic Colors
 - **Success:** `#34C759` - Completion states
-- **Input Background:** `#f5f5f5` - Form inputs
 
 ### Typography
 

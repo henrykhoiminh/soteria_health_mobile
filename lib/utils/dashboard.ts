@@ -171,3 +171,15 @@ export async function completeRoutine(userId: string, routineId: string, categor
   if (error) throw error
   return data
 }
+
+export async function getUserCustomRoutines(userId: string): Promise<Routine[]> {
+  const { data, error } = await supabase
+    .from('routines')
+    .select('*')
+    .eq('is_custom', true)
+    .eq('created_by', userId)
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+  return data || []
+}

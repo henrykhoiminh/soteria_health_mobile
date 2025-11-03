@@ -1,11 +1,13 @@
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { getRoutineById } from '@/lib/utils/dashboard';
+import { deleteCustomRoutine } from '@/lib/utils/routine-builder';
 import { Routine } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -43,6 +45,43 @@ export default function RoutineDetailScreen() {
     router.push(`/routines/${routine.id}/execute`);
   };
 
+  const handleEditRoutine = () => {
+    if (!routine) return;
+    router.push(`/(tabs)/builder?editId=${routine.id}`);
+  };
+
+  const handleDeleteRoutine = () => {
+    if (!routine || !user) return;
+
+    Alert.alert(
+      'Delete Routine?',
+      'This action cannot be undone. Are you sure you want to delete this custom routine?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteCustomRoutine(user.id, routine.id);
+              Alert.alert('Success', 'Routine deleted successfully', [
+                {
+                  text: 'OK',
+                  onPress: () => router.replace('/(tabs)/routines'),
+                },
+              ]);
+            } catch (error) {
+              console.error('Error deleting routine:', error);
+              Alert.alert('Error', 'Failed to delete routine. Please try again.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const isCustomRoutine = routine?.is_custom && routine?.created_by === user?.id;
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -71,8 +110,20 @@ export default function RoutineDetailScreen() {
           <TouchableOpacity style={styles.backIcon} onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={24} color="#1a1a1a" />
           </TouchableOpacity>
-          <View style={[styles.categoryBadge, { backgroundColor: getCategoryColor(routine.category) }]}>
-            <Text style={styles.categoryText}>{routine.category}</Text>
+          <View style={styles.headerRight}>
+            {isCustomRoutine && (
+              <View style={styles.actionButtons}>
+                <TouchableOpacity style={styles.actionButton} onPress={handleEditRoutine}>
+                  <Ionicons name="create-outline" size={24} color="#3533cd" />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.actionButton} onPress={handleDeleteRoutine}>
+                  <Ionicons name="trash-outline" size={24} color="#EF4444" />
+                </TouchableOpacity>
+              </View>
+            )}
+            <View style={[styles.categoryBadge, { backgroundColor: getCategoryColor(routine.category) }]}>
+              <Text style={styles.categoryText}>{routine.category}</Text>
+            </View>
           </View>
         </View>
 
@@ -168,20 +219,20 @@ function getCategoryColor(category: string): string {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F8FAFC',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F8FAFC',
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F8FAFC',
   },
   errorText: {
     fontSize: 18,
@@ -211,6 +262,23 @@ const styles = StyleSheet.create({
     paddingTop: 60,
   },
   backIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  actionButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -284,6 +352,13 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
   },
   exerciseHeader: {
     flexDirection: 'row',
