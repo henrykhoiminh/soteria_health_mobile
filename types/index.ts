@@ -1,6 +1,7 @@
 // User Types
 export type FitnessLevel = 'Beginner' | 'Intermediate' | 'Advanced'
 export type JourneyFocus = 'Injury Prevention' | 'Recovery'
+export type JourneyFocusOption = 'Injury Prevention' | 'Recovery' | 'Both'
 
 export interface Profile {
   id: string
@@ -82,4 +83,18 @@ export interface HealthScoreInfo {
   score: number
   tier: HealthScoreTier
   color: string
+}
+
+// Routine Builder Types
+export interface RoutineBuilderExercise extends Exercise {
+  id: string // Temporary ID for tracking in the builder
+}
+
+export interface RoutineBuilderData {
+  name: string
+  description: string
+  category: RoutineCategory
+  difficulty: RoutineDifficulty
+  journeyFocus: JourneyFocusOption
+  exercises: RoutineBuilderExercise[]
 }

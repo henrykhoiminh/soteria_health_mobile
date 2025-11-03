@@ -40,6 +40,20 @@ This is the mobile companion app to the Soteria Health web application, built wi
 - Routine execution with timer and progress tracking
 - Completion tracking with automatic profile refresh
 
+### Routine Builder
+- Create custom routines from scratch
+- Multi-step wizard interface:
+  - Journey Focus selection (Injury Prevention, Recovery, or Both)
+  - Exercise selection from existing exercise library
+  - Configure duration for each exercise (in seconds)
+  - Add up to 30 exercises per routine
+  - Set routine name, description, category, and difficulty
+  - Review all details before publishing
+- Exercise counter shows progress (X/30 exercises)
+- Published routines integrate seamlessly with existing routine execution
+- Custom routines marked with `is_custom: true` flag
+- Tracked by creator with `created_by` user ID
+
 ### Profile Management
 - View and edit profile information:
   - Full name
@@ -109,6 +123,7 @@ soteria-health-mobile/
 │   ├── (tabs)/                   # Main app tabs (bottom navigation)
 │   │   ├── index.tsx            # Dashboard with progress & stats
 │   │   ├── routines.tsx         # Routines list with search & filter
+│   │   ├── builder.tsx          # Routine Builder (create custom routines)
 │   │   └── profile.tsx          # User profile with editing
 │   ├── routines/                 # Routine-related screens
 │   │   ├── [id].tsx             # Routine detail screen
@@ -129,7 +144,8 @@ soteria-health-mobile/
 │   │   └── client.ts           # Supabase client with AsyncStorage
 │   └── utils/                   # Utility functions
 │       ├── auth.ts             # Auth helpers & profile picture upload
-│       └── dashboard.ts        # Dashboard data & balanced routines
+│       ├── dashboard.ts        # Dashboard data & balanced routines
+│       └── routine-builder.ts  # Routine builder utilities & validation
 └── types/                        # TypeScript types
     └── index.ts                 # Shared type definitions
 ```
@@ -161,6 +177,30 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
 ### 3. Database Setup
+
+#### Routines Table Schema
+The `routines` table should have the following structure to support both pre-built and custom routines:
+
+```sql
+-- The routines table should include:
+-- id (uuid, primary key)
+-- name (text)
+-- description (text)
+-- category (text) -- 'Mind', 'Body', or 'Soul'
+-- difficulty (text) -- 'Beginner', 'Intermediate', or 'Advanced'
+-- journey_focus (text[]) -- Array: ['Injury Prevention'] and/or ['Recovery']
+-- duration_minutes (integer)
+-- exercises (jsonb) -- Array of exercise objects
+-- is_custom (boolean) -- true for user-created routines
+-- created_by (uuid) -- user id of creator (for custom routines)
+-- completion_count (integer)
+-- benefits (text[])
+-- created_at (timestamp)
+
+-- Ensure the routines table supports custom routines:
+ALTER TABLE routines ADD COLUMN IF NOT EXISTS is_custom BOOLEAN DEFAULT false;
+ALTER TABLE routines ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES auth.users(id);
+```
 
 #### Add Profile Picture Column
 ```sql
@@ -205,6 +245,34 @@ CREATE POLICY "Authenticated users can delete avatars"
 ON storage.objects FOR DELETE
 TO authenticated
 USING (bucket_id = 'avatars');
+```
+
+#### Routine Builder Policies (Optional but Recommended)
+```sql
+-- Allow all users to read routines (both custom and pre-built)
+CREATE POLICY "Anyone can view routines"
+ON routines FOR SELECT
+TO public
+USING (true);
+
+-- Authenticated users can create custom routines
+CREATE POLICY "Authenticated users can create custom routines"
+ON routines FOR INSERT
+TO authenticated
+WITH CHECK (is_custom = true AND created_by = auth.uid());
+
+-- Users can only update their own custom routines
+CREATE POLICY "Users can update own custom routines"
+ON routines FOR UPDATE
+TO authenticated
+USING (is_custom = true AND created_by = auth.uid())
+WITH CHECK (is_custom = true AND created_by = auth.uid());
+
+-- Users can only delete their own custom routines
+CREATE POLICY "Users can delete own custom routines"
+ON routines FOR DELETE
+TO authenticated
+USING (is_custom = true AND created_by = auth.uid());
 ```
 
 ### 4. Start Development Server
