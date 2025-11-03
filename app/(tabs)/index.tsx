@@ -1,5 +1,5 @@
 import { useAuth } from '@/lib/contexts/AuthContext';
-import { getPersonalizedRoutines, getTodayProgress, getUserStats } from '@/lib/utils/dashboard';
+import { getBalancedRoutines, getTodayProgress, getUserStats } from '@/lib/utils/dashboard';
 import { DailyProgress, Routine, UserStats } from '@/types';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
@@ -41,7 +41,7 @@ export default function DashboardScreen() {
       const [progressData, statsData, routinesData] = await Promise.all([
         getTodayProgress(user.id),
         getUserStats(user.id),
-        getPersonalizedRoutines(profile?.journey_focus || null, profile?.fitness_level || null, 6),
+        getBalancedRoutines(profile?.journey_focus || null, profile?.fitness_level || null),
       ]);
 
       console.log('Today Progress:', progressData); // Debug log
@@ -79,17 +79,20 @@ export default function DashboardScreen() {
           <ProgressCard
             title="Mind"
             completed={todayProgress?.mind_complete || false}
-            color="#9333EA"
+            color="#3B82F6"
+            onPress={() => router.push('/routines?category=Mind')}
           />
           <ProgressCard
             title="Body"
             completed={todayProgress?.body_complete || false}
-            color="#0EA5E9"
+            color="#EF4444"
+            onPress={() => router.push('/routines?category=Body')}
           />
           <ProgressCard
             title="Soul"
             completed={todayProgress?.soul_complete || false}
             color="#F59E0B"
+            onPress={() => router.push('/routines?category=Soul')}
           />
         </View>
       </View>
@@ -149,14 +152,14 @@ export default function DashboardScreen() {
   );
 }
 
-function ProgressCard({ title, completed, color }: { title: string; completed: boolean; color: string }) {
+function ProgressCard({ title, completed, color, onPress }: { title: string; completed: boolean; color: string; onPress: () => void }) {
   return (
-    <View style={[styles.progressCard, { borderColor: color }]}>
+    <TouchableOpacity style={[styles.progressCard, { borderColor: color }]} onPress={onPress}>
       <Text style={styles.progressTitle}>{title}</Text>
       <View style={[styles.progressIndicator, completed && { backgroundColor: color }]}>
         {completed && <Text style={styles.checkmark}>✓</Text>}
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -174,9 +177,9 @@ function StatCard({ label, value, suffix }: { label: string; value: number; suff
 function getCategoryColor(category: string): string {
   switch (category) {
     case 'Mind':
-      return '#9333EA';
+      return '#3B82F6';
     case 'Body':
-      return '#0EA5E9';
+      return '#EF4444';
     case 'Soul':
       return '#F59E0B';
     default:

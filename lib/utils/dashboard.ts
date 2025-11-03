@@ -91,6 +91,60 @@ export async function getRoutinesByCategory(category: RoutineCategory): Promise<
   return data || []
 }
 
+// Get one routine from each category (Mind, Body, Soul) for a balanced recommendation
+export async function getBalancedRoutines(
+  journeyFocus: JourneyFocus | null,
+  fitnessLevel: FitnessLevel | null
+): Promise<Routine[]> {
+  const categories: RoutineCategory[] = ['Mind', 'Body', 'Soul']
+  const routines: Routine[] = []
+
+  // Fetch one routine for each category
+  for (const category of categories) {
+    let query = supabase
+      .from('routines')
+      .select('*')
+      .eq('category', category)
+
+    // Filter by journey focus if user has one
+    if (journeyFocus) {
+      query = query.contains('journey_focus', [journeyFocus])
+    }
+
+    // Filter by fitness level (difficulty) if user has one
+    if (fitnessLevel) {
+      query = query.eq('difficulty', fitnessLevel)
+    }
+
+    // Order by popularity and get the top routine
+    query = query
+      .order('completion_count', { ascending: false })
+      .limit(1)
+
+    const { data, error } = await query
+
+    if (error) throw error
+
+    // If no routine matches the criteria for this category, get the most popular one without filters
+    if (!data || data.length === 0) {
+      const fallbackQuery = await supabase
+        .from('routines')
+        .select('*')
+        .eq('category', category)
+        .order('completion_count', { ascending: false })
+        .limit(1)
+
+      if (fallbackQuery.data && fallbackQuery.data.length > 0) {
+        routines.push(fallbackQuery.data[0])
+      }
+    } else {
+      routines.push(data[0])
+    }
+  }
+
+  return routines
+}
+
 export async function getRoutineById(routineId: string): Promise<Routine | null> {
   const { data, error } = await supabase
     .from('routines')

@@ -7,8 +7,9 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Modal,
+  TextInput,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { getRecommendedRoutines } from '@/lib/utils/dashboard';
 import { Routine, RoutineCategory } from '@/types';
@@ -19,12 +20,21 @@ export default function RoutinesScreen() {
   const [loading, setLoading] = useState(true);
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<RoutineCategory | 'All'>('All');
+  const [searchQuery, setSearchQuery] = useState('');
   const [dropdownVisible, setDropdownVisible] = useState(false);
   const router = useRouter();
+  const { category } = useLocalSearchParams<{ category?: string }>();
 
   useEffect(() => {
     loadRoutines();
   }, []);
+
+  useEffect(() => {
+    // Apply category filter from navigation params
+    if (category && (category === 'Mind' || category === 'Body' || category === 'Soul')) {
+      setSelectedCategory(category as RoutineCategory);
+    }
+  }, [category]);
 
   const loadRoutines = async () => {
     try {
@@ -38,9 +48,16 @@ export default function RoutinesScreen() {
     }
   };
 
-  const filteredRoutines = selectedCategory === 'All'
-    ? routines
-    : routines.filter(r => r.category === selectedCategory);
+  const filteredRoutines = routines.filter(routine => {
+    // Filter by category
+    const categoryMatch = selectedCategory === 'All' || routine.category === selectedCategory;
+
+    // Filter by search query (case-insensitive)
+    const searchMatch = searchQuery.trim() === '' ||
+      routine.name.toLowerCase().includes(searchQuery.toLowerCase().trim());
+
+    return categoryMatch && searchMatch;
+  });
 
   if (loading) {
     return (
@@ -62,8 +79,26 @@ export default function RoutinesScreen() {
         <Text style={styles.subtitle}>Choose your wellness practice</Text>
       </View>
 
-      {/* Filter Dropdown */}
+      {/* Search and Filter Section */}
       <View style={styles.filterSection}>
+        {/* Search Input */}
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search routines..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholderTextColor="#999"
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <Ionicons name="close-circle" size={20} color="#666" />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Category Filter Dropdown */}
         <TouchableOpacity
           style={styles.dropdownButton}
           onPress={() => setDropdownVisible(true)}
@@ -157,9 +192,9 @@ export default function RoutinesScreen() {
 function getCategoryColor(category: string): string {
   switch (category) {
     case 'Mind':
-      return '#9333EA';
+      return '#3B82F6';
     case 'Body':
-      return '#0EA5E9';
+      return '#EF4444';
     case 'Soul':
       return '#F59E0B';
     default:
@@ -198,6 +233,26 @@ const styles = StyleSheet.create({
     padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
+    gap: 12,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#1a1a1a',
+    padding: 0,
   },
   dropdownButton: {
     flexDirection: 'row',
