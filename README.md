@@ -8,16 +8,93 @@ This is the mobile companion app to the Soteria Health web application, built wi
 
 - **Expo Router** - File-based routing for React Native
 - **TypeScript** - Type-safe development
-- **Supabase** - Backend and authentication
+- **Supabase** - Backend, authentication, and storage
 - **React Native** - Cross-platform mobile development
+- **Expo Image Picker** - Profile picture upload
 
 ## Features
 
-- User authentication (Sign up, Sign in, Onboarding)
-- Dashboard with daily progress tracking
-- Wellness routines (Mind, Body, Soul)
-- Health score and streak tracking
-- User profile management
+### Authentication & Onboarding
+- User sign up with email verification
+- Secure login with password visibility toggle
+- Multi-step onboarding flow
+  - Journey focus selection (Injury Prevention / Recovery)
+  - Fitness level selection (Beginner / Intermediate / Advanced)
+  - Personal goals selection
+
+### Dashboard
+- Personalized greeting with profile picture
+- Today's progress tracking (Mind, Body, Soul)
+- Clickable progress cards that filter routines by category
+- User statistics (Current Streak, Health Score, Total Routines)
+- Balanced recommendations (one routine from each category)
+
+### Routines
+- Browse all routines with search functionality
+- Filter by category (Mind, Body, Soul, All)
+- Category-specific color indicators:
+  - Mind: Blue (#3B82F6)
+  - Body: Red (#EF4444)
+  - Soul: Amber (#F59E0B)
+- Detailed routine view with exercises and benefits
+- Routine execution with timer and progress tracking
+- Completion tracking with automatic profile refresh
+
+### Profile Management
+- View and edit profile information:
+  - Full name
+  - Journey focus
+  - Fitness level
+  - Age
+- Upload and change profile picture
+- View personal goals and injuries/limitations
+- Sign out functionality
+
+## Design System
+
+### Color Palette
+
+#### Primary Brand Colors
+- **Primary Blue:** `#3533cd` - Primary buttons, links, and accents
+- **Red (Destructive):** `#FF3B30` - Sign out and destructive actions
+
+#### Category Colors
+- **Mind Blue:** `#3B82F6` - Mind-related routines and indicators
+- **Body Red:** `#EF4444` - Body-related routines and indicators
+- **Soul Amber:** `#F59E0B` - Soul-related routines and indicators
+
+#### UI Colors
+- **Background:** `#f5f5f5` - Main background
+- **Surface:** `#fff` - Card and section backgrounds
+- **Primary Text:** `#1a1a1a` - Main text color
+- **Secondary Text:** `#666` - Subtitles and labels
+- **Tertiary Text:** `#999` - Metadata and less important text
+- **Border:** `#ddd` - Input borders and dividers
+- **Light Border:** `#f0f0f0` - Subtle dividers
+- **Light Background:** `#E3F2FD` - Goal tags (Mind)
+- **Warning Background:** `#FFF3E0` - Injury tags
+
+#### Semantic Colors
+- **Success:** `#34C759` - Completion states
+- **Input Background:** `#f5f5f5` - Form inputs
+
+### Typography
+
+#### Font Sizes
+- **Extra Large Title:** 32px - Page titles
+- **Large Title:** 28px - Section headers
+- **Title:** 24px - Profile name
+- **Heading:** 20px - Section titles
+- **Body Large:** 18px - Routine names
+- **Body:** 16px - Standard text
+- **Body Small:** 14px - Metadata, tags
+- **Caption:** 12px - Small details
+
+#### Font Weights
+- **Bold:** 700 - Primary titles
+- **Semibold:** 600 - Section headers, buttons
+- **Medium:** 500 - Selected states, important text
+- **Regular:** 400 - Body text
 
 ## Project Structure
 
@@ -25,28 +102,34 @@ This is the mobile companion app to the Soteria Health web application, built wi
 soteria-health-mobile/
 ├── app/                          # Expo Router app directory
 │   ├── (auth)/                   # Authentication screens
-│   │   ├── login.tsx            # Login screen
+│   │   ├── login.tsx            # Login screen with logo
 │   │   ├── signup.tsx           # Sign up screen
-│   │   └── onboarding.tsx       # User onboarding
-│   ├── (tabs)/                   # Main app tabs
-│   │   ├── index.tsx            # Dashboard
-│   │   ├── routines.tsx         # Routines list
-│   │   └── profile.tsx          # User profile
-│   └── _layout.tsx              # Root layout with navigation
+│   │   ├── verify-email.tsx     # Email verification screen
+│   │   └── onboarding.tsx       # Multi-step user onboarding
+│   ├── (tabs)/                   # Main app tabs (bottom navigation)
+│   │   ├── index.tsx            # Dashboard with progress & stats
+│   │   ├── routines.tsx         # Routines list with search & filter
+│   │   └── profile.tsx          # User profile with editing
+│   ├── routines/                 # Routine-related screens
+│   │   ├── [id].tsx             # Routine detail screen
+│   │   └── [id]/
+│   │       └── execute.tsx      # Routine execution with timer
+│   └── _layout.tsx              # Root layout with auth check
+├── assets/
+│   └── images/
+│       └── soteria-logo.png     # App logo
 ├── components/                   # Reusable components
-│   ├── Dashboard/
-│   ├── HealthScore/
-│   ├── Modal/
-│   ├── Routine/
-│   └── Streak/
+│   └── themed-text.tsx          # Themed text component
+├── constants/
+│   └── theme.ts                 # Theme constants and colors
 ├── lib/                          # Core utilities
 │   ├── contexts/                # React contexts
-│   │   └── AuthContext.tsx     # Authentication context
+│   │   └── AuthContext.tsx     # Authentication & profile context
 │   ├── supabase/                # Supabase configuration
-│   │   └── client.ts           # Supabase client
+│   │   └── client.ts           # Supabase client with AsyncStorage
 │   └── utils/                   # Utility functions
-│       ├── auth.ts             # Auth helpers
-│       └── dashboard.ts        # Dashboard data
+│       ├── auth.ts             # Auth helpers & profile picture upload
+│       └── dashboard.ts        # Dashboard data & balanced routines
 └── types/                        # TypeScript types
     └── index.ts                 # Shared type definitions
 ```
@@ -59,11 +142,14 @@ soteria-health-mobile/
 npm install
 ```
 
-The following packages are included:
+### Key Packages
 - `@supabase/supabase-js` - Supabase client
 - `@react-native-async-storage/async-storage` - Persistent storage
 - `react-native-url-polyfill` - URL polyfill for React Native
+- `expo-image-picker` - Image selection and upload
+- `base64-arraybuffer` - Base64 encoding for image uploads
 - `date-fns` - Date utilities
+- `@expo/vector-icons` - Icon library
 
 ### 2. Environment Variables
 
@@ -74,9 +160,54 @@ EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
 EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
-**Note:** The `.env` file is already configured with the Supabase credentials from your Next.js app.
+### 3. Database Setup
 
-### 3. Start Development Server
+#### Add Profile Picture Column
+```sql
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS profile_picture_url TEXT;
+```
+
+#### Create Storage Bucket for Avatars
+
+**Option A: Via Supabase Dashboard (Recommended)**
+1. Go to Storage in Supabase Dashboard
+2. Create a new bucket named `avatars`
+3. Make it public
+
+**Option B: Via SQL**
+```sql
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('avatars', 'avatars', true)
+ON CONFLICT (id) DO NOTHING;
+```
+
+#### Set Up Storage Policies
+```sql
+-- Public read access
+CREATE POLICY "Public Access"
+ON storage.objects FOR SELECT
+USING (bucket_id = 'avatars');
+
+-- Authenticated users can upload
+CREATE POLICY "Authenticated users can upload avatars"
+ON storage.objects FOR INSERT
+TO authenticated
+WITH CHECK (bucket_id = 'avatars');
+
+-- Authenticated users can update
+CREATE POLICY "Authenticated users can update avatars"
+ON storage.objects FOR UPDATE
+TO authenticated
+USING (bucket_id = 'avatars');
+
+-- Authenticated users can delete
+CREATE POLICY "Authenticated users can delete avatars"
+ON storage.objects FOR DELETE
+TO authenticated
+USING (bucket_id = 'avatars');
+```
+
+### 4. Start Development Server
 
 ```bash
 npm start
@@ -90,46 +221,76 @@ This will start the Expo development server. You can then:
 ## Running on Different Platforms
 
 ### iOS (Mac only)
-
 ```bash
 npm run ios
 ```
 
 ### Android
-
 ```bash
 npm run android
 ```
 
 ### Web
-
 ```bash
 npm run web
 ```
 
-## Key Differences from Next.js App
+## Key Features Implementation
 
-### 1. Supabase Client
-- Uses `@supabase/supabase-js` instead of `@supabase/ssr`
-- Configured with AsyncStorage for session persistence
-- No server-side rendering considerations
+### Authentication Flow
+1. User opens app → `_layout.tsx` checks auth state via AuthContext
+2. If not authenticated → Redirects to login
+3. After login → Checks email verification
+4. If email not verified → Redirects to verify-email screen
+5. After verification → Checks profile completion
+6. If profile incomplete → Redirects to onboarding
+7. If profile complete → Redirects to dashboard (tabs)
 
-### 2. Navigation
-- Uses Expo Router instead of Next.js App Router
-- File-based routing with similar structure
-- Tab navigation instead of client-side routing
+### Profile Picture Upload
+- Uses Expo Image Picker for image selection
+- Crops images to 1:1 aspect ratio
+- Converts to base64 for upload
+- Stores in Supabase Storage (avatars bucket)
+- Updates profile with public URL
+- Displays throughout app (Dashboard, Profile)
 
-### 3. Styling
-- StyleSheet instead of Tailwind CSS
-- React Native components instead of HTML elements
-- Platform-specific styling when needed
+### Balanced Routine Recommendations
+- Algorithm fetches one routine from each category (Mind, Body, Soul)
+- Filters by user's journey focus and fitness level
+- Orders by popularity (completion count)
+- Falls back to most popular if no matches found
+- Always returns exactly 3 routines
 
-## Authentication Flow
+### Progress Tracking
+- Daily progress stored per user per date
+- Tracks completion of Mind, Body, Soul routines
+- Updates health score and streaks
+- Refreshes automatically when returning to dashboard
 
-1. User opens app → `app/_layout.tsx` checks auth state
-2. If not authenticated → Redirects to `app/(auth)/login.tsx`
-3. After login → Redirects to `app/(tabs)/index.tsx` (Dashboard)
-4. Auth state managed by `AuthContext` provider
+## Architecture Decisions
+
+### State Management
+- **AuthContext** for global authentication and profile state
+- Local state (useState) for component-specific data
+- Supabase as source of truth, with context caching
+
+### Navigation
+- **Expo Router** for file-based routing
+- Stack navigation for auth flow
+- Tab navigation for main app
+- Modal presentation for detail screens
+
+### Styling
+- StyleSheet for performance
+- Inline styles for dynamic values
+- Consistent spacing (4, 8, 12, 16, 24, 32, 40 px)
+- Border radius: 8px (inputs), 12px (cards), 16px (badges)
+
+### Data Fetching
+- Direct Supabase queries in utility functions
+- Promise.all for parallel data loading
+- Error handling with try/catch and alerts
+- Loading states for better UX
 
 ## Common Issues
 
@@ -148,21 +309,57 @@ npx expo start --ios
 - Verify Supabase URL and anon key
 - Check network connectivity
 
-## Next Steps
+### Image Upload Issues
+- Ensure avatars storage bucket is created
+- Verify storage policies are set up
+- Check image file size (keep under 5MB)
 
-### Components to Add
-1. Routine Detail Screen - `/app/routines/[id].tsx`
-2. Routine Execution Screen - `/app/routines/[id]/execute.tsx`
-3. Enhanced components (Health Score, Streak Display, Modals)
+### Profile Picture Not Showing
+- Clear app cache and restart
+- Verify image URL in database
+- Check storage bucket is public
 
-### Features to Implement
+## Future Enhancements
+
+### Features to Add
 1. Push notifications for daily reminders
 2. Offline support with local caching
 3. Progress animations and celebrations
 4. Social features (share routines, community)
 5. Custom routine creation
+6. Routine scheduling and calendar view
+7. Exercise video demonstrations
+8. Achievement badges and milestones
+9. Dark mode support
+10. Accessibility improvements
+
+### Technical Improvements
+1. Add unit and integration tests
+2. Implement error boundary
+3. Add analytics tracking
+4. Optimize image loading and caching
+5. Add pull-to-refresh on lists
+6. Implement infinite scroll for routines
+7. Add skeleton loaders
+8. Optimize bundle size
 
 ## Related Projects
 
 - **Web App:** `../soteria_health` (Next.js)
 - **Backend:** Supabase project
+- **Design:** Figma (if applicable)
+
+## Contributing
+
+1. Create a feature branch
+2. Make your changes
+3. Test on both iOS and Android
+4. Submit a pull request
+
+## License
+
+[Your License Here]
+
+## Support
+
+For issues or questions, please contact [Your Contact Info]
