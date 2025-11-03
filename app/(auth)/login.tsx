@@ -1,8 +1,10 @@
 import { getUserProfile, signIn } from '@/lib/utils/auth';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
@@ -11,7 +13,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -75,7 +76,11 @@ export default function LoginScreen() {
       style={styles.container}
     >
       <View style={styles.content}>
-        <Text style={styles.title}>Welcome to Soteria Health </Text>
+        <Image
+          source={require('@/assets/images/soteria-logo.png')}
+          style={styles.logo}
+          resizeMode="contain"
+        />
         <Text style={styles.subtitle}>Sign in to continue your journey to a pain-free life!</Text>
 
         <View style={styles.form}>
@@ -147,16 +152,18 @@ const styles = StyleSheet.create({
     padding: 24,
     justifyContent: 'center',
   },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    marginBottom: 8,
-    color: '#1a1a1a',
+  logo: {
+    width: '100%',
+    height: 350,
+    marginBottom: 0,
+    marginTop: -40,
+    alignSelf: 'center',
   },
   subtitle: {
     fontSize: 16,
     color: '#666',
     marginBottom: 32,
+    textAlign: 'center',
   },
   form: {
     width: '100%',
@@ -189,7 +196,7 @@ const styles = StyleSheet.create({
     top: 16,
   },
   button: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#3533cd',
     borderRadius: 8,
     padding: 16,
     alignItems: 'center',
@@ -208,7 +215,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   linkText: {
-    color: '#007AFF',
+    color: '#3533cd',
     fontSize: 14,
   },
 });

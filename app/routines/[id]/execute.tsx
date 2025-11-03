@@ -150,7 +150,7 @@ export default function ExecuteRoutineScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color="#3533cd" />
       </View>
     );
   }
@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
   backButton: {
     paddingHorizontal: 24,
     paddingVertical: 12,
-    backgroundColor: '#007AFF',
+    backgroundColor: '#3533cd',
     borderRadius: 8,
   },
   backButtonText: {
@@ -314,7 +314,7 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#007AFF',
+    backgroundColor: '#3533cd',
     borderRadius: 4,
   },
   progressText: {
@@ -352,12 +352,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 8,
-    borderColor: '#007AFF',
+    borderColor: '#3533cd',
   },
   timerText: {
     fontSize: 72,
     fontWeight: 'bold',
-    color: '#007AFF',
+    color: '#3533cd',
   },
   timerLabel: {
     fontSize: 16,
@@ -372,7 +372,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#007AFF',
+    backgroundColor: '#3533cd',
     justifyContent: 'center',
     alignItems: 'center',
   },

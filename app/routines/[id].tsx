@@ -46,7 +46,7 @@ export default function RoutineDetailScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color="#3533cd" />
       </View>
     );
   }
@@ -103,7 +103,7 @@ export default function RoutineDetailScreen() {
             <Text style={styles.sectionTitle}>Benefits</Text>
             {routine.benefits.map((benefit, index) => (
               <View key={index} style={styles.benefitItem}>
-                <Ionicons name="checkmark-circle" size={20} color="#007AFF" />
+                <Ionicons name="checkmark-circle" size={20} color="#3533cd" />
                 <Text style={styles.benefitText}>{benefit}</Text>
               </View>
             ))}
@@ -125,7 +125,7 @@ export default function RoutineDetailScreen() {
               </View>
               <Text style={styles.exerciseInstructions}>{exercise.instructions}</Text>
               <View style={styles.exerciseDuration}>
-                <Ionicons name="timer-outline" size={16} color="#007AFF" />
+                <Ionicons name="timer-outline" size={16} color="#3533cd" />
                 <Text style={styles.exerciseDurationText}>
                   {exercise.duration_seconds}s
                 </Text>
@@ -161,7 +161,7 @@ function getCategoryColor(category: string): string {
     case 'Soul':
       return '#F59E0B';
     default:
-      return '#007AFF';
+      return '#3533cd';
   }
 }
 
@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
   backButton: {
     paddingHorizontal: 24,
     paddingVertical: 12,
-    backgroundColor: '#007AFF',
+    backgroundColor: '#3533cd',
     borderRadius: 8,
   },
   backButtonText: {
@@ -294,7 +294,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#007AFF',
+    backgroundColor: '#3533cd',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -323,7 +323,7 @@ const styles = StyleSheet.create({
   },
   exerciseDurationText: {
     fontSize: 14,
-    color: '#007AFF',
+    color: '#3533cd',
     fontWeight: '500',
   },
   footer: {
@@ -334,7 +334,7 @@ const styles = StyleSheet.create({
     borderTopColor: '#eee',
   },
   startButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#3533cd',
     borderRadius: 12,
     padding: 16,
     flexDirection: 'row',

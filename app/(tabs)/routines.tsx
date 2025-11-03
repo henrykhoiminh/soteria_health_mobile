@@ -62,7 +62,7 @@ export default function RoutinesScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color="#3533cd" />
       </View>
     );
   }
@@ -136,7 +136,7 @@ export default function RoutinesScreen() {
                 All Routines
               </Text>
               {selectedCategory === 'All' && (
-                <Ionicons name="checkmark" size={20} color="#007AFF" />
+                <Ionicons name="checkmark" size={20} color="#3533cd" />
               )}
             </TouchableOpacity>
             {CATEGORIES.map((category) => (
@@ -152,7 +152,7 @@ export default function RoutinesScreen() {
                   </Text>
                 </View>
                 {selectedCategory === category && (
-                  <Ionicons name="checkmark" size={20} color="#007AFF" />
+                  <Ionicons name="checkmark" size={20} color="#3533cd" />
                 )}
               </TouchableOpacity>
             ))}
@@ -198,7 +198,7 @@ function getCategoryColor(category: string): string {
     case 'Soul':
       return '#F59E0B';
     default:
-      return '#007AFF';
+      return '#3533cd';
   }
 }
 
@@ -307,7 +307,7 @@ const styles = StyleSheet.create({
     color: '#1a1a1a',
   },
   modalOptionTextActive: {
-    color: '#007AFF',
+    color: '#3533cd',
     fontWeight: '600',
   },
   content: {
@@ -353,7 +353,7 @@ const styles = StyleSheet.create({
   },
   completionCount: {
     fontSize: 12,
-    color: '#007AFF',
+    color: '#3533cd',
     fontWeight: '500',
   },
 });

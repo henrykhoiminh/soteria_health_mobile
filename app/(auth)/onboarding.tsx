@@ -339,8 +339,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   optionSelected: {
-    borderColor: '#007AFF',
-    backgroundColor: '#007AFF',
+    borderColor: '#3533cd',
+    backgroundColor: '#3533cd',
   },
   optionText: {
     fontSize: 14,
@@ -370,7 +370,7 @@ const styles = StyleSheet.create({
     marginTop: 24,
   },
   button: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#3533cd',
     borderRadius: 8,
     padding: 16,
     alignItems: 'center',
@@ -382,7 +382,7 @@ const styles = StyleSheet.create({
   secondaryButton: {
     backgroundColor: '#fff',
     borderWidth: 2,
-    borderColor: '#007AFF',
+    borderColor: '#3533cd',
   },
   buttonDisabled: {
     opacity: 0.5,
@@ -393,6 +393,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   secondaryButtonText: {
-    color: '#007AFF',
+    color: '#3533cd',
   },
 });

@@ -45,7 +45,7 @@ export default function VerifyEmailScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.iconContainer}>
-        <Ionicons name="mail-outline" size={80} color="#007AFF" />
+        <Ionicons name="mail-outline" size={80} color="#3533cd" />
       </View>
 
       <Text style={styles.title}>Check Your Email</Text>
@@ -120,7 +120,7 @@ const styles = StyleSheet.create({
   email: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#007AFF',
+    color: '#3533cd',
     marginBottom: 24,
     textAlign: 'center',
   },
@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   button: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#3533cd',
     borderRadius: 8,
     padding: 16,
     alignItems: 'center',
@@ -170,7 +170,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   secondaryButtonText: {
-    color: '#007AFF',
+    color: '#3533cd',
     fontSize: 14,
     fontWeight: '600',
   },

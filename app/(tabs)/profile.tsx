@@ -1,15 +1,120 @@
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Alert,
-} from 'react-native';
 import { useAuth } from '@/lib/contexts/AuthContext';
+import { updateUserProfile, uploadProfilePicture } from '@/lib/utils/auth';
+import { FitnessLevel, JourneyFocus } from '@/types';
+import { useState } from 'react';
+import {
+  Alert,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+  Image,
+  ActivityIndicator,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+
+const JOURNEY_FOCUSES: JourneyFocus[] = ['Injury Prevention', 'Recovery'];
+const FITNESS_LEVELS: FitnessLevel[] = ['Beginner', 'Intermediate', 'Advanced'];
 
 export default function ProfileScreen() {
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, refreshProfile, signOut } = useAuth();
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedFullName, setEditedFullName] = useState('');
+  const [editedJourneyFocus, setEditedJourneyFocus] = useState<JourneyFocus | null>(null);
+  const [editedFitnessLevel, setEditedFitnessLevel] = useState<FitnessLevel | null>(null);
+  const [editedAge, setEditedAge] = useState('');
+  const [showJourneyFocusModal, setShowJourneyFocusModal] = useState(false);
+  const [showFitnessLevelModal, setShowFitnessLevelModal] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+
+  const handlePickImage = async () => {
+    try {
+      // Request permission
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Please allow access to your photo library to change your profile picture.');
+        return;
+      }
+
+      // Launch image picker
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0] && user) {
+        setUploadingImage(true);
+
+        try {
+          // Upload image
+          const imageUrl = await uploadProfilePicture(user.id, result.assets[0].uri);
+
+          // Update profile with new image URL
+          await updateUserProfile(user.id, {
+            profile_picture_url: imageUrl,
+          });
+
+          await refreshProfile();
+          Alert.alert('Success', 'Profile picture updated successfully');
+        } catch (error: any) {
+          Alert.alert('Error', error.message || 'Failed to upload profile picture');
+        } finally {
+          setUploadingImage(false);
+        }
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to select image');
+    }
+  };
+
+  const handleEdit = () => {
+    setEditedFullName(profile?.full_name || '');
+    setEditedJourneyFocus(profile?.journey_focus || null);
+    setEditedFitnessLevel(profile?.fitness_level || null);
+    setEditedAge(profile?.age?.toString() || '');
+    setIsEditing(true);
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+    setEditedFullName('');
+    setEditedJourneyFocus(null);
+    setEditedFitnessLevel(null);
+    setEditedAge('');
+  };
+
+  const handleSave = async () => {
+    if (!user) return;
+
+    try {
+      setSaving(true);
+
+      const updates: any = {
+        full_name: editedFullName.trim() || null,
+        journey_focus: editedJourneyFocus,
+        fitness_level: editedFitnessLevel,
+        age: editedAge ? parseInt(editedAge, 10) : null,
+      };
+
+      await updateUserProfile(user.id, updates);
+      await refreshProfile();
+
+      setIsEditing(false);
+      Alert.alert('Success', 'Profile updated successfully');
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to update profile');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleSignOut = async () => {
     Alert.alert(
@@ -35,38 +140,137 @@ export default function ProfileScreen() {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>
-            {profile?.full_name?.charAt(0).toUpperCase() || 'U'}
-          </Text>
+        <View style={styles.avatarContainer}>
+          <View style={styles.avatar}>
+            {profile?.profile_picture_url ? (
+              <Image
+                source={{ uri: profile.profile_picture_url }}
+                style={styles.avatarImage}
+              />
+            ) : (
+              <Text style={styles.avatarText}>
+                {profile?.full_name?.charAt(0).toUpperCase() || 'U'}
+              </Text>
+            )}
+          </View>
+          <TouchableOpacity
+            style={styles.cameraButton}
+            onPress={handlePickImage}
+            disabled={uploadingImage}
+          >
+            {uploadingImage ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Ionicons name="camera" size={20} color="#fff" />
+            )}
+          </TouchableOpacity>
         </View>
-        <Text style={styles.name}>{profile?.full_name || 'User'}</Text>
+        {isEditing ? (
+          <TextInput
+            style={styles.nameInput}
+            value={editedFullName}
+            onChangeText={setEditedFullName}
+            placeholder="Full Name"
+            placeholderTextColor="#999"
+          />
+        ) : (
+          <Text style={styles.name}>{profile?.full_name || 'User'}</Text>
+        )}
         <Text style={styles.email}>{user?.email}</Text>
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Profile Information</Text>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Profile Information</Text>
+          {!isEditing && (
+            <TouchableOpacity onPress={handleEdit} style={styles.editButton}>
+              <Ionicons name="pencil" size={20} color="#3533cd" />
+              <Text style={styles.editButtonText}>Edit</Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
+        {/* Journey Focus */}
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>Journey Focus</Text>
+          {isEditing ? (
+            <TouchableOpacity
+              style={styles.selectButton}
+              onPress={() => setShowJourneyFocusModal(true)}
+            >
+              <Text style={styles.selectButtonText}>
+                {editedJourneyFocus || 'Select'}
+              </Text>
+              <Ionicons name="chevron-down" size={20} color="#666" />
+            </TouchableOpacity>
+          ) : (
+            <Text style={styles.infoValue}>
+              {profile?.journey_focus || 'Not set'}
+            </Text>
+          )}
+        </View>
+
+        {/* Fitness Level */}
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>Fitness Level</Text>
-          <Text style={styles.infoValue}>
-            {profile?.fitness_level || 'Not set'}
-          </Text>
+          {isEditing ? (
+            <TouchableOpacity
+              style={styles.selectButton}
+              onPress={() => setShowFitnessLevelModal(true)}
+            >
+              <Text style={styles.selectButtonText}>
+                {editedFitnessLevel || 'Select'}
+              </Text>
+              <Ionicons name="chevron-down" size={20} color="#666" />
+            </TouchableOpacity>
+          ) : (
+            <Text style={styles.infoValue}>
+              {profile?.fitness_level || 'Not set'}
+            </Text>
+          )}
         </View>
 
+        {/* Age */}
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>Age</Text>
-          <Text style={styles.infoValue}>
-            {profile?.age || 'Not set'}
-          </Text>
+          {isEditing ? (
+            <TextInput
+              style={styles.ageInput}
+              value={editedAge}
+              onChangeText={setEditedAge}
+              placeholder="Age"
+              placeholderTextColor="#999"
+              keyboardType="number-pad"
+              maxLength={3}
+            />
+          ) : (
+            <Text style={styles.infoValue}>
+              {profile?.age || 'Not set'}
+            </Text>
+          )}
         </View>
 
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Time Availability</Text>
-          <Text style={styles.infoValue}>
-            {profile?.time_availability ? `${profile.time_availability} min/day` : 'Not set'}
-          </Text>
-        </View>
+        {/* Save/Cancel buttons */}
+        {isEditing && (
+          <View style={styles.actionButtons}>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.cancelButton]}
+              onPress={handleCancel}
+              disabled={saving}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.saveButton, saving && styles.buttonDisabled]}
+              onPress={handleSave}
+              disabled={saving}
+            >
+              <Text style={styles.saveButtonText}>
+                {saving ? 'Saving...' : 'Save Changes'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
       {profile?.goals && profile.goals.length > 0 && (
@@ -100,6 +304,72 @@ export default function ProfileScreen() {
           <Text style={styles.signOutText}>Sign Out</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Journey Focus Modal */}
+      <Modal
+        visible={showJourneyFocusModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowJourneyFocusModal(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowJourneyFocusModal(false)}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Select Journey Focus</Text>
+            {JOURNEY_FOCUSES.map((focus) => (
+              <TouchableOpacity
+                key={focus}
+                style={styles.modalOption}
+                onPress={() => {
+                  setEditedJourneyFocus(focus);
+                  setShowJourneyFocusModal(false);
+                }}
+              >
+                <Text style={styles.modalOptionText}>{focus}</Text>
+                {editedJourneyFocus === focus && (
+                  <Ionicons name="checkmark" size={20} color="#3533cd" />
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Fitness Level Modal */}
+      <Modal
+        visible={showFitnessLevelModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowFitnessLevelModal(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowFitnessLevelModal(false)}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Select Fitness Level</Text>
+            {FITNESS_LEVELS.map((level) => (
+              <TouchableOpacity
+                key={level}
+                style={styles.modalOption}
+                onPress={() => {
+                  setEditedFitnessLevel(level);
+                  setShowFitnessLevelModal(false);
+                }}
+              >
+                <Text style={styles.modalOptionText}>{level}</Text>
+                {editedFitnessLevel === level && (
+                  <Ionicons name="checkmark" size={20} color="#3533cd" />
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </ScrollView>
   );
 }
@@ -111,23 +381,44 @@ const styles = StyleSheet.create({
   },
   header: {
     padding: 24,
-    paddingTop: 60,
+    paddingTop: 100,
     backgroundColor: '#fff',
     alignItems: 'center',
+  },
+  avatarContainer: {
+    position: 'relative',
+    marginBottom: 16,
   },
   avatar: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#007AFF',
+    backgroundColor: '#3533cd',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
   },
   avatarText: {
     fontSize: 32,
     fontWeight: 'bold',
     color: '#fff',
+  },
+  cameraButton: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#3533cd',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#fff',
   },
   name: {
     fontSize: 24,
@@ -144,11 +435,37 @@ const styles = StyleSheet.create({
     padding: 24,
     backgroundColor: '#fff',
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: '#1a1a1a',
-    marginBottom: 16,
+  },
+  editButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  editButtonText: {
+    fontSize: 16,
+    color: '#3533cd',
+    fontWeight: '500',
+  },
+  nameInput: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1a1a1a',
+    marginBottom: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: '#3533cd',
+    paddingBottom: 4,
+    textAlign: 'center',
+    minWidth: 200,
   },
   infoRow: {
     flexDirection: 'row',
@@ -183,6 +500,98 @@ const styles = StyleSheet.create({
   },
   goalText: {
     fontSize: 14,
+    color: '#1a1a1a',
+  },
+  selectButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  selectButtonText: {
+    fontSize: 16,
+    color: '#1a1a1a',
+    fontWeight: '500',
+  },
+  ageInput: {
+    fontSize: 16,
+    color: '#1a1a1a',
+    fontWeight: '500',
+    borderBottomWidth: 1,
+    borderBottomColor: '#3533cd',
+    paddingVertical: 4,
+    minWidth: 60,
+    textAlign: 'right',
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 24,
+  },
+  actionButton: {
+    flex: 1,
+    padding: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: '#fff',
+    borderWidth: 2,
+    borderColor: '#666',
+  },
+  cancelButtonText: {
+    color: '#666',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  saveButton: {
+    backgroundColor: '#3533cd',
+  },
+  saveButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  buttonDisabled: {
+    opacity: 0.5,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    width: '100%',
+    maxWidth: 300,
+    overflow: 'hidden',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1a1a1a',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  modalOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  modalOptionText: {
+    fontSize: 16,
     color: '#1a1a1a',
   },
   signOutButton: {

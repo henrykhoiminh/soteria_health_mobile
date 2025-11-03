@@ -10,6 +10,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Image,
 } from 'react-native';
 
 export default function DashboardScreen() {
@@ -58,7 +59,7 @@ export default function DashboardScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color="#3533cd" />
       </View>
     );
   }
@@ -66,6 +67,18 @@ export default function DashboardScreen() {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
+        <View style={styles.avatar}>
+          {profile?.profile_picture_url ? (
+            <Image
+              source={{ uri: profile.profile_picture_url }}
+              style={styles.avatarImage}
+            />
+          ) : (
+            <Text style={styles.avatarText}>
+              {profile?.full_name?.charAt(0).toUpperCase() || 'U'}
+            </Text>
+          )}
+        </View>
         <Text style={styles.greeting}>
           Hello, {profile?.full_name || 'there'}!
         </Text>
@@ -183,7 +196,7 @@ function getCategoryColor(category: string): string {
     case 'Soul':
       return '#F59E0B';
     default:
-      return '#007AFF';
+      return '#3533cd';
   }
 }
 
@@ -202,6 +215,25 @@ const styles = StyleSheet.create({
     padding: 24,
     paddingTop: 100,
     backgroundColor: '#fff',
+  },
+  avatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#3533cd',
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+    marginBottom: 16,
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  avatarText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#fff',
   },
   greeting: {
     fontSize: 28,

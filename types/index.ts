@@ -10,7 +10,7 @@ export interface Profile {
   journey_focus: JourneyFocus | null
   injuries: string[]
   goals: string[]
-  time_availability: number | null
+  profile_picture_url: string | null
   created_at: string
   updated_at: string
 }
