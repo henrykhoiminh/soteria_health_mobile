@@ -104,3 +104,127 @@ export async function uploadProfilePicture(userId: string, imageUri: string): Pr
     throw error
   }
 }
+
+/**
+ * Calculate the number of days since the user started their journey
+ * @param journeyStartedAt - ISO timestamp when journey began
+ * @returns Number of days since journey start
+ */
+export function calculateJourneyDays(journeyStartedAt: string | null): number {
+  if (!journeyStartedAt) return 0
+
+  const startDate = new Date(journeyStartedAt)
+  const today = new Date()
+  const diffTime = Math.abs(today.getTime() - startDate.getTime())
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+
+  return diffDays
+}
+
+/**
+ * Update recovery-specific information for a user
+ * @param userId - User ID
+ * @param recoveryAreas - Array of body parts being recovered
+ * @param recoveryGoals - Array of predefined recovery goals
+ */
+export async function updateRecoveryInfo(
+  userId: string,
+  recoveryAreas: string[],
+  recoveryGoals: string[]
+) {
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({
+      recovery_areas: recoveryAreas,
+      recovery_goals: recoveryGoals,
+    })
+    .eq('id', userId)
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+/**
+ * Set or reset the journey start date for a user
+ * @param userId - User ID
+ * @param startDate - ISO timestamp (defaults to now)
+ */
+export async function setJourneyStartDate(userId: string, startDate?: string) {
+  const { data, error} = await supabase
+    .from('profiles')
+    .update({
+      journey_started_at: startDate || new Date().toISOString(),
+    })
+    .eq('id', userId)
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+/**
+ * HARD RESET: Completely resets all user data and sends them back through onboarding
+ * WARNING: This deletes ALL user progress, stats, and journey data
+ * @param userId - User ID
+ */
+export async function hardResetUserData(userId: string) {
+  try {
+    // 1. Delete all daily progress records
+    const { error: progressError } = await supabase
+      .from('daily_progress')
+      .delete()
+      .eq('user_id', userId)
+
+    if (progressError) throw progressError
+
+    // 2. Delete all routine completions
+    const { error: completionsError } = await supabase
+      .from('routine_completions')
+      .delete()
+      .eq('user_id', userId)
+
+    if (completionsError) throw completionsError
+
+    // 3. Delete user stats
+    const { error: statsError } = await supabase
+      .from('user_stats')
+      .delete()
+      .eq('user_id', userId)
+
+    if (statsError) throw statsError
+
+    // 4. Delete journey goals
+    const { error: goalsError } = await supabase
+      .from('journey_goals')
+      .delete()
+      .eq('user_id', userId)
+
+    if (goalsError) throw goalsError
+
+    // 5. Reset profile to initial state (keep name and email, clear everything else)
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .update({
+        journey_focus: null,
+        journey_started_at: null,
+        recovery_areas: [],
+        recovery_goals: [],
+        fitness_level: null,
+        goals: [],
+        injuries: [],
+        age: null,
+        // Keep full_name and profile_picture_url
+      })
+      .eq('id', userId)
+
+    if (profileError) throw profileError
+
+    return { success: true }
+  } catch (error) {
+    console.error('Error during hard reset:', error)
+    throw error
+  }
+}

@@ -11,23 +11,34 @@ This is the mobile companion app to the Soteria Health web application, built wi
 - **Supabase** - Backend, authentication, and storage
 - **React Native** - Cross-platform mobile development
 - **Expo Image Picker** - Profile picture upload
+- **React Native Picker** - Native dropdown selections
 
 ## Features
 
 ### Authentication & Onboarding
 - User sign up with email verification
 - Secure login with password visibility toggle
-- Multi-step onboarding flow
-  - Journey focus selection (Injury Prevention / Recovery)
+- Enhanced multi-step onboarding flow
+  - **Journey Focus Selection** - Detailed cards with icons and benefits
+    - Injury Prevention: Shield icon (blue #3B82F6) with prevention-focused features
+    - Recovery: Heart icon (red #EF4444) with recovery-focused features
+  - **Recovery Details** (Recovery users only) - Optional personalization
+    - Recovery area selection (Lower Back, Knee, Shoulder, Hip, Neck, Ankle, Wrist, Elbow, Other)
+    - Recovery goals and notes text area
   - Fitness level selection (Beginner / Intermediate / Advanced)
-  - Personal goals selection
+  - Personal goals selection (multi-select)
+- Journey start date automatically recorded
 
 ### Dashboard
 - Personalized greeting with profile picture
+- **Journey Tracking**
+  - Journey badge with icon (Shield for Prevention, Heart for Recovery)
+  - Day counter showing "Day X of [Journey Name]"
+  - Recovery area display for Recovery users
 - Today's progress tracking (Mind, Body, Soul)
 - Clickable progress cards that filter routines by category
 - User statistics (Current Streak, Health Score, Total Routines)
-- Balanced recommendations (one routine from each category)
+- Balanced recommendations (one routine from each category, filtered by journey focus)
 
 ### Routines
 - Browse all routines with search functionality
@@ -57,12 +68,31 @@ This is the mobile companion app to the Soteria Health web application, built wi
 ### Profile Management
 - View and edit profile information:
   - Full name
-  - Journey focus
+  - Journey focus (Injury Prevention / Recovery)
+  - Recovery details (for Recovery users)
   - Fitness level
   - Age
 - Upload and change profile picture
 - View personal goals and injuries/limitations
+- Journey progress tracking
 - Sign out functionality
+
+### Journey Focus System
+- **Two Journey Types:**
+  - **Injury Prevention** - For users focused on preventing injuries through proactive wellness
+  - **Recovery** - For users recovering from injuries or managing pain
+- **Journey Tracking:**
+  - Automatic start date recording when completing onboarding
+  - Day counter showing journey progression
+  - Visual journey badges throughout the app
+- **Recovery-Specific Features:**
+  - Optional recovery area selection (specific body part)
+  - Recovery goals and notes for personalization
+  - Recovery area displayed in journey badge and tracking
+- **Personalized Recommendations:**
+  - Routines filtered by journey focus and fitness level
+  - Balanced recommendations across Mind, Body, Soul categories
+  - Fallback to popular routines when no matches found
 
 ## Design System
 
@@ -141,6 +171,7 @@ soteria-health-mobile/
 │   └── images/
 │       └── soteria-logo.png     # App logo
 ├── components/                   # Reusable components
+│   ├── JourneyBadge.tsx         # Journey badge with icon and label
 │   └── themed-text.tsx          # Themed text component
 ├── constants/
 │   └── theme.ts                 # Theme constants and colors
@@ -150,7 +181,7 @@ soteria-health-mobile/
 │   ├── supabase/                # Supabase configuration
 │   │   └── client.ts           # Supabase client with AsyncStorage
 │   └── utils/                   # Utility functions
-│       ├── auth.ts             # Auth helpers & profile picture upload
+│       ├── auth.ts             # Auth, profile, journey tracking & upload
 │       ├── dashboard.ts        # Dashboard data & balanced routines
 │       └── routine-builder.ts  # Routine builder utilities & validation
 └── types/                        # TypeScript types
@@ -173,6 +204,7 @@ npm install
 - `base64-arraybuffer` - Base64 encoding for image uploads
 - `date-fns` - Date utilities
 - `@expo/vector-icons` - Icon library
+- `@react-native-picker/picker` - Native dropdown component for recovery area selection
 
 ### 2. Environment Variables
 
@@ -184,6 +216,50 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
 ### 3. Database Setup
+
+Run the provided SQL migration to set up all database tables and policies:
+
+```bash
+# Execute the migration file in your Supabase SQL Editor
+database_migration_journey_enhancements.sql
+```
+
+This migration includes:
+- Profile table updates for journey tracking
+- Journey goals table creation
+- Routines table journey_focus support
+- RLS policies for data security
+- Indexes for query performance
+
+#### Manual Database Setup (Alternative)
+
+If you prefer to set up tables manually, here are the key schemas:
+
+#### Profiles Table Updates
+```sql
+-- Journey tracking fields
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS journey_started_at timestamptz;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS recovery_area text;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS recovery_notes text;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS profile_picture_url TEXT;
+```
+
+#### Journey Goals Table
+```sql
+CREATE TABLE IF NOT EXISTS journey_goals (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  journey_focus text NOT NULL CHECK (journey_focus IN ('Injury Prevention', 'Recovery')),
+  target_description text NOT NULL,
+  target_date date,
+  is_active boolean DEFAULT true,
+  created_at timestamptz DEFAULT now(),
+  completed_at timestamptz
+);
+
+CREATE INDEX IF NOT EXISTS idx_journey_goals_user_id ON journey_goals(user_id);
+CREATE INDEX IF NOT EXISTS idx_journey_goals_is_active ON journey_goals(is_active);
+```
 
 #### Routines Table Schema
 The `routines` table should have the following structure to support both pre-built and custom routines:
@@ -204,14 +280,10 @@ The `routines` table should have the following structure to support both pre-bui
 -- benefits (text[])
 -- created_at (timestamp)
 
--- Ensure the routines table supports custom routines:
+-- Ensure the routines table supports custom routines and journey focus:
 ALTER TABLE routines ADD COLUMN IF NOT EXISTS is_custom BOOLEAN DEFAULT false;
 ALTER TABLE routines ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES auth.users(id);
-```
-
-#### Add Profile Picture Column
-```sql
-ALTER TABLE profiles ADD COLUMN IF NOT EXISTS profile_picture_url TEXT;
+ALTER TABLE routines ADD COLUMN IF NOT EXISTS journey_focus text[];
 ```
 
 #### Create Storage Bucket for Avatars
@@ -318,8 +390,19 @@ npm run web
 3. After login → Checks email verification
 4. If email not verified → Redirects to verify-email screen
 5. After verification → Checks profile completion
-6. If profile incomplete → Redirects to onboarding
+6. If profile incomplete → Redirects to onboarding (3-4 steps depending on journey type)
 7. If profile complete → Redirects to dashboard (tabs)
+
+### Journey Focus Onboarding Flow
+1. **Step 1:** Journey selection with detailed cards
+   - Injury Prevention card (blue) shows prevention benefits
+   - Recovery card (red) shows recovery benefits
+2. **Step 2 (Recovery only):** Recovery details
+   - Optional recovery area dropdown
+   - Optional recovery notes text area
+3. **Step 3:** Fitness level selection
+4. **Step 4:** Personal goals selection
+5. **Completion:** Journey start date automatically recorded
 
 ### Profile Picture Upload
 - Uses Expo Image Picker for image selection
@@ -331,10 +414,25 @@ npm run web
 
 ### Balanced Routine Recommendations
 - Algorithm fetches one routine from each category (Mind, Body, Soul)
-- Filters by user's journey focus and fitness level
+- **Intelligent Filtering:**
+  - Primary filter: User's journey focus (Injury Prevention / Recovery)
+  - Secondary filter: User's fitness level (Beginner / Intermediate / Advanced)
+  - Routines can have multiple journey focuses (e.g., ['Injury Prevention', 'Recovery'])
 - Orders by popularity (completion count)
 - Falls back to most popular if no matches found
-- Always returns exactly 3 routines
+- Always returns exactly 3 routines (one per category)
+
+### Journey Tracking System
+- **Day Counter:** Calculates days since `journey_started_at` timestamp
+- **Journey Badge Component:** Reusable component showing journey type with icon
+  - Props: `focus`, `size`, `showLabel`, `recoveryArea`
+  - Shield icon for Prevention (blue)
+  - Heart icon for Recovery (red)
+- **Recovery Area Display:** Shows specific body part for Recovery users
+- **Journey Functions:**
+  - `calculateJourneyDays()` - Calculates days from start date
+  - `setJourneyStartDate()` - Sets or resets journey start date
+  - `updateRecoveryInfo()` - Updates recovery-specific details
 
 ### Progress Tracking
 - Daily progress stored per user per date
@@ -394,19 +492,33 @@ npx expo start --ios
 - Verify image URL in database
 - Check storage bucket is public
 
+## Recent Updates
+
+### Journey Focus Enhancement (Latest)
+- ✅ Enhanced journey selection with detailed cards and icons
+- ✅ Recovery-specific details collection (area and notes)
+- ✅ Journey start date tracking
+- ✅ Day counter on dashboard
+- ✅ Journey badge component throughout app
+- ✅ Recovery area display for Recovery users
+- ✅ Journey goals table for future goal tracking
+- ✅ Updated recommendation algorithm with journey filtering
+- ✅ Dynamic onboarding steps (3 for Prevention, 4 for Recovery)
+
 ## Future Enhancements
 
 ### Features to Add
-1. Push notifications for daily reminders
-2. Offline support with local caching
-3. Progress animations and celebrations
-4. Social features (share routines, community)
-5. Custom routine creation
-6. Routine scheduling and calendar view
-7. Exercise video demonstrations
-8. Achievement badges and milestones
-9. Dark mode support
-10. Accessibility improvements
+1. Journey goals management (using journey_goals table)
+2. Recovery progress tracking and milestones
+3. Push notifications for daily reminders
+4. Offline support with local caching
+5. Progress animations and celebrations
+6. Social features (share routines, community)
+7. Routine scheduling and calendar view
+8. Exercise video demonstrations
+9. Achievement badges and milestones
+10. Dark mode support
+11. Accessibility improvements
 
 ### Technical Improvements
 1. Add unit and integration tests

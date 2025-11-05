@@ -1,5 +1,5 @@
 import { useAuth } from '@/lib/contexts/AuthContext';
-import { updateUserProfile, uploadProfilePicture } from '@/lib/utils/auth';
+import { updateUserProfile, uploadProfilePicture, hardResetUserData } from '@/lib/utils/auth';
 import { FitnessLevel, JourneyFocus } from '@/types';
 import { useState } from 'react';
 import {
@@ -16,12 +16,14 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { useRouter } from 'expo-router';
 
 const JOURNEY_FOCUSES: JourneyFocus[] = ['Injury Prevention', 'Recovery'];
 const FITNESS_LEVELS: FitnessLevel[] = ['Beginner', 'Intermediate', 'Advanced'];
 
 export default function ProfileScreen() {
   const { user, profile, refreshProfile, signOut } = useAuth();
+  const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [editedFullName, setEditedFullName] = useState('');
   const [editedJourneyFocus, setEditedJourneyFocus] = useState<JourneyFocus | null>(null);
@@ -31,6 +33,7 @@ export default function ProfileScreen() {
   const [showFitnessLevelModal, setShowFitnessLevelModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [resetting, setResetting] = useState(false);
 
   const handlePickImage = async () => {
     try {
@@ -130,6 +133,38 @@ export default function ProfileScreen() {
               await signOut();
             } catch (error: any) {
               Alert.alert('Error', error.message || 'Failed to sign out');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleResetJourney = async () => {
+    Alert.alert(
+      'Reset Journey - Warning',
+      'This will permanently delete ALL your data including:\n\n• Journey progress and stats\n• Routine completions and history\n• Daily progress tracking\n• Recovery goals and areas\n\nYou will be sent back through onboarding to start fresh.\n\nThis action CANNOT be undone!',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset Everything',
+          style: 'destructive',
+          onPress: async () => {
+            if (!user) return;
+
+            try {
+              setResetting(true);
+              await hardResetUserData(user.id);
+              await refreshProfile();
+
+              // Redirect to onboarding
+              router.replace('/(auth)/onboarding');
+
+              Alert.alert('Success', 'Your journey has been reset. Welcome back!');
+            } catch (error: any) {
+              Alert.alert('Error', error.message || 'Failed to reset journey');
+            } finally {
+              setResetting(false);
             }
           },
         },
@@ -302,6 +337,24 @@ export default function ProfileScreen() {
       <View style={styles.section}>
         <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
           <Text style={styles.signOutText}>Sign Out</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Reset Journey Section */}
+      <View style={styles.section}>
+        <Text style={styles.dangerZoneTitle}>Danger Zone</Text>
+        <Text style={styles.dangerZoneSubtitle}>
+          Resetting your journey will permanently delete all your progress and data
+        </Text>
+        <TouchableOpacity
+          style={[styles.resetButton, resetting && styles.buttonDisabled]}
+          onPress={handleResetJourney}
+          disabled={resetting}
+        >
+          <Ionicons name="refresh" size={20} color="#FF3B30" />
+          <Text style={styles.resetButtonText}>
+            {resetting ? 'Resetting...' : 'Reset Journey'}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -602,6 +655,34 @@ const styles = StyleSheet.create({
   },
   signOutText: {
     color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  dangerZoneTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FF3B30',
+    marginBottom: 8,
+  },
+  dangerZoneSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  resetButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderWidth: 2,
+    borderColor: '#FF3B30',
+    borderRadius: 8,
+    padding: 16,
+    backgroundColor: '#fff',
+  },
+  resetButtonText: {
+    color: '#FF3B30',
     fontSize: 16,
     fontWeight: '600',
   },

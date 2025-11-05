@@ -1,7 +1,14 @@
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { supabase } from '@/lib/supabase/client';
 import { updateUserProfile } from '@/lib/utils/auth';
-import { FitnessLevel, JourneyFocus } from '@/types';
+import {
+  FitnessLevel,
+  JourneyFocus,
+  UPPER_BODY_AREAS,
+  LOWER_BODY_AREAS,
+  RECOVERY_GOALS,
+  BodyRegion,
+} from '@/types';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
@@ -12,6 +19,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 const JOURNEY_GOALS: JourneyFocus[] = ['Injury Prevention', 'Recovery'];
 
@@ -29,6 +37,9 @@ const GOALS = [
 export default function OnboardingScreen() {
   const [step, setStep] = useState(1);
   const [journeyFocus, setJourneyFocus] = useState<JourneyFocus | null>(null);
+  const [recoveryAreas, setRecoveryAreas] = useState<string[]>([]);
+  const [bodyRegionFilter, setBodyRegionFilter] = useState<BodyRegion>('All');
+  const [recoveryGoals, setRecoveryGoals] = useState<string[]>([]);
   const [fitnessLevel, setFitnessLevel] = useState<FitnessLevel | null>(null);
   const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -76,12 +87,59 @@ export default function OnboardingScreen() {
     );
   };
 
+  const toggleRecoveryArea = (area: string) => {
+    setRecoveryAreas((prev) =>
+      prev.includes(area)
+        ? prev.filter((a) => a !== area)
+        : [...prev, area]
+    );
+  };
+
+  const toggleRecoveryGoal = (goal: string) => {
+    setRecoveryGoals((prev) =>
+      prev.includes(goal)
+        ? prev.filter((g) => g !== goal)
+        : [...prev, goal]
+    );
+  };
+
+  // Get filtered recovery areas based on body region
+  const getFilteredRecoveryAreas = () => {
+    if (bodyRegionFilter === 'Upper Body') {
+      return UPPER_BODY_AREAS;
+    } else if (bodyRegionFilter === 'Lower Body') {
+      return LOWER_BODY_AREAS;
+    }
+    return [...UPPER_BODY_AREAS, ...LOWER_BODY_AREAS];
+  };
+
   const handleNextStep = () => {
     if (step === 1 && !journeyFocus) {
       Alert.alert('Error', 'Please select your journey focus');
       return;
     }
-    if (step === 2 && !fitnessLevel) {
+    // If Recovery was selected, show recovery area selection
+    if (step === 1 && journeyFocus === 'Recovery') {
+      setStep(2); // Go to recovery areas
+      return;
+    }
+    // If Injury Prevention, skip recovery steps
+    if (step === 1 && journeyFocus === 'Injury Prevention') {
+      setStep(4); // Skip to fitness level
+      return;
+    }
+    // Step 2: Recovery areas (optional)
+    if (step === 2) {
+      setStep(3); // Go to recovery goals
+      return;
+    }
+    // Step 3: Recovery goals (optional)
+    if (step === 3) {
+      setStep(4); // Go to fitness level
+      return;
+    }
+    // Step 4: Fitness level (required)
+    if (step === 4 && !fitnessLevel) {
       Alert.alert('Error', 'Please select your fitness level');
       return;
     }
@@ -89,7 +147,18 @@ export default function OnboardingScreen() {
   };
 
   const handlePreviousStep = () => {
-    setStep(step - 1);
+    // Handle back navigation considering the conditional recovery steps
+    if (step === 4 && journeyFocus === 'Injury Prevention') {
+      setStep(1); // Go back to journey selection
+    } else if (step === 4 && journeyFocus === 'Recovery') {
+      setStep(3); // Go back to recovery goals
+    } else if (step === 3) {
+      setStep(2); // Go back to recovery areas
+    } else if (step === 2) {
+      setStep(1); // Go back to journey selection
+    } else {
+      setStep(step - 1);
+    }
   };
 
   const handleComplete = async () => {
@@ -122,12 +191,21 @@ export default function OnboardingScreen() {
       // Get full name from user metadata
       const fullName = currentUser.user_metadata?.full_name || '';
 
-      await updateUserProfile(currentUser.id, {
+      const profileUpdates: any = {
         full_name: fullName,
         journey_focus: journeyFocus,
         fitness_level: fitnessLevel,
         goals: selectedGoals,
-      });
+        journey_started_at: new Date().toISOString(), // Set journey start date
+      };
+
+      // Add recovery-specific fields if journey is Recovery
+      if (journeyFocus === 'Recovery') {
+        profileUpdates.recovery_areas = recoveryAreas;
+        profileUpdates.recovery_goals = recoveryGoals;
+      }
+
+      await updateUserProfile(currentUser.id, profileUpdates);
       await refreshProfile();
       router.replace('/(tabs)');
     } catch (error: any) {
@@ -137,11 +215,26 @@ export default function OnboardingScreen() {
     }
   };
 
+  // Calculate total steps dynamically
+  const getTotalSteps = () => {
+    return journeyFocus === 'Recovery' ? 5 : 3;
+  };
+
+  // Get current step display
+  const getCurrentStepDisplay = () => {
+    if (step === 1) return 1;
+    if (step === 2) return 2; // Recovery areas
+    if (step === 3) return 3; // Recovery goals
+    if (step === 4) return journeyFocus === 'Recovery' ? 4 : 2; // Fitness
+    if (step === 5) return journeyFocus === 'Recovery' ? 5 : 3; // Goals
+    return step;
+  };
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Complete Your Profile</Text>
       <Text style={styles.subtitle}>
-        Step {step} of 3
+        Step {getCurrentStepDisplay()} of {getTotalSteps()}
       </Text>
 
       {step === 1 && (
@@ -151,41 +244,209 @@ export default function OnboardingScreen() {
             Choose your primary wellness goal
           </Text>
           <View style={styles.largeOptionsContainer}>
-            {JOURNEY_GOALS.map((focus) => (
-              <TouchableOpacity
-                key={focus}
-                style={[
-                  styles.largeOption,
-                  journeyFocus === focus && styles.optionSelected,
-                ]}
-                onPress={() => setJourneyFocus(focus)}
-                disabled={loading}
-              >
+            {/* Injury Prevention Card */}
+            <TouchableOpacity
+              style={[
+                styles.largeOption,
+                styles.detailedCard,
+                journeyFocus === 'Injury Prevention' && styles.optionSelectedBlue,
+              ]}
+              onPress={() => setJourneyFocus('Injury Prevention')}
+              disabled={loading}
+            >
+              <View style={styles.cardHeader}>
+                <Ionicons
+                  name="shield-checkmark"
+                  size={32}
+                  color={journeyFocus === 'Injury Prevention' ? '#fff' : '#3B82F6'}
+                />
                 <Text
                   style={[
                     styles.largeOptionText,
-                    journeyFocus === focus && styles.optionTextSelected,
+                    journeyFocus === 'Injury Prevention' && styles.optionTextSelected,
                   ]}
                 >
-                  {focus}
+                  Injury Prevention
                 </Text>
+              </View>
+              <Text
+                style={[
+                  styles.cardSubtitle,
+                  journeyFocus === 'Injury Prevention' && styles.optionDescriptionSelected,
+                ]}
+              >
+                I'm healthy and want to prevent injuries
+              </Text>
+              <View style={styles.bulletPoints}>
+                <BulletPoint
+                  text="Injury prevention routines"
+                  selected={journeyFocus === 'Injury Prevention'}
+                />
+                <BulletPoint
+                  text="Mobility and strength building"
+                  selected={journeyFocus === 'Injury Prevention'}
+                />
+                <BulletPoint
+                  text="Long-term wellness habits"
+                  selected={journeyFocus === 'Injury Prevention'}
+                />
+              </View>
+            </TouchableOpacity>
+
+            {/* Recovery Card */}
+            <TouchableOpacity
+              style={[
+                styles.largeOption,
+                styles.detailedCard,
+                journeyFocus === 'Recovery' && styles.optionSelectedRed,
+              ]}
+              onPress={() => setJourneyFocus('Recovery')}
+              disabled={loading}
+            >
+              <View style={styles.cardHeader}>
+                <Ionicons
+                  name="heart"
+                  size={32}
+                  color={journeyFocus === 'Recovery' ? '#fff' : '#EF4444'}
+                />
                 <Text
                   style={[
-                    styles.optionDescription,
-                    journeyFocus === focus && styles.optionDescriptionSelected,
+                    styles.largeOptionText,
+                    journeyFocus === 'Recovery' && styles.optionTextSelected,
                   ]}
                 >
-                  {focus === 'Injury Prevention'
-                    ? 'Build strength and mobility to prevent injuries'
-                    : 'Recover and rehabilitate from existing injuries'}
+                  Recovery
                 </Text>
-              </TouchableOpacity>
-            ))}
+              </View>
+              <Text
+                style={[
+                  styles.cardSubtitle,
+                  journeyFocus === 'Recovery' && styles.optionDescriptionSelected,
+                ]}
+              >
+                I'm recovering from an injury or managing pain
+              </Text>
+              <View style={styles.bulletPoints}>
+                <BulletPoint
+                  text="Targeted recovery routines"
+                  selected={journeyFocus === 'Recovery'}
+                />
+                <BulletPoint
+                  text="Pain management exercises"
+                  selected={journeyFocus === 'Recovery'}
+                />
+                <BulletPoint
+                  text="Progress tracking for healing"
+                  selected={journeyFocus === 'Recovery'}
+                />
+              </View>
+            </TouchableOpacity>
           </View>
         </View>
       )}
 
-      {step === 2 && (
+      {step === 2 && journeyFocus === 'Recovery' && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Recovery Areas</Text>
+          <Text style={styles.sectionSubtitle}>
+            Select the body parts you're recovering from (optional)
+          </Text>
+
+          {/* Body Region Filters */}
+          <View style={styles.filterContainer}>
+            {(['All', 'Upper Body', 'Lower Body'] as BodyRegion[]).map((region) => (
+              <TouchableOpacity
+                key={region}
+                style={[
+                  styles.filterButton,
+                  bodyRegionFilter === region && styles.filterButtonActive,
+                ]}
+                onPress={() => setBodyRegionFilter(region)}
+              >
+                <Text
+                  style={[
+                    styles.filterButtonText,
+                    bodyRegionFilter === region && styles.filterButtonTextActive,
+                  ]}
+                >
+                  {region}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Recovery Area Selection */}
+          <View style={styles.optionsGrid}>
+            {getFilteredRecoveryAreas().map((area) => (
+              <TouchableOpacity
+                key={area}
+                style={[
+                  styles.option,
+                  recoveryAreas.includes(area) && styles.optionSelected,
+                ]}
+                onPress={() => toggleRecoveryArea(area)}
+                disabled={loading}
+              >
+                <Text
+                  style={[
+                    styles.optionText,
+                    recoveryAreas.includes(area) && styles.optionTextSelected,
+                  ]}
+                >
+                  {area}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {recoveryAreas.length > 0 && (
+            <Text style={styles.selectionCount}>
+              {recoveryAreas.length} area{recoveryAreas.length !== 1 ? 's' : ''} selected
+            </Text>
+          )}
+        </View>
+      )}
+
+      {step === 3 && journeyFocus === 'Recovery' && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Recovery Goals</Text>
+          <Text style={styles.sectionSubtitle}>
+            What are you hoping to achieve? (optional)
+          </Text>
+
+          <View style={styles.optionsGrid}>
+            {RECOVERY_GOALS.map((goal) => (
+              <TouchableOpacity
+                key={goal}
+                style={[
+                  styles.option,
+                  styles.goalOption,
+                  recoveryGoals.includes(goal) && styles.optionSelected,
+                ]}
+                onPress={() => toggleRecoveryGoal(goal)}
+                disabled={loading}
+              >
+                <Text
+                  style={[
+                    styles.optionText,
+                    recoveryGoals.includes(goal) && styles.optionTextSelected,
+                  ]}
+                >
+                  {goal}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {recoveryGoals.length > 0 && (
+            <Text style={styles.selectionCount}>
+              {recoveryGoals.length} goal{recoveryGoals.length !== 1 ? 's' : ''} selected
+            </Text>
+          )}
+        </View>
+      )}
+
+      {step === 4 && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>What's your fitness level?</Text>
           <View style={styles.optionsGrid}>
@@ -213,7 +474,7 @@ export default function OnboardingScreen() {
         </View>
       )}
 
-      {step === 3 && (
+      {step === 5 && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>What are your goals?</Text>
           <Text style={styles.sectionSubtitle}>Select all that apply</Text>
@@ -255,7 +516,7 @@ export default function OnboardingScreen() {
           </TouchableOpacity>
         )}
 
-        {step < 3 ? (
+        {step < getTotalSteps() ? (
           <TouchableOpacity
             style={[styles.button, step > 1 && styles.buttonFlex]}
             onPress={handleNextStep}
@@ -276,6 +537,18 @@ export default function OnboardingScreen() {
         )}
       </View>
     </ScrollView>
+  );
+}
+
+// Helper component for bullet points
+function BulletPoint({ text, selected }: { text: string; selected: boolean }) {
+  return (
+    <View style={styles.bulletPoint}>
+      <Text style={[styles.bulletDot, selected && styles.bulletDotSelected]}>•</Text>
+      <Text style={[styles.bulletText, selected && styles.bulletTextSelected]}>
+        {text}
+      </Text>
+    </View>
   );
 }
 
@@ -341,6 +614,91 @@ const styles = StyleSheet.create({
   optionSelected: {
     borderColor: '#3533cd',
     backgroundColor: '#3533cd',
+  },
+  optionSelectedBlue: {
+    borderColor: '#3B82F6',
+    backgroundColor: '#3B82F6',
+  },
+  optionSelectedRed: {
+    borderColor: '#EF4444',
+    backgroundColor: '#EF4444',
+  },
+  detailedCard: {
+    paddingVertical: 20,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 12,
+  },
+  cardSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  bulletPoints: {
+    gap: 8,
+  },
+  bulletPoint: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  bulletDot: {
+    fontSize: 16,
+    color: '#666',
+    lineHeight: 20,
+  },
+  bulletDotSelected: {
+    color: '#fff',
+  },
+  bulletText: {
+    fontSize: 14,
+    color: '#666',
+    flex: 1,
+    lineHeight: 20,
+  },
+  bulletTextSelected: {
+    color: '#fff',
+  },
+  filterContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 20,
+  },
+  filterButton: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#ddd',
+    backgroundColor: '#fff',
+    alignItems: 'center',
+  },
+  filterButtonActive: {
+    borderColor: '#3533cd',
+    backgroundColor: '#3533cd',
+  },
+  filterButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+  },
+  filterButtonTextActive: {
+    color: '#fff',
+  },
+  goalOption: {
+    minWidth: '100%', // Make recovery goals full width for better readability
+  },
+  selectionCount: {
+    fontSize: 14,
+    color: '#3533cd',
+    fontWeight: '600',
+    marginTop: 16,
+    textAlign: 'center',
   },
   optionText: {
     fontSize: 14,

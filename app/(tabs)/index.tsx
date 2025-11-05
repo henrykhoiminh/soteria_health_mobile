@@ -1,5 +1,6 @@
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { getBalancedRoutines, getTodayProgress, getUserStats } from '@/lib/utils/dashboard';
+import { calculateJourneyDays } from '@/lib/utils/auth';
 import { DailyProgress, Routine, UserStats } from '@/types';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
@@ -12,6 +13,7 @@ import {
   View,
   Image,
 } from 'react-native';
+import JourneyBadge from '@/components/JourneyBadge';
 
 export default function DashboardScreen() {
   const { user, profile } = useAuth();
@@ -20,6 +22,7 @@ export default function DashboardScreen() {
   const [todayProgress, setTodayProgress] = useState<DailyProgress | null>(null);
   const [stats, setStats] = useState<UserStats | null>(null);
   const [recommendedRoutines, setRecommendedRoutines] = useState<Routine[]>([]);
+  const [showJourneyDetails, setShowJourneyDetails] = useState(false);
 
   useEffect(() => {
     loadDashboardData();
@@ -64,25 +67,68 @@ export default function DashboardScreen() {
     );
   }
 
+  // Calculate journey days
+  const journeyDays = profile?.journey_started_at
+    ? calculateJourneyDays(profile.journey_started_at)
+    : 0;
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <View style={styles.avatar}>
-          {profile?.profile_picture_url ? (
-            <Image
-              source={{ uri: profile.profile_picture_url }}
-              style={styles.avatarImage}
-            />
-          ) : (
-            <Text style={styles.avatarText}>
-              {profile?.full_name?.charAt(0).toUpperCase() || 'U'}
-            </Text>
+        {/* Avatar and Journey Badge Row */}
+        <View style={styles.avatarRow}>
+          <View style={styles.avatar}>
+            {profile?.profile_picture_url ? (
+              <Image
+                source={{ uri: profile.profile_picture_url }}
+                style={styles.avatarImage}
+              />
+            ) : (
+              <Text style={styles.avatarText}>
+                {profile?.full_name?.charAt(0).toUpperCase() || 'U'}
+              </Text>
+            )}
+          </View>
+
+          {/* Journey Badge next to avatar */}
+          {profile?.journey_focus && (
+            <TouchableOpacity
+              onPress={() => setShowJourneyDetails(!showJourneyDetails)}
+              activeOpacity={0.7}
+            >
+              <JourneyBadge
+                focus={profile.journey_focus}
+                size="sm"
+                showLabel={false}
+                recoveryAreas={profile.recovery_areas || []}
+              />
+            </TouchableOpacity>
           )}
         </View>
+
         <Text style={styles.greeting}>
           Hello, {profile?.full_name || 'there'}!
         </Text>
         <Text style={styles.subtitle}>Check out your personalized routines below.</Text>
+
+        {/* Journey Day Counter - Shows only when badge is clicked */}
+        {profile?.journey_focus && showJourneyDetails && profile.journey_started_at && (
+          <View style={styles.journeyDetailsCard}>
+            <Text style={styles.journeyDetailsText}>
+              Day {journeyDays} of {profile.journey_focus}
+            </Text>
+            {profile.recovery_areas && profile.recovery_areas.length > 0 && profile.journey_focus === 'Recovery' && (
+              <Text style={styles.journeyDetailsSubtext}>
+                Recovering: {profile.recovery_areas.join(', ')}
+              </Text>
+            )}
+            {profile.recovery_goals && profile.recovery_goals.length > 0 && profile.journey_focus === 'Recovery' && (
+              <Text style={styles.journeyDetailsSubtext}>
+                Goals: {profile.recovery_goals.join(', ')}
+              </Text>
+            )}
+          </View>
+        )}
       </View>
 
       {/* Today's Progress */}
@@ -216,6 +262,12 @@ const styles = StyleSheet.create({
     paddingTop: 100,
     backgroundColor: '#fff',
   },
+  avatarRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 16,
+  },
   avatar: {
     width: 56,
     height: 56,
@@ -224,7 +276,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
-    marginBottom: 16,
   },
   avatarImage: {
     width: '100%',
@@ -244,6 +295,26 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
     marginTop: 4,
+  },
+  journeyDetailsCard: {
+    marginTop: 16,
+    padding: 12,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  journeyDetailsText: {
+    fontSize: 14,
+    color: '#1a1a1a',
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  journeyDetailsSubtext: {
+    fontSize: 13,
+    color: '#666',
+    marginTop: 4,
+    lineHeight: 18,
   },
   section: {
     marginTop: 16,

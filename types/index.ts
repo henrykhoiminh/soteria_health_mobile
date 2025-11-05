@@ -9,6 +9,9 @@ export interface Profile {
   age: number | null
   fitness_level: FitnessLevel | null
   journey_focus: JourneyFocus | null
+  journey_started_at: string | null // Timestamp when user began their journey
+  recovery_areas: string[] // Array of body parts user is recovering from
+  recovery_goals: string[] // Array of predefined recovery goals
   injuries: string[]
   goals: string[]
   profile_picture_url: string | null
@@ -98,3 +101,52 @@ export interface RoutineBuilderData {
   journeyFocus: JourneyFocusOption
   exercises: RoutineBuilderExercise[]
 }
+
+// Journey Goals Types
+export interface JourneyGoal {
+  id: string
+  user_id: string
+  journey_focus: JourneyFocus
+  target_description: string
+  target_date: string | null
+  is_active: boolean
+  created_at: string
+  completed_at: string | null
+}
+
+// Recovery area options organized by body region
+export const UPPER_BODY_AREAS = [
+  'Neck',
+  'Shoulder',
+  'Upper Back',
+  'Elbow',
+  'Wrist',
+  'Hand',
+] as const
+
+export const LOWER_BODY_AREAS = [
+  'Lower Back',
+  'Hip',
+  'Knee',
+  'Ankle',
+  'Foot',
+] as const
+
+export const ALL_RECOVERY_AREAS = [...UPPER_BODY_AREAS, ...LOWER_BODY_AREAS] as const
+
+export type RecoveryArea = typeof ALL_RECOVERY_AREAS[number]
+export type BodyRegion = 'Upper Body' | 'Lower Body' | 'All'
+
+// Predefined recovery goals
+export const RECOVERY_GOALS = [
+  'Reduce pain and discomfort',
+  'Improve range of motion',
+  'Increase strength',
+  'Return to daily activities',
+  'Return to sports/exercise',
+  'Prevent re-injury',
+  'Improve posture',
+  'Reduce inflammation',
+] as const
+
+export type RecoveryGoal = typeof RECOVERY_GOALS[number]
