@@ -183,3 +183,145 @@ export async function getUserCustomRoutines(userId: string): Promise<Routine[]> 
   if (error) throw error
   return data || []
 }
+
+// Search routines by name and description (for manual text input)
+export async function searchRoutinesByName(
+  searchQuery: string,
+  category?: RoutineCategory | 'All',
+  isCustom?: boolean,
+  userId?: string
+): Promise<Routine[]> {
+  // Start building the query
+  let query = supabase
+    .from('routines')
+    .select('*')
+
+  // Filter by custom status if specified
+  if (isCustom && userId) {
+    query = query.eq('is_custom', true).eq('created_by', userId)
+  } else if (isCustom === false) {
+    query = query.eq('is_custom', false)
+  }
+
+  // Filter by category if not 'All'
+  if (category && category !== 'All') {
+    query = query.eq('category', category)
+  }
+
+  // Search only name and description
+  if (searchQuery.trim()) {
+    const searchTerm = searchQuery.trim()
+    query = query.or(
+      `name.ilike.%${searchTerm}%,` +
+      `description.ilike.%${searchTerm}%`
+    )
+  }
+
+  // Order by completion count (popularity)
+  query = query.order('completion_count', { ascending: false })
+
+  const { data, error } = await query
+
+  if (error) throw error
+
+  // Client-side relevance ranking
+  if (searchQuery.trim() && data) {
+    const searchTermLower = searchQuery.trim().toLowerCase()
+
+    const scoredResults = data.map(routine => {
+      let score = 0
+
+      // Exact name match gets highest score
+      if (routine.name.toLowerCase() === searchTermLower) score += 100
+      else if (routine.name.toLowerCase().includes(searchTermLower)) score += 50
+
+      // Description match
+      if (routine.description?.toLowerCase().includes(searchTermLower)) score += 20
+
+      return { routine, score }
+    })
+
+    // Sort by score (descending)
+    return scoredResults
+      .filter(item => item.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .map(item => item.routine)
+  }
+
+  return data || []
+}
+
+// Search routines by tags, body_parts, symptoms, keywords (for Quick Search)
+export async function searchRoutinesByTags(
+  searchQuery: string,
+  category?: RoutineCategory | 'All',
+  isCustom?: boolean,
+  userId?: string
+): Promise<Routine[]> {
+  // Start building the query
+  let query = supabase
+    .from('routines')
+    .select('*')
+
+  // Filter by custom status if specified
+  if (isCustom && userId) {
+    query = query.eq('is_custom', true).eq('created_by', userId)
+  } else if (isCustom === false) {
+    query = query.eq('is_custom', false)
+  }
+
+  // Filter by category if not 'All'
+  if (category && category !== 'All') {
+    query = query.eq('category', category)
+  }
+
+  // Order by completion count first (we'll do client-side filtering)
+  query = query.order('completion_count', { ascending: false })
+
+  const { data, error } = await query
+
+  if (error) throw error
+
+  // Client-side filtering and relevance ranking for tag-based search
+  if (searchQuery.trim() && data) {
+    const searchTermLower = searchQuery.trim().toLowerCase()
+
+    // Score each routine based on tag field matches
+    const scoredResults = data.map(routine => {
+      let score = 0
+
+      // Helper function to check array matches
+      const checkArrayMatch = (arr?: string[], weight: number = 1) => {
+        if (!arr || arr.length === 0) return 0
+
+        let matchScore = 0
+        arr.forEach(item => {
+          const itemLower = item.toLowerCase()
+          // Exact match
+          if (itemLower === searchTermLower) {
+            matchScore += weight * 2
+          }
+          // Partial match
+          else if (itemLower.includes(searchTermLower) || searchTermLower.includes(itemLower)) {
+            matchScore += weight
+          }
+        })
+        return matchScore
+      }
+
+      // Weight different fields differently
+      score += checkArrayMatch(routine.body_parts, 50)  // Body parts are most important
+      score += checkArrayMatch(routine.tags, 30)        // Tags are important
+
+      return { routine, score }
+    })
+
+    // Sort by score (descending) and return routines with matches
+    return scoredResults
+      .filter(item => item.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .map(item => item.routine)
+  }
+
+  return data || []
+}

@@ -79,6 +79,9 @@ export async function publishCustomRoutine(
       completion_count: 0,
       benefits: [], // Can be expanded later
       created_at: new Date().toISOString(),
+      // Optional tag fields for AI functionality
+      tags: routineData.tags || [],
+      body_parts: routineData.body_parts || [],
     })
     .select('id')
     .single()
@@ -141,6 +144,9 @@ export async function updateCustomRoutine(
       journey_focus: journeyFocusArray,
       duration_minutes: durationMinutes,
       exercises: exercises,
+      // Optional tag fields for AI functionality
+      tags: routineData.tags || [],
+      body_parts: routineData.body_parts || [],
     })
     .eq('id', routineId)
     .eq('created_by', userId)

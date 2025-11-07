@@ -8,10 +8,11 @@ import {
   ActivityIndicator,
   Modal,
   TextInput,
+  FlatList,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { getRecommendedRoutines, getUserCustomRoutines } from '@/lib/utils/dashboard';
+import { getRecommendedRoutines, getUserCustomRoutines, searchRoutinesByName } from '@/lib/utils/dashboard';
 import { Routine, RoutineCategory } from '@/types';
 import { useAuth } from '@/lib/contexts/AuthContext';
 
@@ -32,7 +33,7 @@ export default function RoutinesScreen() {
 
   useEffect(() => {
     loadRoutines();
-  }, [selectedFilter]);
+  }, [selectedFilter, searchQuery, selectedCategory]);
 
   useEffect(() => {
     // Apply category filter from navigation params
@@ -46,7 +47,16 @@ export default function RoutinesScreen() {
       setLoading(true);
       let data: Routine[];
 
-      if (selectedFilter === 'custom' && user) {
+      // Search by name and description if there's a search query
+      if (searchQuery.trim()) {
+        const isCustom = selectedFilter === 'custom' ? true : undefined;
+        data = await searchRoutinesByName(
+          searchQuery,
+          selectedCategory,
+          isCustom,
+          user?.id
+        );
+      } else if (selectedFilter === 'custom' && user) {
         data = await getUserCustomRoutines(user.id);
       } else {
         data = await getRecommendedRoutines(50);
@@ -61,15 +71,15 @@ export default function RoutinesScreen() {
   };
 
   const filteredRoutines = routines.filter(routine => {
-    // Filter by category
-    const categoryMatch = selectedCategory === 'All' || routine.category === selectedCategory;
+    // When using search, routines are already filtered by the search function
+    if (searchQuery.trim()) {
+      return true;
+    }
 
-    // Filter by search query (case-insensitive)
-    const searchMatch = searchQuery.trim() === '' ||
-      routine.name.toLowerCase().includes(searchQuery.toLowerCase().trim());
-
-    return categoryMatch && searchMatch;
+    // Filter by category only when not searching
+    return selectedCategory === 'All' || routine.category === selectedCategory;
   });
+
 
   if (loading) {
     return (

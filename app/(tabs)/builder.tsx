@@ -14,6 +14,9 @@ import {
   RoutineBuilderExercise,
   RoutineCategory,
   RoutineDifficulty,
+  UPPER_BODY_AREAS,
+  LOWER_BODY_AREAS,
+  BodyRegion,
 } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -53,6 +56,8 @@ export default function RoutineBuilderScreen() {
     difficulty: 'Beginner',
     journeyFocus: 'Injury Prevention',
     exercises: [],
+    tags: [],
+    body_parts: [],
   });
 
   useEffect(() => {
@@ -110,6 +115,8 @@ export default function RoutineBuilderScreen() {
         difficulty: routine.difficulty,
         journeyFocus,
         exercises,
+        tags: routine.tags || [],
+        body_parts: routine.body_parts || [],
       });
 
       setIsEditMode(true);
@@ -140,6 +147,8 @@ export default function RoutineBuilderScreen() {
               difficulty: 'Beginner',
               journeyFocus: 'Injury Prevention',
               exercises: [],
+              tags: [],
+              body_parts: [],
             });
             setCurrentStep('journey');
           },
@@ -199,6 +208,8 @@ export default function RoutineBuilderScreen() {
                   difficulty: 'Beginner',
                   journeyFocus: 'Injury Prevention',
                   exercises: [],
+                  tags: [],
+                  body_parts: [],
                 });
                 setCurrentStep('journey');
               },
@@ -575,7 +586,56 @@ function MetadataStep({
   onNext: () => void;
   onBack: () => void;
 }) {
+  const [showAdvancedTags, setShowAdvancedTags] = useState(false);
+  const [bodyRegionFilter, setBodyRegionFilter] = useState<BodyRegion>('All');
+  const [bodyRegionModalVisible, setBodyRegionModalVisible] = useState(false);
+  const [bodyPartsModalVisible, setBodyPartsModalVisible] = useState(false);
+  const [currentTagInput, setCurrentTagInput] = useState('');
   const canProceed = data.name.trim().length > 0 && data.description.trim().length > 0;
+
+  const MAX_TAGS = 5;
+
+  const handleAddTag = () => {
+    const trimmedTag = currentTagInput.trim();
+
+    // Validation
+    if (!trimmedTag) return;
+    if (data.tags && data.tags.length >= MAX_TAGS) {
+      Alert.alert('Maximum Tags Reached', `You can only add up to ${MAX_TAGS} tags per routine.`);
+      return;
+    }
+    if (data.tags && data.tags.includes(trimmedTag)) {
+      Alert.alert('Duplicate Tag', 'This tag has already been added.');
+      return;
+    }
+
+    // Add tag
+    const currentTags = data.tags || [];
+    onUpdate({ tags: [...currentTags, trimmedTag] });
+    setCurrentTagInput('');
+  };
+
+  const handleRemoveTag = (tagToRemove: string) => {
+    const currentTags = data.tags || [];
+    onUpdate({ tags: currentTags.filter(tag => tag !== tagToRemove) });
+  };
+
+  const toggleBodyPart = (bodyPart: string) => {
+    const currentBodyParts = data.body_parts || [];
+    const newBodyParts = currentBodyParts.includes(bodyPart)
+      ? currentBodyParts.filter(bp => bp !== bodyPart)
+      : [...currentBodyParts, bodyPart];
+    onUpdate({ body_parts: newBodyParts });
+  };
+
+  const getFilteredBodyParts = () => {
+    if (bodyRegionFilter === 'Upper Body') {
+      return UPPER_BODY_AREAS;
+    } else if (bodyRegionFilter === 'Lower Body') {
+      return LOWER_BODY_AREAS;
+    }
+    return [...UPPER_BODY_AREAS, ...LOWER_BODY_AREAS];
+  };
 
   return (
     <KeyboardAvoidingView
@@ -655,7 +715,204 @@ function MetadataStep({
             </TouchableOpacity>
           ))}
         </View>
+
+        {/* Advanced Tags Section (Optional) */}
+        <TouchableOpacity
+          style={styles.advancedTagsToggle}
+          onPress={() => setShowAdvancedTags(!showAdvancedTags)}
+        >
+          <View style={styles.advancedTagsToggleContent}>
+            <Text style={styles.advancedTagsToggleLabel}>Advanced Tags (Optional)</Text>
+            <Text style={styles.advancedTagsToggleSubtitle}>For future AI-powered search</Text>
+          </View>
+          <Ionicons
+            name={showAdvancedTags ? 'chevron-up' : 'chevron-down'}
+            size={20}
+            color="#666"
+          />
+        </TouchableOpacity>
+
+        {showAdvancedTags && (
+          <View style={styles.advancedTagsContainer}>
+            <Text style={styles.fieldLabel}>Tags (Max {MAX_TAGS})</Text>
+            <Text style={styles.fieldHint}>
+              {data.tags && data.tags.length >= MAX_TAGS
+                ? `Maximum of ${MAX_TAGS} tags reached`
+                : 'e.g., Desk Work, Upper Body, Stretching'}
+            </Text>
+
+            {/* Tag Input with Add Button */}
+            <View style={styles.tagInputContainer}>
+              <TextInput
+                style={styles.tagTextInput}
+                value={currentTagInput}
+                onChangeText={setCurrentTagInput}
+                placeholder="Type a tag..."
+                placeholderTextColor="#999"
+                maxLength={30}
+                editable={!data.tags || data.tags.length < MAX_TAGS}
+                onSubmitEditing={handleAddTag}
+                returnKeyType="done"
+              />
+              <TouchableOpacity
+                style={[
+                  styles.addTagButton,
+                  (!currentTagInput.trim() || (data.tags && data.tags.length >= MAX_TAGS)) &&
+                    styles.addTagButtonDisabled,
+                ]}
+                onPress={handleAddTag}
+                disabled={!currentTagInput.trim() || (data.tags && data.tags.length >= MAX_TAGS)}
+              >
+                <Ionicons
+                  name="add-circle"
+                  size={32}
+                  color={
+                    !currentTagInput.trim() || (data.tags && data.tags.length >= MAX_TAGS)
+                      ? '#ccc'
+                      : '#3533cd'
+                  }
+                />
+              </TouchableOpacity>
+            </View>
+
+            {/* Display Selected Tags as Chips */}
+            {data.tags && data.tags.length > 0 && (
+              <View style={styles.selectedTagsContainer}>
+                {data.tags.map((tag) => (
+                  <View key={tag} style={styles.selectedTagChip}>
+                    <Text style={styles.selectedTagText}>{tag}</Text>
+                    <TouchableOpacity onPress={() => handleRemoveTag(tag)}>
+                      <Ionicons name="close-circle" size={18} color="#3533cd" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            <Text style={styles.fieldLabel}>Body Parts (Optional)</Text>
+            <Text style={styles.fieldHint}>Select body parts targeted by this routine</Text>
+
+            {/* Body Region Filter Dropdown */}
+            <TouchableOpacity
+              style={styles.dropdownButton}
+              onPress={() => setBodyRegionModalVisible(true)}
+            >
+              <Text style={styles.dropdownText}>{bodyRegionFilter}</Text>
+              <Ionicons name="chevron-down" size={20} color="#666" />
+            </TouchableOpacity>
+
+            {/* Body Parts Multi-Select Dropdown */}
+            <TouchableOpacity
+              style={styles.dropdownButton}
+              onPress={() => setBodyPartsModalVisible(true)}
+            >
+              <Text style={styles.dropdownText}>
+                {data.body_parts && data.body_parts.length > 0
+                  ? `${data.body_parts.length} selected`
+                  : 'Select body parts'}
+              </Text>
+              <Ionicons name="chevron-down" size={20} color="#666" />
+            </TouchableOpacity>
+
+            {/* Display Selected Body Parts */}
+            {data.body_parts && data.body_parts.length > 0 && (
+              <View style={styles.selectedBodyPartsContainer}>
+                {data.body_parts.map((bodyPart) => (
+                  <View key={bodyPart} style={styles.selectedBodyPartChip}>
+                    <Text style={styles.selectedBodyPartText}>{bodyPart}</Text>
+                    <TouchableOpacity onPress={() => toggleBodyPart(bodyPart)}>
+                      <Ionicons name="close-circle" size={18} color="#3533cd" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
       </View>
+
+      {/* Body Region Filter Modal */}
+      <Modal
+        visible={bodyRegionModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setBodyRegionModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setBodyRegionModalVisible(false)}
+        >
+          <View style={styles.modalContent}>
+            {(['All', 'Upper Body', 'Lower Body'] as BodyRegion[]).map((region) => (
+              <TouchableOpacity
+                key={region}
+                style={styles.modalOption}
+                onPress={() => {
+                  setBodyRegionFilter(region);
+                  setBodyRegionModalVisible(false);
+                }}
+              >
+                <Text
+                  style={[
+                    styles.modalOptionText,
+                    bodyRegionFilter === region && styles.modalOptionTextActive,
+                  ]}
+                >
+                  {region}
+                </Text>
+                {bodyRegionFilter === region && (
+                  <Ionicons name="checkmark" size={20} color="#3533cd" />
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Body Parts Multi-Select Modal */}
+      <Modal
+        visible={bodyPartsModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setBodyPartsModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setBodyPartsModalVisible(false)}
+        >
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Body Parts</Text>
+              <TouchableOpacity onPress={() => setBodyPartsModalVisible(false)}>
+                <Ionicons name="close" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.modalScrollView}>
+              {getFilteredBodyParts().map((bodyPart) => (
+                <TouchableOpacity
+                  key={bodyPart}
+                  style={styles.modalOption}
+                  onPress={() => toggleBodyPart(bodyPart)}
+                >
+                  <Text
+                    style={[
+                      styles.modalOptionText,
+                      data.body_parts?.includes(bodyPart) && styles.modalOptionTextActive,
+                    ]}
+                  >
+                    {bodyPart}
+                  </Text>
+                  {data.body_parts?.includes(bodyPart) && (
+                    <Ionicons name="checkmark" size={20} color="#3533cd" />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       <View style={styles.stepNavigation}>
         <TouchableOpacity style={styles.backButton} onPress={onBack}>
@@ -702,7 +959,7 @@ function ReviewStep({
 
       <View style={styles.reviewContainer}>
         <View style={styles.reviewSection}>
-          <Text style={styles.reviewSectionTitle}>Basic Info</Text>
+          <Text style={styles.reviewSectionTitle}>Routine Overview</Text>
           <View style={styles.reviewRow}>
             <Text style={styles.reviewLabel}>Name:</Text>
             <Text style={styles.reviewValue}>{data.name}</Text>
@@ -729,6 +986,34 @@ function ReviewStep({
             <Text style={styles.reviewLabel}>Duration:</Text>
             <Text style={styles.reviewValue}>~{totalDuration} min</Text>
           </View>
+
+          {/* Display Tags if present */}
+          {data.tags && data.tags.length > 0 && (
+            <View style={styles.reviewRow}>
+              <Text style={styles.reviewLabel}>Tags:</Text>
+              <View style={styles.reviewTagsContainer}>
+                {data.tags.map((tag) => (
+                  <View key={tag} style={styles.reviewTagChip}>
+                    <Text style={styles.reviewTagText}>{tag}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+
+          {/* Display Body Parts if present */}
+          {data.body_parts && data.body_parts.length > 0 && (
+            <View style={styles.reviewRow}>
+              <Text style={styles.reviewLabel}>Body Parts:</Text>
+              <View style={styles.reviewTagsContainer}>
+                {data.body_parts.map((bodyPart) => (
+                  <View key={bodyPart} style={styles.reviewBodyPartChip}>
+                    <Text style={styles.reviewBodyPartText}>{bodyPart}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
         </View>
 
         <View style={styles.reviewSection}>
@@ -1173,6 +1458,38 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1a1a1a',
   },
+  reviewTagsContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  reviewTagChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: '#EEF2FF',
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+  },
+  reviewTagText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#3533cd',
+  },
+  reviewBodyPartChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: '#FFF3E0',
+    borderWidth: 1,
+    borderColor: '#FFE0B2',
+  },
+  reviewBodyPartText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#F59E0B',
+  },
   categoryBadge: {
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -1264,5 +1581,158 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#fff',
+  },
+  advancedTagsToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  advancedTagsToggleContent: {
+    flex: 1,
+  },
+  advancedTagsToggleLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1a1a1a',
+    marginBottom: 2,
+  },
+  advancedTagsToggleSubtitle: {
+    fontSize: 12,
+    color: '#666',
+  },
+  advancedTagsContainer: {
+    gap: 12,
+    padding: 16,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  fieldHint: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: -4,
+    marginBottom: 4,
+  },
+  dropdownButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    marginTop: 4,
+  },
+  dropdownText: {
+    fontSize: 16,
+    color: '#1a1a1a',
+    fontWeight: '500',
+  },
+  selectedBodyPartsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 12,
+  },
+  selectedBodyPartChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: '#EEF2FF',
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+  },
+  selectedBodyPartText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#3533cd',
+  },
+  tagInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  tagTextInput: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    padding: 12,
+    fontSize: 16,
+  },
+  addTagButton: {
+    padding: 4,
+  },
+  addTagButtonDisabled: {
+    opacity: 0.5,
+  },
+  selectedTagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 12,
+    marginBottom: 12,
+  },
+  selectedTagChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: '#EEF2FF',
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+  },
+  selectedTagText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#3533cd',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    width: '100%',
+    maxWidth: 400,
+    maxHeight: '70%',
+    overflow: 'hidden',
+  },
+  modalScrollView: {
+    maxHeight: 400,
+  },
+  modalOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  modalOptionText: {
+    fontSize: 16,
+    color: '#1a1a1a',
+  },
+  modalOptionTextActive: {
+    color: '#3533cd',
+    fontWeight: '600',
   },
 });

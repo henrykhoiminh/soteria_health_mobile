@@ -42,7 +42,9 @@ This is the mobile companion app to the Soteria Health web application, built wi
 
 ### Routines
 - Browse all routines with search functionality
+- Search routines by name and description
 - Filter by category (Mind, Body, Soul, All)
+- Filter between all routines and custom routines
 - Category-specific color indicators:
   - Mind: Blue (#3B82F6)
   - Body: Red (#EF4444)
@@ -59,11 +61,23 @@ This is the mobile companion app to the Soteria Health web application, built wi
   - Configure duration for each exercise (in seconds)
   - Add up to 30 exercises per routine
   - Set routine name, description, category, and difficulty
-  - Review all details before publishing
+  - **Advanced Tags (Optional)** - For future AI-powered search:
+    - Add general tags with "type & add" interface (max 5 tags per routine)
+    - Each tag can be up to 30 characters
+    - Tags displayed as removable purple chips
+    - Duplicate tag prevention with validation
+    - Select targeted body parts via dropdown multi-select with region filters (All, Upper Body, Lower Body)
+    - Selected body parts displayed as removable chips
+  - **Review & Publish** - Comprehensive overview before publishing:
+    - Routine Overview section shows name, description, category, difficulty, journey, duration
+    - Tags displayed as purple chips (if added)
+    - Body parts displayed as amber chips (if added)
+    - Complete exercise list with durations
 - Exercise counter shows progress (X/30 exercises)
 - Published routines integrate seamlessly with existing routine execution
 - Custom routines marked with `is_custom: true` flag
 - Tracked by creator with `created_by` user ID
+- Edit existing custom routines
 
 ### Profile Management
 - View and edit profile information:
@@ -182,8 +196,12 @@ soteria-health-mobile/
 │   │   └── client.ts           # Supabase client with AsyncStorage
 │   └── utils/                   # Utility functions
 │       ├── auth.ts             # Auth, profile, journey tracking & upload
-│       ├── dashboard.ts        # Dashboard data & balanced routines
+│       ├── dashboard.ts        # Dashboard data, balanced routines, search functions
 │       └── routine-builder.ts  # Routine builder utilities & validation
+├── sql/                          # Database migration files
+│   ├── database_migration_journey_enhancements.sql  # Journey tracking migrations
+│   ├── database_migration_routine_search_tagging.sql # Search & tagging migrations
+│   └── example_routine_tagging.sql                  # Example routine tags
 └── types/                        # TypeScript types
     └── index.ts                 # Shared type definitions
 ```
@@ -217,19 +235,38 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 
 ### 3. Database Setup
 
-Run the provided SQL migration to set up all database tables and policies:
+Run the provided SQL migrations to set up all database tables and policies:
 
 ```bash
-# Execute the migration file in your Supabase SQL Editor
-database_migration_journey_enhancements.sql
+# Execute these migration files in your Supabase SQL Editor in order:
+
+# 1. Journey enhancements (profiles, journey goals, journey_focus)
+sql/database_migration_journey_enhancements.sql
+
+# 2. Routine search and tagging (tags, body_parts with GIN indexes)
+sql/database_migration_routine_search_tagging.sql
+
+# 3. (Optional) Tag existing routines with example data
+sql/example_routine_tagging.sql
 ```
 
-This migration includes:
+**Migration 1 - Journey Enhancements** includes:
 - Profile table updates for journey tracking
 - Journey goals table creation
 - Routines table journey_focus support
 - RLS policies for data security
 - Indexes for query performance
+
+**Migration 2 - Routine Search & Tagging** includes:
+- Tags array column (text[]) for general categorization
+- Body parts array column (text[]) for targeted body areas
+- GIN indexes on array columns for efficient PostgreSQL array searching
+- Text search index for name and description
+
+**Migration 3 - Example Tagging** includes:
+- Example UPDATE statements to tag 10+ existing routines
+- Comprehensive tagging for upper body, lower body, mind, and full body routines
+- Fallback tags for untagged routines by category
 
 #### Manual Database Setup (Alternative)
 
@@ -278,12 +315,20 @@ The `routines` table should have the following structure to support both pre-bui
 -- created_by (uuid) -- user id of creator (for custom routines)
 -- completion_count (integer)
 -- benefits (text[])
+-- tags (text[]) -- General tags for categorization (e.g., 'Desk Work', 'Upper Body')
+-- body_parts (text[]) -- Body parts targeted (e.g., ['Neck', 'Shoulder', 'Lower Back'])
 -- created_at (timestamp)
 
--- Ensure the routines table supports custom routines and journey focus:
+-- Ensure the routines table supports custom routines, journey focus, and tagging:
 ALTER TABLE routines ADD COLUMN IF NOT EXISTS is_custom BOOLEAN DEFAULT false;
 ALTER TABLE routines ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES auth.users(id);
 ALTER TABLE routines ADD COLUMN IF NOT EXISTS journey_focus text[];
+ALTER TABLE routines ADD COLUMN IF NOT EXISTS tags text[];
+ALTER TABLE routines ADD COLUMN IF NOT EXISTS body_parts text[];
+
+-- Create GIN indexes for efficient array searching
+CREATE INDEX IF NOT EXISTS idx_routines_tags_gin ON routines USING GIN (tags);
+CREATE INDEX IF NOT EXISTS idx_routines_body_parts_gin ON routines USING GIN (body_parts);
 ```
 
 #### Create Storage Bucket for Avatars
@@ -434,6 +479,37 @@ npm run web
   - `setJourneyStartDate()` - Sets or resets journey start date
   - `updateRecoveryInfo()` - Updates recovery-specific details
 
+### Routine Search & Tagging System
+- **Search Functions:**
+  - `searchRoutinesByName()` - Searches name and description fields using PostgreSQL ILIKE
+  - `searchRoutinesByTags()` - Searches tags and body_parts arrays (prepared for future AI)
+- **Database Architecture:**
+  - Tags stored as PostgreSQL text[] array for efficient querying (max 5 per routine)
+  - Body parts stored as PostgreSQL text[] array with predefined options
+  - GIN (Generalized Inverted Index) indexes for fast array containment queries
+  - Text search index on name and description for ILIKE queries
+- **Tagging in Routine Builder:**
+  - Optional "Advanced Tags" section (collapsed by default)
+  - **Tag Input UI:**
+    - Type-and-add interface with add button (plus circle icon)
+    - Maximum 5 tags per routine (30 characters each)
+    - Duplicate prevention with validation alerts
+    - Tags displayed as removable purple chips
+    - Press Enter or click add button to add tag
+  - **Body Parts Selection:**
+    - Dropdown modal with region filters (All / Upper Body / Lower Body)
+    - Multi-select from predefined body parts (matching onboarding options)
+    - Selected parts displayed as removable chips
+  - **Review Step Display:**
+    - "Routine Overview" section (formerly "Basic Info")
+    - Tags shown as purple chips
+    - Body parts shown as amber chips
+    - Both sections only appear if data is present
+- **Future AI Integration:**
+  - Tags and body_parts prepared for AI-powered routine recommendations
+  - AI will reference: description, category, difficulty, tags, body_parts
+  - Relevance scoring algorithm already implemented for tag-based search
+
 ### Progress Tracking
 - Daily progress stored per user per date
 - Tracks completion of Mind, Body, Soul routines
@@ -494,7 +570,27 @@ npx expo start --ios
 
 ## Recent Updates
 
-### Journey Focus Enhancement (Latest)
+### Routine Search & Tagging System (Latest)
+- ✅ Added search functionality for routines by name and description
+- ✅ Database schema enhancements:
+  - Tags array column (text[]) for general categorization
+  - Body parts array column (text[]) for targeted body areas
+  - GIN indexes on array columns for efficient PostgreSQL searching
+- ✅ Routine Builder advanced tags section (optional):
+  - Type-and-add tag input interface with add button
+  - Maximum 5 tags per routine (30 characters each)
+  - Duplicate prevention and validation
+  - Tags displayed as removable purple chips
+  - Select body parts via dropdown multi-select with region filters (All, Upper Body, Lower Body)
+  - Selected body parts displayed as removable chips
+- ✅ Enhanced Review step:
+  - "Routine Overview" section (renamed from "Basic Info")
+  - Tags displayed as purple chips
+  - Body parts displayed as amber chips
+- ✅ Prepared for future AI-powered search functionality
+- ✅ Example tagging SQL for 10+ existing routines
+
+### Journey Focus Enhancement
 - ✅ Enhanced journey selection with detailed cards and icons
 - ✅ Recovery-specific details collection (area and notes)
 - ✅ Journey start date tracking
@@ -508,17 +604,18 @@ npx expo start --ios
 ## Future Enhancements
 
 ### Features to Add
-1. Journey goals management (using journey_goals table)
-2. Recovery progress tracking and milestones
-3. Push notifications for daily reminders
-4. Offline support with local caching
-5. Progress animations and celebrations
-6. Social features (share routines, community)
-7. Routine scheduling and calendar view
-8. Exercise video demonstrations
-9. Achievement badges and milestones
-10. Dark mode support
-11. Accessibility improvements
+1. **AI-Powered Routine Search** - Leverage tags and body_parts for intelligent recommendations
+2. Journey goals management (using journey_goals table)
+3. Recovery progress tracking and milestones
+4. Push notifications for daily reminders
+5. Offline support with local caching
+6. Progress animations and celebrations
+7. Social features (share routines, community)
+8. Routine scheduling and calendar view
+9. Exercise video demonstrations
+10. Achievement badges and milestones
+11. Dark mode support
+12. Accessibility improvements
 
 ### Technical Improvements
 1. Add unit and integration tests

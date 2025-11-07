@@ -44,6 +44,9 @@ export interface Routine {
   is_custom: boolean
   created_by?: string
   created_at: string
+  // Advanced search fields
+  tags?: string[] // General tags for categorization (e.g., "Desk Work", "Upper Body")
+  body_parts?: string[] // Body parts targeted by this routine (e.g., ["Neck", "Shoulder"])
 }
 
 // Completion Types
@@ -100,6 +103,9 @@ export interface RoutineBuilderData {
   difficulty: RoutineDifficulty
   journeyFocus: JourneyFocusOption
   exercises: RoutineBuilderExercise[]
+  // Optional tag fields for AI functionality
+  tags?: string[]
+  body_parts?: string[]
 }
 
 // Journey Goals Types
