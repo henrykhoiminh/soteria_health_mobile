@@ -1,4 +1,5 @@
 import { signUp } from '@/lib/utils/auth';
+import { AppColors } from '@/constants/theme';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -87,7 +88,7 @@ export default function SignupScreen() {
             <TextInput
               style={styles.input}
               placeholder="Full Name"
-              placeholderTextColor="#666"
+              placeholderTextColor={AppColors.textPlaceholder}
               value={fullName}
               onChangeText={setFullName}
               editable={!loading}
@@ -96,7 +97,7 @@ export default function SignupScreen() {
             <TextInput
               style={styles.input}
               placeholder="Email"
-              placeholderTextColor="#666"
+              placeholderTextColor={AppColors.textPlaceholder}
               value={email}
               onChangeText={setEmail}
               autoCapitalize="none"
@@ -108,7 +109,7 @@ export default function SignupScreen() {
               <TextInput
                 style={styles.passwordInput}
                 placeholder="Password"
-                placeholderTextColor="#666"
+                placeholderTextColor={AppColors.textPlaceholder}
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
@@ -121,7 +122,7 @@ export default function SignupScreen() {
                 <Ionicons
                   name={showPassword ? 'eye-off' : 'eye'}
                   size={24}
-                  color="#666"
+                  color={AppColors.textSecondary}
                 />
               </TouchableOpacity>
             </View>
@@ -130,7 +131,7 @@ export default function SignupScreen() {
               <TextInput
                 style={styles.passwordInput}
                 placeholder="Confirm Password"
-                placeholderTextColor="#666"
+                placeholderTextColor={AppColors.textPlaceholder}
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
                 secureTextEntry={!showConfirmPassword}
@@ -143,7 +144,7 @@ export default function SignupScreen() {
                 <Ionicons
                   name={showConfirmPassword ? 'eye-off' : 'eye'}
                   size={24}
-                  color="#666"
+                  color={AppColors.textSecondary}
                 />
               </TouchableOpacity>
             </View>
@@ -177,7 +178,7 @@ export default function SignupScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.background,
   },
   scrollContent: {
     flexGrow: 1,
@@ -191,11 +192,11 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: 'bold',
     marginBottom: 8,
-    color: '#1a1a1a',
+    color: AppColors.textPrimary,
   },
   subtitle: {
     fontSize: 16,
-    color: '#666',
+    color: AppColors.textSecondary,
     marginBottom: 32,
   },
   form: {
@@ -203,12 +204,13 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: AppColors.border,
     borderRadius: 8,
     padding: 16,
     marginBottom: 16,
     fontSize: 16,
-    color: '#1a1a1a',
+    color: AppColors.textPrimary,
+    backgroundColor: AppColors.inputBackground,
   },
   passwordContainer: {
     position: 'relative',
@@ -216,12 +218,13 @@ const styles = StyleSheet.create({
   },
   passwordInput: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: AppColors.border,
     borderRadius: 8,
     padding: 16,
     paddingRight: 50,
     fontSize: 16,
-    color: '#1a1a1a',
+    color: AppColors.textPrimary,
+    backgroundColor: AppColors.inputBackground,
   },
   eyeIcon: {
     position: 'absolute',
@@ -229,7 +232,7 @@ const styles = StyleSheet.create({
     top: 16,
   },
   button: {
-    backgroundColor: '#3533cd',
+    backgroundColor: AppColors.primary,
     borderRadius: 8,
     padding: 16,
     alignItems: 'center',
@@ -239,7 +242,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   buttonText: {
-    color: '#fff',
+    color: AppColors.textPrimary,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -248,7 +251,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   linkText: {
-    color: '#3533cd',
+    color: AppColors.primary,
     fontSize: 14,
   },
 });

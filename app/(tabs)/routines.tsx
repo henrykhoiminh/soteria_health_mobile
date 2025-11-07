@@ -10,6 +10,7 @@ import {
   TextInput,
   FlatList,
 } from 'react-native';
+import { AppColors } from '@/constants/theme';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { getRecommendedRoutines, getUserCustomRoutines, searchRoutinesByName } from '@/lib/utils/dashboard';
@@ -84,7 +85,7 @@ export default function RoutinesScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#3533cd" />
+        <ActivityIndicator size="large" color={AppColors.primary} />
       </View>
     );
   }
@@ -113,7 +114,7 @@ export default function RoutinesScreen() {
           <Ionicons
             name="list"
             size={16}
-            color={selectedFilter === 'all' ? '#fff' : '#666'}
+            color={selectedFilter === 'all' ? AppColors.textPrimary : AppColors.textSecondary}
           />
           <Text
             style={[
@@ -135,7 +136,7 @@ export default function RoutinesScreen() {
           <Ionicons
             name="create"
             size={16}
-            color={selectedFilter === 'custom' ? '#fff' : '#666'}
+            color={selectedFilter === 'custom' ? AppColors.textPrimary : AppColors.textSecondary}
           />
           <Text
             style={[
@@ -152,17 +153,17 @@ export default function RoutinesScreen() {
       <View style={styles.filterSection}>
         {/* Search Input */}
         <View style={styles.searchContainer}>
-          <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
+          <Ionicons name="search" size={20} color={AppColors.textSecondary} style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
             placeholder="Search routines..."
             value={searchQuery}
             onChangeText={setSearchQuery}
-            placeholderTextColor="#999"
+            placeholderTextColor={AppColors.textTertiary}
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Ionicons name="close-circle" size={20} color="#666" />
+              <Ionicons name="close-circle" size={20} color={AppColors.textSecondary} />
             </TouchableOpacity>
           )}
         </View>
@@ -180,7 +181,7 @@ export default function RoutinesScreen() {
               {selectedCategory === 'All' ? 'All Routines' : selectedCategory}
             </Text>
           </View>
-          <Ionicons name="chevron-down" size={20} color="#666" />
+          <Ionicons name="chevron-down" size={20} color={AppColors.textSecondary} />
         </TouchableOpacity>
       </View>
 
@@ -205,7 +206,7 @@ export default function RoutinesScreen() {
                 All Routines
               </Text>
               {selectedCategory === 'All' && (
-                <Ionicons name="checkmark" size={20} color="#3533cd" />
+                <Ionicons name="checkmark" size={20} color={AppColors.primary} />
               )}
             </TouchableOpacity>
             {CATEGORIES.map((category) => (
@@ -221,7 +222,7 @@ export default function RoutinesScreen() {
                   </Text>
                 </View>
                 {selectedCategory === category && (
-                  <Ionicons name="checkmark" size={20} color="#3533cd" />
+                  <Ionicons name="checkmark" size={20} color={AppColors.primary} />
                 )}
               </TouchableOpacity>
             ))}
@@ -232,7 +233,7 @@ export default function RoutinesScreen() {
       <ScrollView style={styles.content}>
         {filteredRoutines.length === 0 ? (
           <View style={styles.emptyState}>
-            <Ionicons name="document-text-outline" size={64} color="#ccc" />
+            <Ionicons name="document-text-outline" size={64} color={AppColors.border} />
             <Text style={styles.emptyStateTitle}>
               {selectedFilter === 'custom' ? 'No custom routines yet' : 'No routines found'}
             </Text>
@@ -275,40 +276,40 @@ export default function RoutinesScreen() {
 function getCategoryColor(category: string): string {
   switch (category) {
     case 'Mind':
-      return '#3B82F6';
+      return AppColors.mind;
     case 'Body':
-      return '#EF4444';
+      return AppColors.body;
     case 'Soul':
-      return '#F59E0B';
+      return AppColors.soul;
     default:
-      return '#3533cd';
+      return AppColors.primary;
   }
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: AppColors.background,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: AppColors.background,
   },
   header: {
     padding: 24,
     paddingTop: 100,
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#1a1a1a',
+    color: AppColors.textPrimary,
   },
   subtitle: {
     fontSize: 16,
-    color: '#666',
+    color: AppColors.textSecondary,
     marginTop: 4,
   },
   filterChipsContainer: {
@@ -316,9 +317,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     gap: 12,
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: AppColors.borderLight,
   },
   filterChip: {
     flexDirection: 'row',
@@ -327,36 +328,36 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: AppColors.surfaceSecondary,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: AppColors.border,
   },
   filterChipActive: {
-    backgroundColor: '#3533cd',
-    borderColor: '#3533cd',
+    backgroundColor: AppColors.primary,
+    borderColor: AppColors.primary,
   },
   filterChipText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#666',
+    color: AppColors.textSecondary,
   },
   filterChipTextActive: {
-    color: '#fff',
+    color: AppColors.textPrimary,
   },
   filterSection: {
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: AppColors.borderLight,
     gap: 12,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: AppColors.inputBackground,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: AppColors.border,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
@@ -366,7 +367,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
-    color: '#1a1a1a',
+    color: AppColors.textPrimary,
     padding: 0,
   },
   dropdownButton: {
@@ -375,10 +376,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: AppColors.inputBackground,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: AppColors.border,
   },
   dropdownContent: {
     flexDirection: 'row',
@@ -387,18 +388,18 @@ const styles = StyleSheet.create({
   },
   dropdownText: {
     fontSize: 16,
-    color: '#1a1a1a',
+    color: AppColors.textPrimary,
     fontWeight: '500',
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
   },
   modalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderRadius: 12,
     width: '100%',
     maxWidth: 300,
@@ -410,7 +411,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: AppColors.borderLight,
   },
   modalOptionContent: {
     flexDirection: 'row',
@@ -419,10 +420,10 @@ const styles = StyleSheet.create({
   },
   modalOptionText: {
     fontSize: 16,
-    color: '#1a1a1a',
+    color: AppColors.textPrimary,
   },
   modalOptionTextActive: {
-    color: '#3533cd',
+    color: AppColors.primary,
     fontWeight: '600',
   },
   content: {
@@ -430,15 +431,15 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   routineCard: {
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: AppColors.cardBorder,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.2,
     shadowRadius: 3,
     elevation: 2,
   },
@@ -456,12 +457,12 @@ const styles = StyleSheet.create({
   routineName: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1a1a1a',
+    color: AppColors.textPrimary,
     flex: 1,
   },
   routineDescription: {
     fontSize: 14,
-    color: '#666',
+    color: AppColors.textSecondary,
     marginBottom: 12,
   },
   routineFooter: {
@@ -471,11 +472,11 @@ const styles = StyleSheet.create({
   },
   routineDetails: {
     fontSize: 12,
-    color: '#999',
+    color: AppColors.textTertiary,
   },
   completionCount: {
     fontSize: 12,
-    color: '#3533cd',
+    color: AppColors.primary,
     fontWeight: '500',
   },
   emptyState: {
@@ -488,14 +489,14 @@ const styles = StyleSheet.create({
   emptyStateTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#666',
+    color: AppColors.textSecondary,
     marginTop: 16,
     marginBottom: 8,
     textAlign: 'center',
   },
   emptyStateText: {
     fontSize: 14,
-    color: '#999',
+    color: AppColors.textTertiary,
     textAlign: 'center',
     lineHeight: 20,
   },

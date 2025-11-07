@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase/client';
+import { AppColors } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -45,7 +46,7 @@ export default function VerifyEmailScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.iconContainer}>
-        <Ionicons name="mail-outline" size={80} color="#3533cd" />
+        <Ionicons name="mail-outline" size={80} color={AppColors.primary} />
       </View>
 
       <Text style={styles.title}>Check Your Email</Text>
@@ -61,7 +62,7 @@ export default function VerifyEmailScreen() {
       </Text>
 
       <View style={styles.infoBox}>
-        <Ionicons name="information-circle-outline" size={20} color="#666" />
+        <Ionicons name="information-circle-outline" size={20} color={AppColors.textSecondary} />
         <Text style={styles.infoText}>
           The email may take a few minutes to arrive. Check your spam folder if you don't see it.
         </Text>
@@ -72,7 +73,7 @@ export default function VerifyEmailScreen() {
         onPress={handleResendEmail}
         disabled={loading}
       >
-        <Ionicons name="refresh-outline" size={20} color="#fff" />
+        <Ionicons name="refresh-outline" size={20} color={AppColors.textPrimary} />
         <Text style={styles.buttonText}>
           {loading ? 'Sending...' : 'Resend Verification Email'}
         </Text>
@@ -94,7 +95,7 @@ export default function VerifyEmailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.background,
   },
   content: {
     padding: 24,
@@ -107,33 +108,33 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#1a1a1a',
+    color: AppColors.textPrimary,
     marginBottom: 16,
     textAlign: 'center',
   },
   message: {
     fontSize: 16,
-    color: '#666',
+    color: AppColors.textSecondary,
     textAlign: 'center',
     marginBottom: 8,
   },
   email: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#3533cd',
+    color: AppColors.primary,
     marginBottom: 24,
     textAlign: 'center',
   },
   instructions: {
     fontSize: 14,
-    color: '#666',
+    color: AppColors.textSecondary,
     textAlign: 'center',
     marginBottom: 24,
     lineHeight: 20,
   },
   infoBox: {
     flexDirection: 'row',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: AppColors.surfaceSecondary,
     padding: 16,
     borderRadius: 12,
     marginBottom: 32,
@@ -142,11 +143,11 @@ const styles = StyleSheet.create({
   infoText: {
     flex: 1,
     fontSize: 13,
-    color: '#666',
+    color: AppColors.textSecondary,
     lineHeight: 18,
   },
   button: {
-    backgroundColor: '#3533cd',
+    backgroundColor: AppColors.primary,
     borderRadius: 8,
     padding: 16,
     alignItems: 'center',
@@ -159,7 +160,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   buttonText: {
-    color: '#fff',
+    color: AppColors.textPrimary,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -170,7 +171,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   secondaryButtonText: {
-    color: '#3533cd',
+    color: AppColors.primary,
     fontSize: 14,
     fontWeight: '600',
   },

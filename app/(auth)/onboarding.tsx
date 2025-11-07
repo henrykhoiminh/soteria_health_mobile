@@ -1,4 +1,5 @@
 import { useAuth } from '@/lib/contexts/AuthContext';
+import { AppColors } from '@/constants/theme';
 import { supabase } from '@/lib/supabase/client';
 import { updateUserProfile } from '@/lib/utils/auth';
 import {
@@ -258,7 +259,7 @@ export default function OnboardingScreen() {
                 <Ionicons
                   name="shield-checkmark"
                   size={32}
-                  color={journeyFocus === 'Injury Prevention' ? '#fff' : '#3B82F6'}
+                  color={journeyFocus === 'Injury Prevention' ? AppColors.textPrimary : AppColors.mind}
                 />
                 <Text
                   style={[
@@ -307,7 +308,7 @@ export default function OnboardingScreen() {
                 <Ionicons
                   name="heart"
                   size={32}
-                  color={journeyFocus === 'Recovery' ? '#fff' : '#EF4444'}
+                  color={journeyFocus === 'Recovery' ? AppColors.textPrimary : AppColors.body}
                 />
                 <Text
                   style={[
@@ -555,7 +556,7 @@ function BulletPoint({ text, selected }: { text: string; selected: boolean }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.background,
   },
   content: {
     padding: 24,
@@ -566,12 +567,12 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: 'bold',
     marginBottom: 8,
-    color: '#1a1a1a',
+    color: AppColors.textPrimary,
     marginTop: 40,
   },
   subtitle: {
     fontSize: 16,
-    color: '#666',
+    color: AppColors.textSecondary,
     marginBottom: 32,
   },
   section: {
@@ -581,11 +582,11 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '600',
     marginBottom: 8,
-    color: '#1a1a1a',
+    color: AppColors.textPrimary,
   },
   sectionSubtitle: {
     fontSize: 14,
-    color: '#666',
+    color: AppColors.textSecondary,
     marginBottom: 16,
   },
   optionsGrid: {
@@ -598,30 +599,30 @@ const styles = StyleSheet.create({
   },
   option: {
     borderWidth: 2,
-    borderColor: '#ddd',
+    borderColor: AppColors.border,
     borderRadius: 8,
     padding: 12,
     paddingHorizontal: 16,
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
   },
   largeOption: {
     borderWidth: 2,
-    borderColor: '#ddd',
+    borderColor: AppColors.border,
     borderRadius: 12,
     padding: 24,
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
   },
   optionSelected: {
-    borderColor: '#3533cd',
-    backgroundColor: '#3533cd',
+    borderColor: AppColors.primary,
+    backgroundColor: AppColors.primary,
   },
   optionSelectedBlue: {
-    borderColor: '#3B82F6',
-    backgroundColor: '#3B82F6',
+    borderColor: AppColors.mind,
+    backgroundColor: AppColors.mind,
   },
   optionSelectedRed: {
-    borderColor: '#EF4444',
-    backgroundColor: '#EF4444',
+    borderColor: AppColors.body,
+    backgroundColor: AppColors.body,
   },
   detailedCard: {
     paddingVertical: 20,
@@ -634,7 +635,7 @@ const styles = StyleSheet.create({
   },
   cardSubtitle: {
     fontSize: 14,
-    color: '#666',
+    color: AppColors.textSecondary,
     marginBottom: 16,
     lineHeight: 20,
   },
@@ -648,20 +649,20 @@ const styles = StyleSheet.create({
   },
   bulletDot: {
     fontSize: 16,
-    color: '#666',
+    color: AppColors.textSecondary,
     lineHeight: 20,
   },
   bulletDotSelected: {
-    color: '#fff',
+    color: AppColors.textPrimary,
   },
   bulletText: {
     fontSize: 14,
-    color: '#666',
+    color: AppColors.textSecondary,
     flex: 1,
     lineHeight: 20,
   },
   bulletTextSelected: {
-    color: '#fff',
+    color: AppColors.textPrimary,
   },
   filterContainer: {
     flexDirection: 'row',
@@ -674,53 +675,53 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: '#ddd',
-    backgroundColor: '#fff',
+    borderColor: AppColors.border,
+    backgroundColor: AppColors.surface,
     alignItems: 'center',
   },
   filterButtonActive: {
-    borderColor: '#3533cd',
-    backgroundColor: '#3533cd',
+    borderColor: AppColors.primary,
+    backgroundColor: AppColors.primary,
   },
   filterButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#666',
+    color: AppColors.textSecondary,
   },
   filterButtonTextActive: {
-    color: '#fff',
+    color: AppColors.textPrimary,
   },
   goalOption: {
     minWidth: '100%', // Make recovery goals full width for better readability
   },
   selectionCount: {
     fontSize: 14,
-    color: '#3533cd',
+    color: AppColors.primary,
     fontWeight: '600',
     marginTop: 16,
     textAlign: 'center',
   },
   optionText: {
     fontSize: 14,
-    color: '#1a1a1a',
+    color: AppColors.textPrimary,
     fontWeight: '500',
   },
   largeOptionText: {
     fontSize: 20,
-    color: '#1a1a1a',
+    color: AppColors.textPrimary,
     fontWeight: '600',
     marginBottom: 8,
   },
   optionDescription: {
     fontSize: 14,
-    color: '#666',
+    color: AppColors.textSecondary,
     lineHeight: 20,
   },
   optionDescriptionSelected: {
-    color: '#fff',
+    color: AppColors.textPrimary,
   },
   optionTextSelected: {
-    color: '#fff',
+    color: AppColors.textPrimary,
   },
   buttonContainer: {
     flexDirection: 'row',
@@ -728,7 +729,7 @@ const styles = StyleSheet.create({
     marginTop: 24,
   },
   button: {
-    backgroundColor: '#3533cd',
+    backgroundColor: AppColors.primary,
     borderRadius: 8,
     padding: 16,
     alignItems: 'center',
@@ -738,19 +739,19 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   secondaryButton: {
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderWidth: 2,
-    borderColor: '#3533cd',
+    borderColor: AppColors.primary,
   },
   buttonDisabled: {
     opacity: 0.5,
   },
   buttonText: {
-    color: '#fff',
+    color: AppColors.textPrimary,
     fontSize: 16,
     fontWeight: '600',
   },
   secondaryButtonText: {
-    color: '#3533cd',
+    color: AppColors.primary,
   },
 });

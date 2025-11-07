@@ -1,4 +1,5 @@
 import { useAuth } from '@/lib/contexts/AuthContext';
+import { AppColors } from '@/constants/theme';
 import { getRoutineById } from '@/lib/utils/dashboard';
 import {
   getAvailableExercises,
@@ -295,7 +296,7 @@ export default function RoutineBuilderScreen() {
           {isEditMode ? 'Edit Routine' : 'Routine Builder'}
         </Text>
         <TouchableOpacity onPress={handleReset}>
-          <Ionicons name="refresh" size={24} color="#3533cd" />
+          <Ionicons name="refresh" size={24} color={AppColors.primary} />
         </TouchableOpacity>
       </View>
 
@@ -304,7 +305,7 @@ export default function RoutineBuilderScreen() {
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
         {loading && currentStep === 'exercises' ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#3533cd" />
+            <ActivityIndicator size="large" color={AppColors.primary} />
             <Text style={styles.loadingText}>Loading exercises...</Text>
           </View>
         ) : (
@@ -365,7 +366,7 @@ function JourneyFocusStep({
               <Ionicons
                 name={option.icon as any}
                 size={32}
-                color={selected === option.value ? '#3533cd' : '#666'}
+                color={selected === option.value ? AppColors.primary : AppColors.textSecondary}
               />
             </View>
             <Text style={[
@@ -463,7 +464,7 @@ function ExerciseSelectionStep({
                   </Text>
                 </View>
                 <TouchableOpacity onPress={() => handleRemoveExercise(exercise.id)}>
-                  <Ionicons name="close-circle" size={24} color="#EF4444" />
+                  <Ionicons name="close-circle" size={24} color={AppColors.body} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -475,7 +476,7 @@ function ExerciseSelectionStep({
         style={styles.addExerciseButton}
         onPress={() => setModalVisible(true)}
       >
-        <Ionicons name="add-circle" size={24} color="#3533cd" />
+        <Ionicons name="add-circle" size={24} color={AppColors.primary} />
         <Text style={styles.addExerciseButtonText}>Add Exercise</Text>
       </TouchableOpacity>
 
@@ -489,20 +490,20 @@ function ExerciseSelectionStep({
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
             <TouchableOpacity onPress={() => setModalVisible(false)}>
-              <Ionicons name="close" size={28} color="#1a1a1a" />
+              <Ionicons name="close" size={28} color={AppColors.textPrimary} />
             </TouchableOpacity>
             <Text style={styles.modalTitle}>Select Exercise</Text>
             <View style={{ width: 28 }} />
           </View>
 
           <View style={styles.searchContainer}>
-            <Ionicons name="search" size={20} color="#666" />
+            <Ionicons name="search" size={20} color={AppColors.textSecondary} />
             <TextInput
               style={styles.searchInput}
               placeholder="Search exercises..."
               value={searchQuery}
               onChangeText={setSearchQuery}
-              placeholderTextColor="#999"
+              placeholderTextColor={AppColors.textTertiary}
             />
           </View>
 
@@ -510,7 +511,7 @@ function ExerciseSelectionStep({
             <View style={styles.exerciseConfigContainer}>
               <View style={styles.exerciseConfigHeader}>
                 <TouchableOpacity onPress={() => setSelectedExercise(null)}>
-                  <Ionicons name="arrow-back" size={24} color="#1a1a1a" />
+                  <Ionicons name="arrow-back" size={24} color={AppColors.textPrimary} />
                 </TouchableOpacity>
                 <Text style={styles.exerciseConfigTitle}>Set Duration</Text>
                 <View style={{ width: 24 }} />
@@ -548,7 +549,7 @@ function ExerciseSelectionStep({
                   <Text style={styles.exerciseListItemInstructions} numberOfLines={2}>
                     {exercise.instructions}
                   </Text>
-                  <Ionicons name="chevron-forward" size={20} color="#999" />
+                  <Ionicons name="chevron-forward" size={20} color={AppColors.textTertiary} />
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -558,7 +559,7 @@ function ExerciseSelectionStep({
 
       <View style={styles.stepNavigation}>
         <TouchableOpacity style={styles.backButton} onPress={onBack}>
-          <Ionicons name="arrow-back" size={20} color="#666" />
+          <Ionicons name="arrow-back" size={20} color={AppColors.textSecondary} />
           <Text style={styles.backButtonText}>Back</Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -567,7 +568,7 @@ function ExerciseSelectionStep({
           disabled={!canProceed}
         >
           <Text style={styles.nextButtonText}>Next</Text>
-          <Ionicons name="arrow-forward" size={20} color="#fff" />
+          <Ionicons name="arrow-forward" size={20} color={AppColors.textPrimary} />
         </TouchableOpacity>
       </View>
     </View>
@@ -654,7 +655,7 @@ function MetadataStep({
           value={data.name}
           onChangeText={(name) => onUpdate({ name })}
           placeholder="e.g., Morning Stretch"
-          placeholderTextColor="#999"
+          placeholderTextColor={AppColors.textTertiary}
           maxLength={100}
         />
 
@@ -664,7 +665,7 @@ function MetadataStep({
           value={data.description}
           onChangeText={(description) => onUpdate({ description })}
           placeholder="Describe your routine..."
-          placeholderTextColor="#999"
+          placeholderTextColor={AppColors.textTertiary}
           multiline
           numberOfLines={4}
           maxLength={500}
@@ -728,7 +729,7 @@ function MetadataStep({
           <Ionicons
             name={showAdvancedTags ? 'chevron-up' : 'chevron-down'}
             size={20}
-            color="#666"
+            color={AppColors.textSecondary}
           />
         </TouchableOpacity>
 
@@ -748,7 +749,7 @@ function MetadataStep({
                 value={currentTagInput}
                 onChangeText={setCurrentTagInput}
                 placeholder="Type a tag..."
-                placeholderTextColor="#999"
+                placeholderTextColor={AppColors.textTertiary}
                 maxLength={30}
                 editable={!data.tags || data.tags.length < MAX_TAGS}
                 onSubmitEditing={handleAddTag}
@@ -768,8 +769,8 @@ function MetadataStep({
                   size={32}
                   color={
                     !currentTagInput.trim() || (data.tags && data.tags.length >= MAX_TAGS)
-                      ? '#ccc'
-                      : '#3533cd'
+                      ? AppColors.border
+                      : AppColors.primary
                   }
                 />
               </TouchableOpacity>
@@ -782,7 +783,7 @@ function MetadataStep({
                   <View key={tag} style={styles.selectedTagChip}>
                     <Text style={styles.selectedTagText}>{tag}</Text>
                     <TouchableOpacity onPress={() => handleRemoveTag(tag)}>
-                      <Ionicons name="close-circle" size={18} color="#3533cd" />
+                      <Ionicons name="close-circle" size={18} color={AppColors.primary} />
                     </TouchableOpacity>
                   </View>
                 ))}
@@ -798,7 +799,7 @@ function MetadataStep({
               onPress={() => setBodyRegionModalVisible(true)}
             >
               <Text style={styles.dropdownText}>{bodyRegionFilter}</Text>
-              <Ionicons name="chevron-down" size={20} color="#666" />
+              <Ionicons name="chevron-down" size={20} color={AppColors.textSecondary} />
             </TouchableOpacity>
 
             {/* Body Parts Multi-Select Dropdown */}
@@ -811,7 +812,7 @@ function MetadataStep({
                   ? `${data.body_parts.length} selected`
                   : 'Select body parts'}
               </Text>
-              <Ionicons name="chevron-down" size={20} color="#666" />
+              <Ionicons name="chevron-down" size={20} color={AppColors.textSecondary} />
             </TouchableOpacity>
 
             {/* Display Selected Body Parts */}
@@ -821,7 +822,7 @@ function MetadataStep({
                   <View key={bodyPart} style={styles.selectedBodyPartChip}>
                     <Text style={styles.selectedBodyPartText}>{bodyPart}</Text>
                     <TouchableOpacity onPress={() => toggleBodyPart(bodyPart)}>
-                      <Ionicons name="close-circle" size={18} color="#3533cd" />
+                      <Ionicons name="close-circle" size={18} color={AppColors.primary} />
                     </TouchableOpacity>
                   </View>
                 ))}
@@ -862,7 +863,7 @@ function MetadataStep({
                   {region}
                 </Text>
                 {bodyRegionFilter === region && (
-                  <Ionicons name="checkmark" size={20} color="#3533cd" />
+                  <Ionicons name="checkmark" size={20} color={AppColors.primary} />
                 )}
               </TouchableOpacity>
             ))}
@@ -886,7 +887,7 @@ function MetadataStep({
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select Body Parts</Text>
               <TouchableOpacity onPress={() => setBodyPartsModalVisible(false)}>
-                <Ionicons name="close" size={24} color="#666" />
+                <Ionicons name="close" size={24} color={AppColors.textSecondary} />
               </TouchableOpacity>
             </View>
             <ScrollView style={styles.modalScrollView}>
@@ -905,7 +906,7 @@ function MetadataStep({
                     {bodyPart}
                   </Text>
                   {data.body_parts?.includes(bodyPart) && (
-                    <Ionicons name="checkmark" size={20} color="#3533cd" />
+                    <Ionicons name="checkmark" size={20} color={AppColors.primary} />
                   )}
                 </TouchableOpacity>
               ))}
@@ -916,7 +917,7 @@ function MetadataStep({
 
       <View style={styles.stepNavigation}>
         <TouchableOpacity style={styles.backButton} onPress={onBack}>
-          <Ionicons name="arrow-back" size={20} color="#666" />
+          <Ionicons name="arrow-back" size={20} color={AppColors.textSecondary} />
           <Text style={styles.backButtonText}>Back</Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -925,7 +926,7 @@ function MetadataStep({
           disabled={!canProceed}
         >
           <Text style={styles.nextButtonText}>Review</Text>
-          <Ionicons name="arrow-forward" size={20} color="#fff" />
+          <Ionicons name="arrow-forward" size={20} color={AppColors.textPrimary} />
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -1036,7 +1037,7 @@ function ReviewStep({
 
       <View style={styles.stepNavigation}>
         <TouchableOpacity style={styles.backButton} onPress={onBack} disabled={loading}>
-          <Ionicons name="arrow-back" size={20} color="#666" />
+          <Ionicons name="arrow-back" size={20} color={AppColors.textSecondary} />
           <Text style={styles.backButtonText}>Back</Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -1045,13 +1046,13 @@ function ReviewStep({
           disabled={loading}
         >
           {loading ? (
-            <ActivityIndicator size="small" color="#fff" />
+            <ActivityIndicator size="small" color={AppColors.textPrimary} />
           ) : (
             <>
               <Ionicons
                 name={isEditMode ? "checkmark-circle" : "cloud-upload"}
                 size={20}
-                color="#fff"
+                color={AppColors.textPrimary}
               />
               <Text style={styles.publishButtonText}>
                 {isEditMode ? 'Update' : 'Publish'}
@@ -1067,13 +1068,13 @@ function ReviewStep({
 function getCategoryColor(category: string): string {
   switch (category) {
     case 'Mind':
-      return '#3B82F6';
+      return AppColors.mind;
     case 'Body':
-      return '#EF4444';
+      return AppColors.body;
     case 'Soul':
-      return '#F59E0B';
+      return AppColors.soul;
     default:
-      return '#3533cd';
+      return AppColors.primary;
   }
 }
 

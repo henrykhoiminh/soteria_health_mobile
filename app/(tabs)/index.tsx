@@ -1,4 +1,5 @@
 import { useAuth } from '@/lib/contexts/AuthContext';
+import { AppColors } from '@/constants/theme';
 import { getBalancedRoutines, getTodayProgress, getUserStats } from '@/lib/utils/dashboard';
 import { calculateJourneyDays } from '@/lib/utils/auth';
 import { DailyProgress, Routine, UserStats } from '@/types';
@@ -62,7 +63,7 @@ export default function DashboardScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#3533cd" />
+        <ActivityIndicator size="large" color={AppColors.primary} />
       </View>
     );
   }
@@ -236,31 +237,31 @@ function StatCard({ label, value, suffix }: { label: string; value: number; suff
 function getCategoryColor(category: string): string {
   switch (category) {
     case 'Mind':
-      return '#3B82F6';
+      return AppColors.mind;
     case 'Body':
-      return '#EF4444';
+      return AppColors.body;
     case 'Soul':
-      return '#F59E0B';
+      return AppColors.soul;
     default:
-      return '#3533cd';
+      return AppColors.primary;
   }
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: AppColors.background,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: AppColors.background,
   },
   header: {
     padding: 24,
     paddingTop: 100,
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
   },
   avatarRow: {
     flexDirection: 'row',
@@ -272,7 +273,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#3533cd',
+    backgroundColor: AppColors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
@@ -284,47 +285,47 @@ const styles = StyleSheet.create({
   avatarText: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#fff',
+    color: AppColors.textPrimary,
   },
   greeting: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#1a1a1a',
+    color: AppColors.textPrimary,
   },
   subtitle: {
     fontSize: 16,
-    color: '#666',
+    color: AppColors.textSecondary,
     marginTop: 4,
   },
   journeyDetailsCard: {
     marginTop: 16,
     padding: 12,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: AppColors.surfaceSecondary,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: AppColors.cardBorder,
   },
   journeyDetailsText: {
     fontSize: 14,
-    color: '#1a1a1a',
+    color: AppColors.textPrimary,
     fontWeight: '600',
     marginBottom: 4,
   },
   journeyDetailsSubtext: {
     fontSize: 13,
-    color: '#666',
+    color: AppColors.textSecondary,
     marginTop: 4,
     lineHeight: 18,
   },
   section: {
     marginTop: 16,
     padding: 24,
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#1a1a1a',
+    color: AppColors.textPrimary,
     marginBottom: 16,
   },
   progressGrid: {
@@ -342,7 +343,7 @@ const styles = StyleSheet.create({
   progressTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1a1a1a',
+    color: AppColors.textPrimary,
     marginBottom: 8,
   },
   progressIndicator: {
@@ -350,12 +351,12 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 20,
     borderWidth: 2,
-    borderColor: '#ddd',
+    borderColor: AppColors.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
   checkmark: {
-    color: '#fff',
+    color: AppColors.textPrimary,
     fontSize: 20,
     fontWeight: 'bold',
   },
@@ -368,41 +369,41 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
     borderRadius: 12,
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surfaceSecondary,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: AppColors.cardBorder,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.2,
     shadowRadius: 3,
     elevation: 2,
   },
   statValue: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1a1a1a',
+    color: AppColors.textPrimary,
   },
   statSuffix: {
     fontSize: 14,
-    color: '#666',
+    color: AppColors.textSecondary,
   },
   statLabel: {
     fontSize: 12,
-    color: '#666',
+    color: AppColors.textSecondary,
     marginTop: 4,
     textAlign: 'center',
   },
   routineCard: {
     padding: 16,
     borderRadius: 12,
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surfaceSecondary,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: AppColors.cardBorder,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.2,
     shadowRadius: 3,
     elevation: 2,
   },
@@ -415,7 +416,7 @@ const styles = StyleSheet.create({
   routineName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1a1a1a',
+    color: AppColors.textPrimary,
     flex: 1,
   },
   categoryBadge: {
@@ -424,17 +425,17 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   categoryText: {
-    color: '#fff',
+    color: AppColors.textPrimary,
     fontSize: 12,
     fontWeight: '600',
   },
   routineDescription: {
     fontSize: 14,
-    color: '#666',
+    color: AppColors.textSecondary,
     marginBottom: 8,
   },
   routineDetails: {
     fontSize: 12,
-    color: '#999',
+    color: AppColors.textTertiary,
   },
 });

@@ -27,47 +27,49 @@ export const Colors = {
   },
 };
 
-// Soteria Health App Colors
+// Soteria Health App Colors - Dark Mode Aesthetic
 export const AppColors = {
-  // Primary Brand Colors
+  // Primary Brand Colors (kept for good contrast on dark backgrounds)
   primary: '#3533cd',
   destructive: '#FF3B30',
 
-  // Category Colors
+  // Category Colors (kept for good contrast on dark backgrounds)
   mind: '#3B82F6',
   body: '#EF4444',
   soul: '#F59E0B',
 
-  // Background Colors
-  background: '#F8FAFC',  // Soft blue-gray main background
-  surface: '#fff',         // Card and section backgrounds
-  inputBackground: '#f5f5f5',
+  // Background Colors - Dark Mode
+  background: '#1A1A1A',      // Very dark grey, almost black (main background)
+  surface: '#2C2C2C',         // Dark grey for cards/elevation
+  surfaceSecondary: '#363636', // Lighter grey for nested cards
+  inputBackground: '#3A3A3A',  // Dark grey for inputs
 
-  // Text Colors
-  textPrimary: '#1a1a1a',
-  textSecondary: '#666',
-  textTertiary: '#999',
+  // Text Colors - Dark Mode
+  textPrimary: '#FFFFFF',     // White for primary text
+  textSecondary: '#B0B0B0',   // Light grey for secondary text
+  textTertiary: '#808080',    // Medium grey for tertiary text
+  textPlaceholder: '#5A5A5A', // Darker grey for placeholders
 
-  // Border Colors
-  border: '#ddd',
-  borderLight: '#f0f0f0',
-  cardBorder: '#E2E8F0',   // Card borders for elevation
+  // Border Colors - Dark Mode
+  border: '#404040',          // Subtle border on dark background
+  borderLight: '#333333',     // Very subtle border
+  cardBorder: '#3F3F3F',      // Card borders for elevation
 
-  // Semantic Colors
+  // Semantic Colors (kept for good contrast)
   success: '#34C759',
 
-  // Tag Backgrounds
-  lightBlue: '#E3F2FD',
-  lightOrange: '#FFF3E0',
+  // Tag Backgrounds - Dark Mode
+  lightBlue: '#1E3A5F',       // Dark blue for goals/mind tags
+  lightOrange: '#4A3A1F',     // Dark amber for warnings/injuries
 };
 
-// Card Elevation Style (for consistent card appearance)
+// Card Elevation Style (for consistent card appearance) - Dark Mode Adjusted
 export const CardElevation = {
   borderWidth: 1,
   borderColor: AppColors.cardBorder,
   shadowColor: '#000',
   shadowOffset: { width: 0, height: 1 },
-  shadowOpacity: 0.05,
+  shadowOpacity: 0.2,         // Slightly increased for visibility on dark background
   shadowRadius: 3,
   elevation: 2, // For Android
 };

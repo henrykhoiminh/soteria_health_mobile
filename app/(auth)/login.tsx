@@ -1,4 +1,5 @@
 import { getUserProfile, signIn } from '@/lib/utils/auth';
+import { AppColors } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -87,7 +88,7 @@ export default function LoginScreen() {
           <TextInput
             style={styles.input}
             placeholder="Email"
-            placeholderTextColor="#666"
+            placeholderTextColor={AppColors.textPlaceholder}
             value={email}
             onChangeText={setEmail}
             autoCapitalize="none"
@@ -99,7 +100,7 @@ export default function LoginScreen() {
             <TextInput
               style={styles.passwordInput}
               placeholder="Password"
-              placeholderTextColor="#666"
+              placeholderTextColor={AppColors.textPlaceholder}
               value={password}
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
@@ -112,7 +113,7 @@ export default function LoginScreen() {
               <Ionicons
                 name={showPassword ? 'eye-off' : 'eye'}
                 size={24}
-                color="#666"
+                color={AppColors.textSecondary}
               />
             </TouchableOpacity>
           </View>
@@ -145,7 +146,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.background,
   },
   content: {
     flex: 1,
@@ -161,7 +162,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 16,
-    color: '#666',
+    color: AppColors.textSecondary,
     marginBottom: 32,
     textAlign: 'center',
   },
@@ -170,12 +171,13 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: AppColors.border,
     borderRadius: 8,
     padding: 16,
     marginBottom: 16,
     fontSize: 16,
-    color: '#1a1a1a',
+    color: AppColors.textPrimary,
+    backgroundColor: AppColors.inputBackground,
   },
   passwordContainer: {
     position: 'relative',
@@ -183,12 +185,13 @@ const styles = StyleSheet.create({
   },
   passwordInput: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: AppColors.border,
     borderRadius: 8,
     padding: 16,
     paddingRight: 50,
     fontSize: 16,
-    color: '#1a1a1a',
+    color: AppColors.textPrimary,
+    backgroundColor: AppColors.inputBackground,
   },
   eyeIcon: {
     position: 'absolute',
@@ -196,7 +199,7 @@ const styles = StyleSheet.create({
     top: 16,
   },
   button: {
-    backgroundColor: '#3533cd',
+    backgroundColor: AppColors.primary,
     borderRadius: 8,
     padding: 16,
     alignItems: 'center',
@@ -206,7 +209,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   buttonText: {
-    color: '#fff',
+    color: AppColors.textPrimary,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -215,7 +218,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   linkText: {
-    color: '#3533cd',
+    color: AppColors.primary,
     fontSize: 14,
   },
 });
