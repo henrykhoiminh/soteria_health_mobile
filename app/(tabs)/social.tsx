@@ -1,5 +1,6 @@
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { AppColors } from '@/constants/theme';
+import { getDisplayName } from '@/lib/utils/username';
 import {
   getFriends,
   getPendingFriendRequests,
@@ -295,7 +296,10 @@ function FriendsTab({ userId, onRefresh }: { userId: string; onRefresh: () => vo
                   )}
                 </View>
                 <View style={styles.userInfo}>
-                  <Text style={styles.userName}>{user.full_name || 'Unknown User'}</Text>
+                  <Text style={styles.userName}>{getDisplayName(user)}</Text>
+                  {user.full_name && user.username && (
+                    <Text style={styles.userRealName}>{user.full_name}</Text>
+                  )}
                   <Text style={styles.userMeta}>
                     {user.journey_focus} • {user.fitness_level}
                   </Text>
@@ -331,8 +335,11 @@ function FriendsTab({ userId, onRefresh }: { userId: string; onRefresh: () => vo
               </View>
               <View style={styles.userInfo}>
                 <Text style={styles.userName}>
-                  {request.requester_profile.full_name || 'Unknown User'}
+                  {getDisplayName(request.requester_profile)}
                 </Text>
+                {request.requester_profile.full_name && request.requester_profile.username && (
+                  <Text style={styles.userRealName}>{request.requester_profile.full_name}</Text>
+                )}
                 <Text style={styles.userMeta}>
                   {new Date(request.created_at).toLocaleDateString()}
                 </Text>
@@ -372,7 +379,10 @@ function FriendsTab({ userId, onRefresh }: { userId: string; onRefresh: () => vo
                   <Ionicons name="person" size={24} color={AppColors.textSecondary} />
                 </View>
                 <View style={styles.userInfo}>
-                  <Text style={styles.userName}>{friend.full_name || 'Unknown User'}</Text>
+                  <Text style={styles.userName}>{getDisplayName(friend)}</Text>
+                  {friend.full_name && friend.username && (
+                    <Text style={styles.userRealName}>{friend.full_name}</Text>
+                  )}
                   <Text style={styles.userMeta}>
                     Friends since {new Date(friendship.accepted_at!).toLocaleDateString()}
                   </Text>
@@ -923,6 +933,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: AppColors.textPrimary,
+    marginBottom: 2,
+  },
+  userRealName: {
+    fontSize: 13,
+    color: AppColors.textSecondary,
     marginBottom: 2,
   },
   userMeta: {

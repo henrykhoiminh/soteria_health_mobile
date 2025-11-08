@@ -187,8 +187,8 @@ export async function getSentFriendRequests(userId: string): Promise<Friendship[
 }
 
 /**
- * Search for users by name
- * Note: Email search requires email to be stored in profiles table
+ * Search for users by name or username
+ * Uses the database function that searches both fields and returns ranked results
  * @param searchTerm - Search query
  * @param currentUserId - Current user's ID (to exclude from results)
  * @param limit - Maximum results
@@ -198,17 +198,17 @@ export async function searchUsers(
   currentUserId: string,
   limit: number = 20
 ): Promise<UserSearchResult[]> {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('id, full_name, profile_picture_url, journey_focus, fitness_level')
-    .neq('id', currentUserId)
-    .ilike('full_name', `%${searchTerm}%`)
-    .limit(limit);
+  // Use the new database function that searches both username and full_name
+  const { data, error } = await supabase.rpc('search_profiles', {
+    p_search_term: searchTerm,
+    p_exclude_user_id: currentUserId,
+    p_limit: limit,
+  });
 
   if (error) throw error;
 
   // Get friendship status for each user
-  const userIds = data?.map(u => u.id) || [];
+  const userIds = data?.map((u: any) => u.id) || [];
 
   if (userIds.length === 0) {
     return [];
@@ -224,7 +224,7 @@ export async function searchUsers(
     friendships?.map(f => [f.friend_id, f.status]) || []
   );
 
-  return data?.map(user => ({
+  return data?.map((user: any) => ({
     ...user,
     friendship_status: friendshipMap.get(user.id) || null,
   })) || [];

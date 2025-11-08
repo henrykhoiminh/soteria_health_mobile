@@ -1,5 +1,6 @@
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { AppColors } from '@/constants/theme';
+import { getDisplayName } from '@/lib/utils/username';
 import {
   getCircleDetails,
   getCircleRoutines,
@@ -321,7 +322,7 @@ function MembersTab({
           </View>
           <View style={styles.memberInfo}>
             <Text style={styles.memberName}>
-              {member.profile?.full_name || 'Unknown User'}
+              {member.profile ? getDisplayName(member.profile) : 'Unknown User'}
             </Text>
             <Text style={styles.memberRole}>
               {member.role === 'admin' ? 'Admin' : 'Member'}
@@ -331,7 +332,10 @@ function MembersTab({
             <TouchableOpacity
               style={styles.removeMemberButton}
               onPress={() =>
-                handleRemoveMember(member.user_id, member.profile?.full_name || 'this user')
+                handleRemoveMember(
+                  member.user_id,
+                  member.profile ? getDisplayName(member.profile) : 'this user'
+                )
               }
             >
               <Ionicons name="close-circle" size={24} color={AppColors.destructive} />
@@ -416,7 +420,7 @@ function RoutinesTab({ circleId, userId }: { circleId: string; userId: string })
               <View style={styles.sharedByInfo}>
                 <Ionicons name="person-circle-outline" size={16} color={AppColors.textSecondary} />
                 <Text style={styles.sharedByText}>
-                  Shared by {circleRoutine.sharer_profile?.full_name || 'Unknown'}
+                  Shared by {circleRoutine.sharer_profile ? getDisplayName(circleRoutine.sharer_profile) : 'Unknown'}
                 </Text>
               </View>
               <Text style={styles.sharedDate}>

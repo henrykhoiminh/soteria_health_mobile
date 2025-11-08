@@ -6,6 +6,7 @@ export type JourneyFocusOption = 'Injury Prevention' | 'Recovery' | 'Both'
 export interface Profile {
   id: string
   full_name: string | null
+  username: string | null
   age: number | null
   fitness_level: FitnessLevel | null
   journey_focus: JourneyFocus | null
@@ -259,8 +260,10 @@ export interface ActivityFeedItem {
 export interface UserSearchResult {
   id: string
   full_name: string | null
+  username: string | null
   profile_picture_url: string | null
   journey_focus: JourneyFocus | null
   fitness_level: FitnessLevel | null
   friendship_status?: FriendshipStatus | null
+  match_score?: number
 }

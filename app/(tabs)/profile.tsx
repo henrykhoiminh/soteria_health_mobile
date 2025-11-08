@@ -1,8 +1,9 @@
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { AppColors } from '@/constants/theme';
 import { updateUserProfile, uploadProfilePicture, hardResetUserData } from '@/lib/utils/auth';
+import { validateUsername, getSuggestedUsernames } from '@/lib/utils/username';
 import { FitnessLevel, JourneyFocus } from '@/types';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Alert,
   Modal,
@@ -27,6 +28,9 @@ export default function ProfileScreen() {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [editedFullName, setEditedFullName] = useState('');
+  const [editedUsername, setEditedUsername] = useState('');
+  const [usernameError, setUsernameError] = useState('');
+  const [validatingUsername, setValidatingUsername] = useState(false);
   const [editedJourneyFocus, setEditedJourneyFocus] = useState<JourneyFocus | null>(null);
   const [editedFitnessLevel, setEditedFitnessLevel] = useState<FitnessLevel | null>(null);
   const [editedAge, setEditedAge] = useState('');
@@ -81,15 +85,40 @@ export default function ProfileScreen() {
 
   const handleEdit = () => {
     setEditedFullName(profile?.full_name || '');
+    setEditedUsername(profile?.username || '');
+    setUsernameError('');
     setEditedJourneyFocus(profile?.journey_focus || null);
     setEditedFitnessLevel(profile?.fitness_level || null);
     setEditedAge(profile?.age?.toString() || '');
     setIsEditing(true);
   };
 
+  const handleUsernameChange = async (text: string) => {
+    setEditedUsername(text);
+    setUsernameError('');
+
+    if (!text || text === profile?.username) {
+      return;
+    }
+
+    setValidatingUsername(true);
+    try {
+      const validation = await validateUsername(text, user?.id);
+      if (!validation.isValid) {
+        setUsernameError(validation.error || 'Invalid username');
+      }
+    } catch (error) {
+      console.error('Username validation error:', error);
+    } finally {
+      setValidatingUsername(false);
+    }
+  };
+
   const handleCancel = () => {
     setIsEditing(false);
     setEditedFullName('');
+    setEditedUsername('');
+    setUsernameError('');
     setEditedJourneyFocus(null);
     setEditedFitnessLevel(null);
     setEditedAge('');
@@ -98,11 +127,28 @@ export default function ProfileScreen() {
   const handleSave = async () => {
     if (!user) return;
 
+    // Check for username errors
+    if (usernameError) {
+      Alert.alert('Error', 'Please fix the username error before saving');
+      return;
+    }
+
+    // If username changed, validate it one more time
+    if (editedUsername && editedUsername !== profile?.username) {
+      const validation = await validateUsername(editedUsername, user.id);
+      if (!validation.isValid) {
+        setUsernameError(validation.error || 'Invalid username');
+        Alert.alert('Error', validation.error || 'Invalid username');
+        return;
+      }
+    }
+
     try {
       setSaving(true);
 
       const updates: any = {
         full_name: editedFullName.trim() || null,
+        username: editedUsername.trim() || null,
         journey_focus: editedJourneyFocus,
         fitness_level: editedFitnessLevel,
         age: editedAge ? parseInt(editedAge, 10) : null,
@@ -213,6 +259,9 @@ export default function ProfileScreen() {
           <Text style={styles.name}>{profile?.full_name || 'User'}</Text>
         )}
         <Text style={styles.email}>{user?.email}</Text>
+        {profile?.username && !isEditing && (
+          <Text style={styles.username}>@{profile.username}</Text>
+        )}
       </View>
 
       <View style={styles.section}>
@@ -225,6 +274,38 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           )}
         </View>
+
+        {/* Username */}
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>Username</Text>
+          {isEditing ? (
+            <View style={styles.usernameInputContainer}>
+              <TextInput
+                style={[styles.usernameInput, usernameError && styles.inputError]}
+                value={editedUsername}
+                onChangeText={handleUsernameChange}
+                placeholder="username"
+                placeholderTextColor={AppColors.textTertiary}
+                autoCapitalize="none"
+                autoCorrect={false}
+                maxLength={20}
+              />
+              {validatingUsername && (
+                <ActivityIndicator size="small" color={AppColors.primary} style={styles.validatingIcon} />
+              )}
+            </View>
+          ) : (
+            <Text style={styles.infoValue}>
+              {profile?.username ? `@${profile.username}` : 'Not set'}
+            </Text>
+          )}
+        </View>
+        {isEditing && usernameError && (
+          <Text style={styles.errorText}>{usernameError}</Text>
+        )}
+        {isEditing && editedUsername && !usernameError && !validatingUsername && (
+          <Text style={styles.helperText}>Username is available!</Text>
+        )}
 
         {/* Journey Focus */}
         <View style={styles.infoRow}>
@@ -484,6 +565,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: AppColors.textSecondary,
   },
+  username: {
+    fontSize: 14,
+    color: AppColors.primary,
+    marginTop: 4,
+    fontWeight: '500',
+  },
   section: {
     marginTop: 16,
     padding: 24,
@@ -580,6 +667,39 @@ const styles = StyleSheet.create({
     borderBottomColor: AppColors.primary,
     paddingVertical: 4,
     minWidth: 60,
+    textAlign: 'right',
+  },
+  usernameInputContainer: {
+    position: 'relative',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  usernameInput: {
+    fontSize: 16,
+    color: AppColors.textPrimary,
+    fontWeight: '500',
+    borderBottomWidth: 1,
+    borderBottomColor: AppColors.primary,
+    paddingVertical: 4,
+    minWidth: 150,
+    textAlign: 'right',
+  },
+  inputError: {
+    borderBottomColor: AppColors.destructive,
+  },
+  validatingIcon: {
+    marginLeft: 8,
+  },
+  errorText: {
+    fontSize: 12,
+    color: AppColors.destructive,
+    marginTop: 4,
+    textAlign: 'right',
+  },
+  helperText: {
+    fontSize: 12,
+    color: AppColors.success,
+    marginTop: 4,
     textAlign: 'right',
   },
   actionButtons: {

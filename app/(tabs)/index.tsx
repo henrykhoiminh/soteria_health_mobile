@@ -3,6 +3,7 @@ import { AppColors } from '@/constants/theme';
 import { getBalancedRoutines, getTodayProgress, getUserStats } from '@/lib/utils/dashboard';
 import { calculateJourneyDays } from '@/lib/utils/auth';
 import { getFormattedFriendActivity } from '@/lib/utils/social';
+import { getDisplayName } from '@/lib/utils/username';
 import { DailyProgress, Routine, UserStats, ActivityFeedItem } from '@/types';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
@@ -17,6 +18,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import JourneyBadge from '@/components/JourneyBadge';
+import UsernameSetupModal from '@/components/UsernameSetupModal';
 
 export default function DashboardScreen() {
   const { user, profile } = useAuth();
@@ -27,10 +29,20 @@ export default function DashboardScreen() {
   const [recommendedRoutines, setRecommendedRoutines] = useState<Routine[]>([]);
   const [friendActivity, setFriendActivity] = useState<ActivityFeedItem[]>([]);
   const [showJourneyDetails, setShowJourneyDetails] = useState(false);
+  const [showUsernameSetup, setShowUsernameSetup] = useState(false);
 
   useEffect(() => {
     loadDashboardData();
-  }, [user]);
+
+    // Show username setup modal if user doesn't have a username
+    if (profile && !profile.username) {
+      // Delay showing the modal to avoid showing it immediately on app start
+      const timer = setTimeout(() => {
+        setShowUsernameSetup(true);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [user, profile]);
 
   // Refresh data when screen comes into focus (e.g., after completing a routine)
   useFocusEffect(
@@ -79,7 +91,12 @@ export default function DashboardScreen() {
     : 0;
 
   return (
-    <ScrollView style={styles.container}>
+    <>
+      <UsernameSetupModal
+        visible={showUsernameSetup}
+        onComplete={() => setShowUsernameSetup(false)}
+      />
+      <ScrollView style={styles.container}>
       <View style={styles.header}>
         {/* Avatar and Journey Badge Row */}
         <View style={styles.avatarRow}>
@@ -212,7 +229,7 @@ export default function DashboardScreen() {
               </View>
               <View style={styles.activityContent}>
                 <Text style={styles.activityText} numberOfLines={2}>
-                  <Text style={styles.activityUserName}>{activity.user.full_name}</Text>{' '}
+                  <Text style={styles.activityUserName}>{getDisplayName(activity.user)}</Text>{' '}
                   {activity.message}
                 </Text>
                 <Text style={styles.activityTime}>{getTimeAgo(activity.timestamp)}</Text>
@@ -252,6 +269,7 @@ export default function DashboardScreen() {
         ))}
       </View>
     </ScrollView>
+    </>
   );
 }
 
