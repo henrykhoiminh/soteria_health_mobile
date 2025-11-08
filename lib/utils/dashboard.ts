@@ -1,6 +1,7 @@
 import { supabase } from '../supabase/client'
 import { DailyProgress, Routine, RoutineCategory, UserStats, JourneyFocus, FitnessLevel } from '@/types'
 import { format } from 'date-fns'
+import { recordActivity } from './social'
 
 export async function getTodayProgress(userId: string): Promise<DailyProgress | null> {
   // Use UTC date to match database (CURRENT_DATE in Postgres uses UTC)
@@ -169,6 +170,23 @@ export async function completeRoutine(userId: string, routineId: string, categor
     .single()
 
   if (error) throw error
+
+  // Get current user stats for streak info
+  const stats = await getUserStats(userId)
+  const currentStreak = stats?.current_streak || 1
+
+  // Record activity for friends to see
+  try {
+    await recordActivity(userId, 'completed_routine', {
+      routine_id: routineId,
+      streak: currentStreak,
+      category,
+    })
+  } catch (activityError) {
+    // Don't fail the completion if activity recording fails
+    console.error('Failed to record activity:', activityError)
+  }
+
   return data
 }
 

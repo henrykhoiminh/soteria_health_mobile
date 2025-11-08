@@ -2,7 +2,8 @@ import { useAuth } from '@/lib/contexts/AuthContext';
 import { AppColors } from '@/constants/theme';
 import { getBalancedRoutines, getTodayProgress, getUserStats } from '@/lib/utils/dashboard';
 import { calculateJourneyDays } from '@/lib/utils/auth';
-import { DailyProgress, Routine, UserStats } from '@/types';
+import { getFormattedFriendActivity } from '@/lib/utils/social';
+import { DailyProgress, Routine, UserStats, ActivityFeedItem } from '@/types';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
@@ -14,6 +15,7 @@ import {
   View,
   Image,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import JourneyBadge from '@/components/JourneyBadge';
 
 export default function DashboardScreen() {
@@ -23,6 +25,7 @@ export default function DashboardScreen() {
   const [todayProgress, setTodayProgress] = useState<DailyProgress | null>(null);
   const [stats, setStats] = useState<UserStats | null>(null);
   const [recommendedRoutines, setRecommendedRoutines] = useState<Routine[]>([]);
+  const [friendActivity, setFriendActivity] = useState<ActivityFeedItem[]>([]);
   const [showJourneyDetails, setShowJourneyDetails] = useState(false);
 
   useEffect(() => {
@@ -43,16 +46,18 @@ export default function DashboardScreen() {
 
     try {
       setLoading(true);
-      const [progressData, statsData, routinesData] = await Promise.all([
+      const [progressData, statsData, routinesData, activityData] = await Promise.all([
         getTodayProgress(user.id),
         getUserStats(user.id),
         getBalancedRoutines(profile?.journey_focus || null, profile?.fitness_level || null),
+        getFormattedFriendActivity(user.id, 5), // Get latest 5 activities
       ]);
 
       console.log('Today Progress:', progressData); // Debug log
       setTodayProgress(progressData);
       setStats(statsData);
       setRecommendedRoutines(routinesData);
+      setFriendActivity(activityData);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     } finally {
@@ -179,6 +184,44 @@ export default function DashboardScreen() {
         </View>
       </View>
 
+      {/* Friend Activity */}
+      {friendActivity.length > 0 && (
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Friend Activity</Text>
+            <TouchableOpacity onPress={() => router.push('/(tabs)/social?tab=activity')}>
+              <Text style={styles.seeAllText}>See All</Text>
+            </TouchableOpacity>
+          </View>
+          {friendActivity.slice(0, 3).map((activity) => (
+            <TouchableOpacity
+              key={activity.id}
+              style={styles.activityCard}
+              onPress={() => {
+                if (activity.routineId) {
+                  router.push(`/routines/${activity.routineId}`);
+                }
+              }}
+            >
+              <View style={styles.activityIcon}>
+                <Ionicons
+                  name={getActivityIcon(activity.activityType)}
+                  size={20}
+                  color={AppColors.primary}
+                />
+              </View>
+              <View style={styles.activityContent}>
+                <Text style={styles.activityText} numberOfLines={2}>
+                  <Text style={styles.activityUserName}>{activity.user.full_name}</Text>{' '}
+                  {activity.message}
+                </Text>
+                <Text style={styles.activityTime}>{getTimeAgo(activity.timestamp)}</Text>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+
       {/* Recommended Routines */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Recommended for You</Text>
@@ -245,6 +288,38 @@ function getCategoryColor(category: string): string {
     default:
       return AppColors.primary;
   }
+}
+
+function getActivityIcon(type: string): any {
+  switch (type) {
+    case 'completed_routine':
+      return 'checkmark-circle';
+    case 'created_routine':
+      return 'add-circle';
+    case 'streak_milestone':
+      return 'flame';
+    case 'joined_circle':
+      return 'people';
+    case 'shared_routine':
+      return 'share-social';
+    default:
+      return 'radio-button-on';
+  }
+}
+
+function getTimeAgo(timestamp: string): string {
+  const now = new Date();
+  const past = new Date(timestamp);
+  const diffMs = now.getTime() - past.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return past.toLocaleDateString();
 }
 
 const styles = StyleSheet.create({
@@ -435,6 +510,51 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   routineDetails: {
+    fontSize: 12,
+    color: AppColors.textTertiary,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  seeAllText: {
+    fontSize: 14,
+    color: AppColors.primary,
+    fontWeight: '600',
+  },
+  activityCard: {
+    flexDirection: 'row',
+    backgroundColor: AppColors.surfaceSecondary,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: AppColors.cardBorder,
+  },
+  activityIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: AppColors.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  activityContent: {
+    flex: 1,
+  },
+  activityText: {
+    fontSize: 14,
+    color: AppColors.textPrimary,
+    lineHeight: 20,
+    marginBottom: 4,
+  },
+  activityUserName: {
+    fontWeight: '600',
+  },
+  activityTime: {
     fontSize: 12,
     color: AppColors.textTertiary,
   },

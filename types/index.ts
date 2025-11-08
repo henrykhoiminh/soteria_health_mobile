@@ -156,3 +156,111 @@ export const RECOVERY_GOALS = [
 ] as const
 
 export type RecoveryGoal = typeof RECOVERY_GOALS[number]
+
+// Social Features Types
+
+// Friendship Types
+export type FriendshipStatus = 'pending' | 'accepted' | 'blocked'
+
+export interface Friendship {
+  id: string
+  user_id: string
+  friend_id: string
+  status: FriendshipStatus
+  created_at: string
+  accepted_at: string | null
+}
+
+export interface FriendWithProfile extends Friendship {
+  friend_profile: Profile
+}
+
+export interface FriendRequest {
+  id: string
+  user_id: string
+  friend_id: string
+  status: FriendshipStatus
+  created_at: string
+  requester_profile: Profile
+}
+
+// Circle Types
+export type CircleRole = 'admin' | 'member'
+
+export interface Circle {
+  id: string
+  name: string
+  description: string | null
+  created_by: string
+  is_private: boolean
+  created_at: string
+  member_count?: number
+  creator_profile?: Profile
+}
+
+export interface CircleMember {
+  id: string
+  circle_id: string
+  user_id: string
+  role: CircleRole
+  joined_at: string
+  profile?: Profile
+}
+
+export interface CircleWithMembers extends Circle {
+  members: CircleMember[]
+}
+
+export interface CircleRoutine {
+  id: string
+  circle_id: string
+  routine_id: string
+  shared_by: string
+  shared_at: string
+  routine?: Routine
+  sharer_profile?: Profile
+}
+
+// Activity Feed Types
+export type ActivityType =
+  | 'completed_routine'
+  | 'created_routine'
+  | 'streak_milestone'
+  | 'joined_circle'
+  | 'shared_routine'
+
+export interface FriendActivity {
+  id: string
+  user_id: string
+  activity_type: ActivityType
+  related_routine_id: string | null
+  related_circle_id: string | null
+  activity_data: Record<string, any> | null
+  created_at: string
+  user_profile?: Profile
+  routine?: Routine
+  circle?: Circle
+}
+
+export interface ActivityFeedItem {
+  id: string
+  user: Profile
+  activityType: ActivityType
+  message: string
+  timestamp: string
+  routineId?: string
+  routineName?: string
+  circleId?: string
+  circleName?: string
+  metadata?: Record<string, any>
+}
+
+// Search Types
+export interface UserSearchResult {
+  id: string
+  full_name: string | null
+  profile_picture_url: string | null
+  journey_focus: JourneyFocus | null
+  fitness_level: FitnessLevel | null
+  friendship_status?: FriendshipStatus | null
+}

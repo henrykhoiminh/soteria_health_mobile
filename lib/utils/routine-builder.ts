@@ -7,6 +7,7 @@ import {
   RoutineCategory,
   RoutineDifficulty
 } from '@/types'
+import { recordActivity } from './social'
 
 /**
  * Fetch all unique exercises from existing routines to populate the exercise library
@@ -88,6 +89,18 @@ export async function publishCustomRoutine(
 
   if (error) throw error
   if (!data) throw new Error('Failed to create routine')
+
+  // Record activity for friends to see
+  try {
+    await recordActivity(userId, 'created_routine', {
+      routine_id: data.id,
+      routine_name: routineData.name,
+      category: routineData.category,
+    })
+  } catch (activityError) {
+    // Don't fail the creation if activity recording fails
+    console.error('Failed to record activity:', activityError)
+  }
 
   return data.id
 }
