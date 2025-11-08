@@ -517,7 +517,7 @@ export default function OnboardingScreen() {
           </TouchableOpacity>
         )}
 
-        {step < getTotalSteps() ? (
+        {step < 5 ? (
           <TouchableOpacity
             style={[styles.button, step > 1 && styles.buttonFlex]}
             onPress={handleNextStep}
