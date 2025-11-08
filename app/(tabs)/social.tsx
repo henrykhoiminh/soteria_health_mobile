@@ -14,6 +14,9 @@ import {
   createCircle,
   joinCircle,
   getFormattedFriendActivity,
+  getPendingCircleInvitations,
+  acceptCircleInvitation,
+  declineCircleInvitation,
 } from '@/lib/utils/social';
 import {
   FriendWithProfile,
@@ -21,6 +24,7 @@ import {
   UserSearchResult,
   Circle,
   ActivityFeedItem,
+  CircleInvitation,
 } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -412,6 +416,7 @@ function CirclesTab({ userId, onRefresh }: { userId: string; onRefresh: () => vo
   const router = useRouter();
   const [myCircles, setMyCircles] = useState<Circle[]>([]);
   const [publicCircles, setPublicCircles] = useState<Circle[]>([]);
+  const [pendingInvitations, setPendingInvitations] = useState<CircleInvitation[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -423,12 +428,14 @@ function CirclesTab({ userId, onRefresh }: { userId: string; onRefresh: () => vo
   const loadCircles = async () => {
     try {
       setLoading(true);
-      const [myCirclesData, publicCirclesData] = await Promise.all([
+      const [myCirclesData, publicCirclesData, invitationsData] = await Promise.all([
         getUserCircles(userId),
         getPublicCircles(),
+        getPendingCircleInvitations(userId),
       ]);
       setMyCircles(myCirclesData);
       setPublicCircles(publicCirclesData);
+      setPendingInvitations(invitationsData);
     } catch (error) {
       console.error('Error loading circles:', error);
     } finally {
@@ -449,6 +456,25 @@ function CirclesTab({ userId, onRefresh }: { userId: string; onRefresh: () => vo
       Alert.alert('Success', 'Joined circle!');
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to join circle');
+    }
+  };
+
+  const handleAcceptInvitation = async (invitationId: string) => {
+    try {
+      await acceptCircleInvitation(invitationId);
+      await loadCircles();
+      Alert.alert('Success', 'You have joined the circle!');
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to accept invitation');
+    }
+  };
+
+  const handleDeclineInvitation = async (invitationId: string) => {
+    try {
+      await declineCircleInvitation(invitationId);
+      await loadCircles();
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to decline invitation');
     }
   };
 
@@ -476,6 +502,54 @@ function CirclesTab({ userId, onRefresh }: { userId: string; onRefresh: () => vo
             <Text style={styles.createButtonText}>Create Circle</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Pending Circle Invitations */}
+        {pendingInvitations.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Circle Invitations ({pendingInvitations.length})</Text>
+            {pendingInvitations.map((invitation) => {
+              // Get circle data - Supabase returns it as 'circles' (table name) not 'circle'
+              const circleData = (invitation as any).circles;
+              const circleName = circleData?.name || 'Unknown Circle';
+              const isPrivate = circleData?.is_private ?? true;
+
+              return (
+              <View key={invitation.id} style={styles.invitationCard}>
+                <View style={styles.circleIcon}>
+                  <Ionicons
+                    name={isPrivate ? 'lock-closed' : 'globe'}
+                    size={24}
+                    color={AppColors.primary}
+                  />
+                </View>
+                <View style={styles.invitationInfo}>
+                  <Text style={styles.circleName}>{circleName}</Text>
+                  <Text style={styles.invitationMeta}>
+                    Invited by {getDisplayName(invitation.inviter_profile || { full_name: 'Unknown', username: null })}
+                  </Text>
+                  <Text style={styles.invitationDate}>
+                    {new Date(invitation.created_at).toLocaleDateString()}
+                  </Text>
+                </View>
+                <View style={styles.invitationActions}>
+                  <TouchableOpacity
+                    style={styles.acceptInviteButton}
+                    onPress={() => handleAcceptInvitation(invitation.id)}
+                  >
+                    <Text style={styles.acceptInviteButtonText}>Accept</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.declineInviteButton}
+                    onPress={() => handleDeclineInvitation(invitation.id)}
+                  >
+                    <Text style={styles.declineInviteButtonText}>Decline</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+              );
+            })}
+          </View>
+        )}
 
         {/* My Circles */}
         <View style={styles.section}>
@@ -1067,6 +1141,58 @@ const styles = StyleSheet.create({
     color: AppColors.textPrimary,
     fontSize: 14,
     fontWeight: '600',
+  },
+  invitationCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: AppColors.surface,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: AppColors.primary,
+  },
+  invitationInfo: {
+    flex: 1,
+  },
+  invitationMeta: {
+    fontSize: 13,
+    color: AppColors.textSecondary,
+    marginBottom: 2,
+  },
+  invitationDate: {
+    fontSize: 12,
+    color: AppColors.textTertiary,
+  },
+  invitationActions: {
+    flexDirection: 'column',
+    gap: 8,
+  },
+  acceptInviteButton: {
+    backgroundColor: AppColors.primary,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  acceptInviteButtonText: {
+    color: AppColors.textPrimary,
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  declineInviteButton: {
+    backgroundColor: AppColors.surface,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: AppColors.destructive,
+  },
+  declineInviteButtonText: {
+    color: AppColors.destructive,
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   activityCard: {
     flexDirection: 'row',

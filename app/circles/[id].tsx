@@ -36,6 +36,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { formatActivityFeedItem } from '@/lib/utils/social';
+import FriendInviteModal from '@/components/FriendInviteModal';
 
 type Tab = 'members' | 'routines' | 'activity';
 
@@ -51,6 +52,7 @@ export default function CircleDetailScreen() {
   const [activeTab, setActiveTab] = useState<Tab>('members');
 
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
 
   useEffect(() => {
     if (id && user) {
@@ -133,6 +135,19 @@ export default function CircleDetailScreen() {
         },
       ]
     );
+  };
+
+  const handleInviteFriend = async (friendId: string, friendName: string) => {
+    if (!id || !user) return;
+
+    try {
+      await inviteToCircle(id, friendId, user.id);
+      Alert.alert('Success', `Invitation sent to ${friendName}`);
+      await handleRefresh();
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to send invitation');
+      throw error; // Re-throw to let the modal handle it
+    }
   };
 
   if (loading) {
@@ -253,10 +268,16 @@ export default function CircleDetailScreen() {
 
         {/* Tab Content */}
         {activeTab === 'members' && (
-          <MembersTab circle={circle} isAdmin={isAdmin} onRefresh={handleRefresh} />
+          <MembersTab
+            circle={circle}
+            isAdmin={isAdmin}
+            onRefresh={handleRefresh}
+            onInviteClick={() => setShowInviteModal(true)}
+            currentUserId={user!.id}
+          />
         )}
         {activeTab === 'routines' && <RoutinesTab circleId={id!} userId={user!.id} />}
-        {activeTab === 'activity' && <CircleActivityTab circleId={id!} />}
+        {activeTab === 'activity' && <CircleActivityTab circleId={id!} key={refreshing.toString()} />}
 
         <View style={{ height: 100 }} />
       </ScrollView>
@@ -273,6 +294,16 @@ export default function CircleDetailScreen() {
           }}
         />
       )}
+
+      {/* Friend Invite Modal */}
+      <FriendInviteModal
+        visible={showInviteModal}
+        onClose={() => setShowInviteModal(false)}
+        onInvite={handleInviteFriend}
+        currentMemberIds={circle.members.map(m => m.user_id)}
+        userId={user!.id}
+        circleId={id!}
+      />
     </View>
   );
 }
@@ -285,10 +316,14 @@ function MembersTab({
   circle,
   isAdmin,
   onRefresh,
+  onInviteClick,
+  currentUserId,
 }: {
   circle: CircleWithMembers;
   isAdmin: boolean;
   onRefresh: () => void;
+  onInviteClick: () => void;
+  currentUserId: string;
 }) {
   const handleRemoveMember = (userId: string, userName: string) => {
     Alert.alert(
@@ -301,7 +336,7 @@ function MembersTab({
           style: 'destructive',
           onPress: async () => {
             try {
-              await removeMemberFromCircle(circle.id, userId);
+              await removeMemberFromCircle(circle.id, userId, currentUserId);
               onRefresh();
               Alert.alert('Success', 'Member removed');
             } catch (error: any) {
@@ -315,6 +350,14 @@ function MembersTab({
 
   return (
     <View style={styles.tabContent}>
+      {/* Invite Friends Button */}
+      {isAdmin && (
+        <TouchableOpacity style={styles.inviteFriendsButton} onPress={onInviteClick}>
+          <Ionicons name="person-add" size={20} color={AppColors.primary} />
+          <Text style={styles.inviteFriendsButtonText}>Invite Friends</Text>
+        </TouchableOpacity>
+      )}
+
       {circle.members.map((member) => (
         <View key={member.id} style={styles.memberCard}>
           <View style={styles.memberAvatar}>
@@ -444,7 +487,7 @@ function CircleActivityTab({ circleId }: { circleId: string }) {
 
   useEffect(() => {
     loadActivity();
-  }, []);
+  }, [circleId]);
 
   const loadActivity = async () => {
     try {
@@ -488,7 +531,7 @@ function CircleActivityTab({ circleId }: { circleId: string }) {
             <View style={styles.activityContent}>
               <Text style={styles.activityText}>
                 <Text style={styles.activityUserName}>
-                  {activity.user_profile?.full_name}
+                  {activity.user_profile ? getDisplayName(activity.user_profile) : 'Unknown User'}
                 </Text>{' '}
                 {formattedActivity.message}
               </Text>
@@ -805,6 +848,23 @@ const styles = StyleSheet.create({
   },
   tabContent: {
     padding: 16,
+  },
+  inviteFriendsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: AppColors.surface,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 2,
+    borderColor: AppColors.primary,
+    gap: 8,
+  },
+  inviteFriendsButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: AppColors.primary,
   },
   memberCard: {
     flexDirection: 'row',

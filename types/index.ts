@@ -228,6 +228,9 @@ export type ActivityType =
   | 'created_routine'
   | 'streak_milestone'
   | 'joined_circle'
+  | 'left_circle'
+  | 'invited_to_circle'
+  | 'removed_from_circle'
   | 'shared_routine'
 
 export interface FriendActivity {
@@ -254,6 +257,19 @@ export interface ActivityFeedItem {
   circleId?: string
   circleName?: string
   metadata?: Record<string, any>
+}
+
+// Circle Invitation Types
+export interface CircleInvitation {
+  id: string
+  circle_id: string
+  inviter_id: string
+  invitee_id: string
+  status: 'pending' | 'accepted' | 'declined'
+  created_at: string
+  responded_at: string | null
+  circle?: Circle
+  inviter_profile?: Profile
 }
 
 // Search Types

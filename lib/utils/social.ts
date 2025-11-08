@@ -148,7 +148,15 @@ export async function getFriends(userId: string): Promise<FriendWithProfile[]> {
 
   if (reverseError) throw reverseError;
 
-  return [...(data || []), ...(reverseFriends || [])];
+  // Normalize the data so friend_id always points to the OTHER person
+  const normalizedData = (data || []).map(item => item);
+
+  const normalizedReverseFriends = (reverseFriends || []).map(item => ({
+    ...item,
+    friend_id: item.user_id, // The friend is the user_id when current user is friend_id
+  }));
+
+  return [...normalizedData, ...normalizedReverseFriends];
 }
 
 /**
@@ -341,28 +349,136 @@ export async function getCircleDetails(circleId: string): Promise<CircleWithMemb
 }
 
 /**
- * Invite a user to a circle
+ * Invite a user to a circle (creates pending invitation)
  * @param circleId - Circle ID
- * @param userId - User ID to invite
- * @param role - Role to assign (default: 'member')
+ * @param inviteeId - User ID to invite
+ * @param inviterId - ID of user sending the invite
  */
 export async function inviteToCircle(
   circleId: string,
-  userId: string,
-  role: 'admin' | 'member' = 'member'
-): Promise<CircleMember> {
-  const { data, error } = await supabase
-    .from('circle_members')
+  inviteeId: string,
+  inviterId: string
+): Promise<void> {
+  // Create pending invitation
+  const { error } = await supabase
+    .from('circle_invitations')
     .insert({
       circle_id: circleId,
-      user_id: userId,
-      role,
-    })
-    .select()
+      inviter_id: inviterId,
+      invitee_id: inviteeId,
+      status: 'pending',
+    });
+
+  if (error) {
+    // If duplicate, might be a previous declined invitation
+    if (error.code === '23505') {
+      // Update the existing invitation back to pending
+      const { error: updateError } = await supabase
+        .from('circle_invitations')
+        .update({ status: 'pending', created_at: new Date().toISOString(), responded_at: null })
+        .eq('circle_id', circleId)
+        .eq('invitee_id', inviteeId);
+
+      if (updateError) throw updateError;
+    } else {
+      throw error;
+    }
+  }
+
+  // Get circle name for activity
+  const { data: circle } = await supabase
+    .from('circles')
+    .select('name')
+    .eq('id', circleId)
     .single();
 
+  // Record activity for the inviter
+  await recordActivity(inviterId, 'invited_to_circle', {
+    circle_id: circleId,
+    circle_name: circle?.name || 'a circle',
+    invited_user_id: inviteeId,
+  });
+}
+
+/**
+ * Get pending circle invitations for a user
+ * @param userId - User ID
+ */
+export async function getPendingCircleInvitations(userId: string) {
+  const { data, error } = await supabase
+    .from('circle_invitations')
+    .select(`
+      *,
+      circles!circle_id(id, name, description, is_private),
+      inviter_profile:profiles!circle_invitations_inviter_id_fkey(*)
+    `)
+    .eq('invitee_id', userId)
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching circle invitations:', error);
+    throw error;
+  }
+
+  console.log('Circle invitations data:', JSON.stringify(data, null, 2));
+  return data || [];
+}
+
+/**
+ * Get pending invitations for a specific circle
+ * @param circleId - Circle ID
+ */
+export async function getPendingCircleInvitationsByCircle(circleId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('circle_invitations')
+    .select('invitee_id')
+    .eq('circle_id', circleId)
+    .eq('status', 'pending');
+
   if (error) throw error;
-  return data;
+  return data?.map(inv => inv.invitee_id) || [];
+}
+
+/**
+ * Accept a circle invitation
+ * @param invitationId - Invitation ID
+ */
+export async function acceptCircleInvitation(invitationId: string): Promise<void> {
+  // Call the database function to accept invitation
+  const { error } = await supabase.rpc('accept_circle_invitation', {
+    p_invitation_id: invitationId,
+  });
+
+  if (error) throw error;
+
+  // Get invitation details for activity logging
+  const { data: invitation } = await supabase
+    .from('circle_invitations')
+    .select('circle_id, invitee_id, circles!circle_id(name)')
+    .eq('id', invitationId)
+    .single();
+
+  if (invitation) {
+    // Record activity for joining
+    const circleName = (invitation as any).circles?.name || 'a circle';
+    await recordActivity(invitation.invitee_id, 'joined_circle', {
+      circle_id: invitation.circle_id,
+      circle_name: circleName,
+    });
+  }
+}
+
+/**
+ * Decline a circle invitation
+ * @param invitationId - Invitation ID
+ */
+export async function declineCircleInvitation(invitationId: string): Promise<void> {
+  const { error } = await supabase.rpc('decline_circle_invitation', {
+    p_invitation_id: invitationId,
+  });
+
+  if (error) throw error;
 }
 
 /**
@@ -371,10 +487,10 @@ export async function inviteToCircle(
  * @param userId - User ID
  */
 export async function joinCircle(circleId: string, userId: string): Promise<CircleMember> {
-  // Verify circle is public
+  // Verify circle is public and get circle name
   const { data: circle } = await supabase
     .from('circles')
-    .select('is_private')
+    .select('is_private, name')
     .eq('id', circleId)
     .single();
 
@@ -393,6 +509,13 @@ export async function joinCircle(circleId: string, userId: string): Promise<Circ
     .single();
 
   if (error) throw error;
+
+  // Record activity for joining the circle
+  await recordActivity(userId, 'joined_circle', {
+    circle_id: circleId,
+    circle_name: circle?.name || 'a circle',
+  });
+
   return data;
 }
 
@@ -402,6 +525,13 @@ export async function joinCircle(circleId: string, userId: string): Promise<Circ
  * @param userId - User ID
  */
 export async function leaveCircle(circleId: string, userId: string): Promise<void> {
+  // Get circle name before deleting membership
+  const { data: circle } = await supabase
+    .from('circles')
+    .select('name')
+    .eq('id', circleId)
+    .single();
+
   const { error } = await supabase
     .from('circle_members')
     .delete()
@@ -409,14 +539,32 @@ export async function leaveCircle(circleId: string, userId: string): Promise<voi
     .eq('user_id', userId);
 
   if (error) throw error;
+
+  // Record activity for leaving the circle
+  await recordActivity(userId, 'left_circle', {
+    circle_id: circleId,
+    circle_name: circle?.name || 'a circle',
+  });
 }
 
 /**
  * Remove a member from a circle (admin only)
  * @param circleId - Circle ID
  * @param userId - User ID to remove
+ * @param removedBy - ID of admin removing the user (optional)
  */
-export async function removeMemberFromCircle(circleId: string, userId: string): Promise<void> {
+export async function removeMemberFromCircle(
+  circleId: string,
+  userId: string,
+  removedBy?: string
+): Promise<void> {
+  // Get circle name before removing membership
+  const { data: circle } = await supabase
+    .from('circles')
+    .select('name')
+    .eq('id', circleId)
+    .single();
+
   const { error } = await supabase
     .from('circle_members')
     .delete()
@@ -424,6 +572,22 @@ export async function removeMemberFromCircle(circleId: string, userId: string): 
     .eq('user_id', userId);
 
   if (error) throw error;
+
+  // Record activity for the removed user
+  await recordActivity(userId, 'removed_from_circle', {
+    circle_id: circleId,
+    circle_name: circle?.name || 'a circle',
+    removed_by: removedBy,
+  });
+
+  // If removedBy is provided, also record activity for the admin who removed them
+  if (removedBy && removedBy !== userId) {
+    await recordActivity(removedBy, 'removed_from_circle', {
+      circle_id: circleId,
+      circle_name: circle?.name || 'a circle',
+      removed_user_id: userId,
+    });
+  }
 }
 
 /**
@@ -551,6 +715,8 @@ export async function removeRoutineFromCircle(circleRoutineId: string): Promise<
 
 /**
  * Record a user activity
+ * Uses a database function with SECURITY DEFINER to bypass RLS
+ * This allows recording activities on behalf of other users (e.g., when inviting to circles)
  * @param userId - User ID
  * @param activityType - Type of activity
  * @param activityData - Additional data about the activity
@@ -560,16 +726,22 @@ export async function recordActivity(
   activityType: ActivityType,
   activityData?: Record<string, any>
 ): Promise<FriendActivity> {
+  // Use the database function to record activity with elevated privileges
+  const { data: activityId, error: rpcError } = await supabase.rpc('record_friend_activity', {
+    p_user_id: userId,
+    p_activity_type: activityType,
+    p_related_routine_id: activityData?.routine_id || null,
+    p_related_circle_id: activityData?.circle_id || null,
+    p_activity_data: activityData || null,
+  });
+
+  if (rpcError) throw rpcError;
+
+  // Fetch the created activity to return
   const { data, error } = await supabase
     .from('friend_activity')
-    .insert({
-      user_id: userId,
-      activity_type: activityType,
-      related_routine_id: activityData?.routine_id || null,
-      related_circle_id: activityData?.circle_id || null,
-      activity_data: activityData || null,
-    })
-    .select()
+    .select('*')
+    .eq('id', activityId)
     .single();
 
   if (error) throw error;
@@ -674,6 +846,20 @@ export function formatActivityFeedItem(activity: FriendActivity): ActivityFeedIt
       break;
     case 'joined_circle':
       message = `joined ${activity.circle?.name || 'a circle'}`;
+      break;
+    case 'left_circle':
+      message = `left ${activity.circle?.name || 'a circle'}`;
+      break;
+    case 'invited_to_circle':
+      message = `invited a friend to ${activity.circle?.name || 'a circle'}`;
+      break;
+    case 'removed_from_circle':
+      // Check if this is the person who was removed or the person who did the removing
+      if (activity.activity_data?.removed_user_id) {
+        message = `removed a member from ${activity.circle?.name || 'a circle'}`;
+      } else {
+        message = `was removed from ${activity.circle?.name || 'a circle'}`;
+      }
       break;
     case 'shared_routine':
       message = `shared ${activity.routine?.name || 'a routine'} to ${activity.circle?.name || 'a circle'}`;
