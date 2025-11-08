@@ -1,4 +1,5 @@
 import { useAuth } from '@/lib/contexts/AuthContext';
+import { AppColors } from '@/constants/theme';
 import { completeRoutine, getRoutineById } from '@/lib/utils/dashboard';
 import { Exercise, Routine } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
@@ -150,7 +151,7 @@ export default function ExecuteRoutineScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#3533cd" />
+        <ActivityIndicator size="large" color={AppColors.primary} />
       </View>
     );
   }
@@ -158,7 +159,7 @@ export default function ExecuteRoutineScreen() {
   if (!routine || !routine.exercises || routine.exercises.length === 0) {
     return (
       <View style={styles.errorContainer}>
-        <Ionicons name="alert-circle-outline" size={48} color="#999" />
+        <Ionicons name="alert-circle-outline" size={48} color={AppColors.textTertiary} />
         <Text style={styles.errorText}>No exercises found</Text>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Text style={styles.backButtonText}>Go Back</Text>
@@ -170,7 +171,7 @@ export default function ExecuteRoutineScreen() {
   if (isComplete) {
     return (
       <View style={styles.completeContainer}>
-        <Ionicons name="checkmark-circle" size={100} color="#34C759" />
+        <Ionicons name="checkmark-circle" size={100} color={AppColors.success} />
         <Text style={styles.completeTitle}>Routine Complete!</Text>
         <Text style={styles.completeMessage}>Great work on completing {routine.name}</Text>
       </View>
@@ -185,7 +186,7 @@ export default function ExecuteRoutineScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={handleQuit}>
-          <Ionicons name="close" size={28} color="#1a1a1a" />
+          <Ionicons name="close" size={28} color={AppColors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.routineName}>{routine.name}</Text>
         <View style={{ width: 28 }} />
@@ -221,7 +222,7 @@ export default function ExecuteRoutineScreen() {
           <Ionicons
             name={isPaused ? 'play' : 'pause'}
             size={48}
-            color="#fff"
+            color={AppColors.textPrimary}
           />
         </TouchableOpacity>
       </View>
@@ -235,35 +236,35 @@ export default function ExecuteRoutineScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.background,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.background,
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.background,
   },
   errorText: {
     fontSize: 18,
-    color: '#666',
+    color: AppColors.textSecondary,
     marginTop: 16,
     marginBottom: 24,
   },
   backButton: {
     paddingHorizontal: 24,
     paddingVertical: 12,
-    backgroundColor: '#3533cd',
+    backgroundColor: AppColors.primary,
     borderRadius: 8,
   },
   backButtonText: {
-    color: '#fff',
+    color: AppColors.textPrimary,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -272,18 +273,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.background,
   },
   completeTitle: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#1a1a1a',
+    color: AppColors.textPrimary,
     marginTop: 24,
     marginBottom: 12,
   },
   completeMessage: {
     fontSize: 16,
-    color: '#666',
+    color: AppColors.textSecondary,
     textAlign: 'center',
   },
   header: {
@@ -297,7 +298,7 @@ const styles = StyleSheet.create({
   routineName: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1a1a1a',
+    color: AppColors.textPrimary,
     flex: 1,
     textAlign: 'center',
   },
@@ -307,19 +308,19 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     height: 8,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: AppColors.surfaceSecondary,
     borderRadius: 4,
     overflow: 'hidden',
     marginBottom: 8,
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#3533cd',
+    backgroundColor: AppColors.primary,
     borderRadius: 4,
   },
   progressText: {
     fontSize: 14,
-    color: '#666',
+    color: AppColors.textSecondary,
     textAlign: 'center',
   },
   exerciseContainer: {
@@ -329,13 +330,13 @@ const styles = StyleSheet.create({
   exerciseName: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#1a1a1a',
+    color: AppColors.textPrimary,
     marginBottom: 16,
     textAlign: 'center',
   },
   exerciseInstructions: {
     fontSize: 16,
-    color: '#666',
+    color: AppColors.textSecondary,
     lineHeight: 24,
     textAlign: 'center',
   },
@@ -348,20 +349,20 @@ const styles = StyleSheet.create({
     width: 240,
     height: 240,
     borderRadius: 120,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: AppColors.surface,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 8,
-    borderColor: '#3533cd',
+    borderColor: AppColors.primary,
   },
   timerText: {
     fontSize: 72,
     fontWeight: 'bold',
-    color: '#3533cd',
+    color: AppColors.primary,
   },
   timerLabel: {
     fontSize: 16,
-    color: '#666',
+    color: AppColors.textSecondary,
     marginTop: 4,
   },
   controls: {
@@ -372,7 +373,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#3533cd',
+    backgroundColor: AppColors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },

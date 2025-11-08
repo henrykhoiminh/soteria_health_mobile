@@ -1,4 +1,5 @@
 import { useAuth } from '@/lib/contexts/AuthContext';
+import { AppColors } from '@/constants/theme';
 import { getRoutineById } from '@/lib/utils/dashboard';
 import { deleteCustomRoutine } from '@/lib/utils/routine-builder';
 import { Routine } from '@/types';
@@ -85,7 +86,7 @@ export default function RoutineDetailScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#3533cd" />
+        <ActivityIndicator size="large" color={AppColors.primary} />
       </View>
     );
   }
@@ -93,7 +94,7 @@ export default function RoutineDetailScreen() {
   if (!routine) {
     return (
       <View style={styles.errorContainer}>
-        <Ionicons name="alert-circle-outline" size={48} color="#999" />
+        <Ionicons name="alert-circle-outline" size={48} color={AppColors.textTertiary} />
         <Text style={styles.errorText}>Routine not found</Text>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Text style={styles.backButtonText}>Go Back</Text>
@@ -108,16 +109,16 @@ export default function RoutineDetailScreen() {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity style={styles.backIcon} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color="#1a1a1a" />
+            <Ionicons name="arrow-back" size={24} color={AppColors.textPrimary} />
           </TouchableOpacity>
           <View style={styles.headerRight}>
             {isCustomRoutine && (
               <View style={styles.actionButtons}>
                 <TouchableOpacity style={styles.actionButton} onPress={handleEditRoutine}>
-                  <Ionicons name="create-outline" size={24} color="#3533cd" />
+                  <Ionicons name="create-outline" size={24} color={AppColors.primary} />
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.actionButton} onPress={handleDeleteRoutine}>
-                  <Ionicons name="trash-outline" size={24} color="#EF4444" />
+                  <Ionicons name="trash-outline" size={24} color={AppColors.body} />
                 </TouchableOpacity>
               </View>
             )}
@@ -134,15 +135,15 @@ export default function RoutineDetailScreen() {
 
           <View style={styles.infoRow}>
             <View style={styles.infoItem}>
-              <Ionicons name="time-outline" size={20} color="#666" />
+              <Ionicons name="time-outline" size={20} color={AppColors.textSecondary} />
               <Text style={styles.infoText}>{routine.duration_minutes} min</Text>
             </View>
             <View style={styles.infoItem}>
-              <Ionicons name="bar-chart-outline" size={20} color="#666" />
+              <Ionicons name="bar-chart-outline" size={20} color={AppColors.textSecondary} />
               <Text style={styles.infoText}>{routine.difficulty}</Text>
             </View>
             <View style={styles.infoItem}>
-              <Ionicons name="checkmark-circle-outline" size={20} color="#666" />
+              <Ionicons name="checkmark-circle-outline" size={20} color={AppColors.textSecondary} />
               <Text style={styles.infoText}>{routine.completion_count} completions</Text>
             </View>
           </View>
@@ -154,7 +155,7 @@ export default function RoutineDetailScreen() {
             <Text style={styles.sectionTitle}>Benefits</Text>
             {routine.benefits.map((benefit, index) => (
               <View key={index} style={styles.benefitItem}>
-                <Ionicons name="checkmark-circle" size={20} color="#3533cd" />
+                <Ionicons name="checkmark-circle" size={20} color={AppColors.primary} />
                 <Text style={styles.benefitText}>{benefit}</Text>
               </View>
             ))}
@@ -176,7 +177,7 @@ export default function RoutineDetailScreen() {
               </View>
               <Text style={styles.exerciseInstructions}>{exercise.instructions}</Text>
               <View style={styles.exerciseDuration}>
-                <Ionicons name="timer-outline" size={16} color="#3533cd" />
+                <Ionicons name="timer-outline" size={16} color={AppColors.primary} />
                 <Text style={styles.exerciseDurationText}>
                   {exercise.duration_seconds}s
                 </Text>
@@ -195,7 +196,7 @@ export default function RoutineDetailScreen() {
           onPress={handleStartRoutine}
           disabled={!user}
         >
-          <Ionicons name="play" size={24} color="#fff" />
+          <Ionicons name="play" size={24} color={AppColors.textPrimary} />
           <Text style={styles.startButtonText}>Start Routine</Text>
         </TouchableOpacity>
       </View>
@@ -206,48 +207,48 @@ export default function RoutineDetailScreen() {
 function getCategoryColor(category: string): string {
   switch (category) {
     case 'Mind':
-      return '#3B82F6';
+      return AppColors.mind;
     case 'Body':
-      return '#EF4444';
+      return AppColors.body;
     case 'Soul':
-      return '#F59E0B';
+      return AppColors.soul;
     default:
-      return '#3533cd';
+      return AppColors.primary;
   }
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: AppColors.background,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: AppColors.background,
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: AppColors.background,
   },
   errorText: {
     fontSize: 18,
-    color: '#666',
+    color: AppColors.textSecondary,
     marginTop: 16,
     marginBottom: 24,
   },
   backButton: {
     paddingHorizontal: 24,
     paddingVertical: 12,
-    backgroundColor: '#3533cd',
+    backgroundColor: AppColors.primary,
     borderRadius: 8,
   },
   backButtonText: {
-    color: '#fff',
+    color: AppColors.textPrimary,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -265,7 +266,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -282,7 +283,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -292,7 +293,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   categoryText: {
-    color: '#fff',
+    color: AppColors.textPrimary,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -303,12 +304,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#1a1a1a',
+    color: AppColors.textPrimary,
     marginBottom: 12,
   },
   description: {
     fontSize: 16,
-    color: '#666',
+    color: AppColors.textSecondary,
     lineHeight: 24,
     marginBottom: 20,
   },
@@ -323,7 +324,7 @@ const styles = StyleSheet.create({
   },
   infoText: {
     fontSize: 14,
-    color: '#666',
+    color: AppColors.textSecondary,
   },
   section: {
     padding: 24,
@@ -332,7 +333,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#1a1a1a',
+    color: AppColors.textPrimary,
     marginBottom: 16,
   },
   benefitItem: {
@@ -344,19 +345,19 @@ const styles = StyleSheet.create({
   benefitText: {
     flex: 1,
     fontSize: 15,
-    color: '#333',
+    color: AppColors.textPrimary,
     lineHeight: 22,
   },
   exerciseCard: {
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: AppColors.cardBorder,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.2,
     shadowRadius: 3,
     elevation: 2,
   },
@@ -369,13 +370,13 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#3533cd',
+    backgroundColor: AppColors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
   exerciseNumberText: {
-    color: '#fff',
+    color: AppColors.textPrimary,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -383,11 +384,11 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     fontWeight: '600',
-    color: '#1a1a1a',
+    color: AppColors.textPrimary,
   },
   exerciseInstructions: {
     fontSize: 14,
-    color: '#666',
+    color: AppColors.textSecondary,
     lineHeight: 20,
     marginBottom: 8,
   },
@@ -398,18 +399,18 @@ const styles = StyleSheet.create({
   },
   exerciseDurationText: {
     fontSize: 14,
-    color: '#3533cd',
+    color: AppColors.primary,
     fontWeight: '500',
   },
   footer: {
     padding: 24,
     paddingBottom: 40,
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderTopWidth: 1,
-    borderTopColor: '#eee',
+    borderTopColor: AppColors.borderLight,
   },
   startButton: {
-    backgroundColor: '#3533cd',
+    backgroundColor: AppColors.primary,
     borderRadius: 12,
     padding: 16,
     flexDirection: 'row',
@@ -418,7 +419,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   startButtonText: {
-    color: '#fff',
+    color: AppColors.textPrimary,
     fontSize: 18,
     fontWeight: '600',
   },

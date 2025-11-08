@@ -1,4 +1,5 @@
 import { useAuth } from '@/lib/contexts/AuthContext';
+import { AppColors } from '@/constants/theme';
 import { updateUserProfile, uploadProfilePicture, hardResetUserData } from '@/lib/utils/auth';
 import { FitnessLevel, JourneyFocus } from '@/types';
 import { useState } from 'react';
@@ -194,9 +195,9 @@ export default function ProfileScreen() {
             disabled={uploadingImage}
           >
             {uploadingImage ? (
-              <ActivityIndicator size="small" color="#fff" />
+              <ActivityIndicator size="small" color={AppColors.textPrimary} />
             ) : (
-              <Ionicons name="camera" size={20} color="#fff" />
+              <Ionicons name="camera" size={20} color={AppColors.textPrimary} />
             )}
           </TouchableOpacity>
         </View>
@@ -206,7 +207,7 @@ export default function ProfileScreen() {
             value={editedFullName}
             onChangeText={setEditedFullName}
             placeholder="Full Name"
-            placeholderTextColor="#999"
+            placeholderTextColor={AppColors.textTertiary}
           />
         ) : (
           <Text style={styles.name}>{profile?.full_name || 'User'}</Text>
@@ -219,7 +220,7 @@ export default function ProfileScreen() {
           <Text style={styles.sectionTitle}>Profile Information</Text>
           {!isEditing && (
             <TouchableOpacity onPress={handleEdit} style={styles.editButton}>
-              <Ionicons name="pencil" size={20} color="#3533cd" />
+              <Ionicons name="pencil" size={20} color={AppColors.primary} />
               <Text style={styles.editButtonText}>Edit</Text>
             </TouchableOpacity>
           )}
@@ -236,7 +237,7 @@ export default function ProfileScreen() {
               <Text style={styles.selectButtonText}>
                 {editedJourneyFocus || 'Select'}
               </Text>
-              <Ionicons name="chevron-down" size={20} color="#666" />
+              <Ionicons name="chevron-down" size={20} color={AppColors.textSecondary} />
             </TouchableOpacity>
           ) : (
             <Text style={styles.infoValue}>
@@ -256,7 +257,7 @@ export default function ProfileScreen() {
               <Text style={styles.selectButtonText}>
                 {editedFitnessLevel || 'Select'}
               </Text>
-              <Ionicons name="chevron-down" size={20} color="#666" />
+              <Ionicons name="chevron-down" size={20} color={AppColors.textSecondary} />
             </TouchableOpacity>
           ) : (
             <Text style={styles.infoValue}>
@@ -274,7 +275,7 @@ export default function ProfileScreen() {
               value={editedAge}
               onChangeText={setEditedAge}
               placeholder="Age"
-              placeholderTextColor="#999"
+              placeholderTextColor={AppColors.textTertiary}
               keyboardType="number-pad"
               maxLength={3}
             />
@@ -351,7 +352,7 @@ export default function ProfileScreen() {
           onPress={handleResetJourney}
           disabled={resetting}
         >
-          <Ionicons name="refresh" size={20} color="#FF3B30" />
+          <Ionicons name="refresh" size={20} color={AppColors.destructive} />
           <Text style={styles.resetButtonText}>
             {resetting ? 'Resetting...' : 'Reset Journey'}
           </Text>
@@ -383,7 +384,7 @@ export default function ProfileScreen() {
               >
                 <Text style={styles.modalOptionText}>{focus}</Text>
                 {editedJourneyFocus === focus && (
-                  <Ionicons name="checkmark" size={20} color="#3533cd" />
+                  <Ionicons name="checkmark" size={20} color={AppColors.primary} />
                 )}
               </TouchableOpacity>
             ))}
@@ -416,7 +417,7 @@ export default function ProfileScreen() {
               >
                 <Text style={styles.modalOptionText}>{level}</Text>
                 {editedFitnessLevel === level && (
-                  <Ionicons name="checkmark" size={20} color="#3533cd" />
+                  <Ionicons name="checkmark" size={20} color={AppColors.primary} />
                 )}
               </TouchableOpacity>
             ))}
@@ -430,12 +431,12 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: AppColors.background,
   },
   header: {
     padding: 24,
     paddingTop: 100,
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     alignItems: 'center',
   },
   avatarContainer: {
@@ -446,7 +447,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#3533cd',
+    backgroundColor: AppColors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
@@ -458,7 +459,7 @@ const styles = StyleSheet.create({
   avatarText: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#fff',
+    color: AppColors.textPrimary,
   },
   cameraButton: {
     position: 'absolute',
@@ -467,26 +468,26 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#3533cd',
+    backgroundColor: AppColors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#fff',
+    borderColor: AppColors.surface,
   },
   name: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1a1a1a',
+    color: AppColors.textPrimary,
     marginBottom: 4,
   },
   email: {
     fontSize: 14,
-    color: '#666',
+    color: AppColors.textSecondary,
   },
   section: {
     marginTop: 16,
     padding: 24,
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -497,7 +498,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1a1a1a',
+    color: AppColors.textPrimary,
   },
   editButton: {
     flexDirection: 'row',
@@ -506,16 +507,16 @@ const styles = StyleSheet.create({
   },
   editButtonText: {
     fontSize: 16,
-    color: '#3533cd',
+    color: AppColors.primary,
     fontWeight: '500',
   },
   nameInput: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1a1a1a',
+    color: AppColors.textPrimary,
     marginBottom: 4,
     borderBottomWidth: 1,
-    borderBottomColor: '#3533cd',
+    borderBottomColor: AppColors.primary,
     paddingBottom: 4,
     textAlign: 'center',
     minWidth: 200,
@@ -526,15 +527,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: AppColors.borderLight,
   },
   infoLabel: {
     fontSize: 16,
-    color: '#666',
+    color: AppColors.textSecondary,
   },
   infoValue: {
     fontSize: 16,
-    color: '#1a1a1a',
+    color: AppColors.textPrimary,
     fontWeight: '500',
   },
   goalsContainer: {
@@ -543,17 +544,17 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   goalTag: {
-    backgroundColor: '#E3F2FD',
+    backgroundColor: AppColors.lightBlue,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 16,
   },
   injuryTag: {
-    backgroundColor: '#FFF3E0',
+    backgroundColor: AppColors.lightOrange,
   },
   goalText: {
     fontSize: 14,
-    color: '#1a1a1a',
+    color: AppColors.textPrimary,
   },
   selectButton: {
     flexDirection: 'row',
@@ -561,22 +562,22 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: AppColors.inputBackground,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: AppColors.border,
   },
   selectButtonText: {
     fontSize: 16,
-    color: '#1a1a1a',
+    color: AppColors.textPrimary,
     fontWeight: '500',
   },
   ageInput: {
     fontSize: 16,
-    color: '#1a1a1a',
+    color: AppColors.textPrimary,
     fontWeight: '500',
     borderBottomWidth: 1,
-    borderBottomColor: '#3533cd',
+    borderBottomColor: AppColors.primary,
     paddingVertical: 4,
     minWidth: 60,
     textAlign: 'right',
@@ -593,20 +594,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cancelButton: {
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderWidth: 2,
-    borderColor: '#666',
+    borderColor: AppColors.border,
   },
   cancelButtonText: {
-    color: '#666',
+    color: AppColors.textSecondary,
     fontSize: 16,
     fontWeight: '600',
   },
   saveButton: {
-    backgroundColor: '#3533cd',
+    backgroundColor: AppColors.primary,
   },
   saveButtonText: {
-    color: '#fff',
+    color: AppColors.textPrimary,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -615,13 +616,13 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
   },
   modalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderRadius: 12,
     width: '100%',
     maxWidth: 300,
@@ -630,10 +631,10 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1a1a1a',
+    color: AppColors.textPrimary,
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: AppColors.borderLight,
   },
   modalOption: {
     flexDirection: 'row',
@@ -641,32 +642,32 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: AppColors.borderLight,
   },
   modalOptionText: {
     fontSize: 16,
-    color: '#1a1a1a',
+    color: AppColors.textPrimary,
   },
   signOutButton: {
-    backgroundColor: '#FF3B30',
+    backgroundColor: AppColors.destructive,
     borderRadius: 8,
     padding: 16,
     alignItems: 'center',
   },
   signOutText: {
-    color: '#fff',
+    color: AppColors.textPrimary,
     fontSize: 16,
     fontWeight: '600',
   },
   dangerZoneTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FF3B30',
+    color: AppColors.destructive,
     marginBottom: 8,
   },
   dangerZoneSubtitle: {
     fontSize: 14,
-    color: '#666',
+    color: AppColors.textSecondary,
     marginBottom: 16,
     lineHeight: 20,
   },
@@ -676,13 +677,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     borderWidth: 2,
-    borderColor: '#FF3B30',
+    borderColor: AppColors.destructive,
     borderRadius: 8,
     padding: 16,
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
   },
   resetButtonText: {
-    color: '#FF3B30',
+    color: AppColors.destructive,
     fontSize: 16,
     fontWeight: '600',
   },
