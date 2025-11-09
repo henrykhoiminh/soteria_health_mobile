@@ -50,7 +50,7 @@ export default function SocialScreen() {
   const { user } = useAuth();
   const router = useRouter();
   const params = useLocalSearchParams<{ tab?: string }>();
-  const [activeTab, setActiveTab] = useState<Tab>('friends');
+  const [activeTab, setActiveTab] = useState<Tab>('circles');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -105,19 +105,19 @@ export default function SocialScreen() {
       {/* Tab Navigation */}
       <View style={styles.tabBar}>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'friends' && styles.tabActive]}
-          onPress={() => setActiveTab('friends')}
-        >
-          <Text style={[styles.tabText, activeTab === 'friends' && styles.tabTextActive]}>
-            Friends
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
           style={[styles.tab, activeTab === 'circles' && styles.tabActive]}
           onPress={() => setActiveTab('circles')}
         >
           <Text style={[styles.tabText, activeTab === 'circles' && styles.tabTextActive]}>
             Circles
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'friends' && styles.tabActive]}
+          onPress={() => setActiveTab('friends')}
+        >
+          <Text style={[styles.tabText, activeTab === 'friends' && styles.tabTextActive]}>
+            Friends
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -131,8 +131,8 @@ export default function SocialScreen() {
       </View>
 
       {/* Tab Content */}
-      {activeTab === 'friends' && <FriendsTab userId={user.id} onRefresh={onRefresh} />}
       {activeTab === 'circles' && <CirclesTab userId={user.id} onRefresh={onRefresh} />}
+      {activeTab === 'friends' && <FriendsTab userId={user.id} onRefresh={onRefresh} />}
       {activeTab === 'activity' && <ActivityTab userId={user.id} onRefresh={onRefresh} />}
     </View>
   );

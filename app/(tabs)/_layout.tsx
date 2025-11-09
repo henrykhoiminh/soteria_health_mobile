@@ -1,56 +1,44 @@
-import { Tabs } from 'expo-router';
 import React from 'react';
-
-import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import SwipeableTabs from '@/components/SwipeableTabs';
+import DashboardScreen from './index';
+import RoutinesScreen from './routines';
+import BuilderScreen from './builder';
+import SocialScreen from './social';
+import ProfileScreen from './profile';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
+  const tabs = [
+    {
+      name: 'index',
+      title: 'Dashboard',
+      icon: 'house.fill',
+      component: DashboardScreen,
+    },
+    {
+      name: 'routines',
+      title: 'Routines',
+      icon: 'list.bullet',
+      component: RoutinesScreen,
+    },
+    {
+      name: 'builder',
+      title: 'Build',
+      icon: 'plus.circle.fill',
+      component: BuilderScreen,
+    },
+    {
+      name: 'social',
+      title: 'Social',
+      icon: 'person.3.fill',
+      component: SocialScreen,
+    },
+    {
+      name: 'profile',
+      title: 'Profile',
+      icon: 'person.fill',
+      component: ProfileScreen,
+    },
+  ];
 
-  return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: false,
-        tabBarButton: HapticTab,
-      }}>
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Dashboard',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="routines"
-        options={{
-          title: 'Routines',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="list.bullet" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="builder"
-        options={{
-          title: 'Builder',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="plus.circle.fill" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="social"
-        options={{
-          title: 'Social',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="person.3.fill" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: 'Profile',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="person.fill" color={color} />,
-        }}
-      />
-    </Tabs>
-  );
+  return <SwipeableTabs tabs={tabs} />;
 }
