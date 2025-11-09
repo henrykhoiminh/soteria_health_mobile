@@ -48,6 +48,40 @@ export interface Routine {
   // Advanced search fields
   tags?: string[] // General tags for categorization (e.g., "Desk Work", "Upper Body")
   body_parts?: string[] // Body parts targeted by this routine (e.g., ["Neck", "Shoulder"])
+  // Discovery system fields
+  is_public?: boolean // Whether custom routine is publicly discoverable
+  save_count?: number // Number of users who saved/bookmarked this routine
+  is_saved?: boolean // Whether current user has saved this routine
+  // Badge fields
+  badge_popular?: boolean // >100 completions
+  badge_trending?: boolean // >20 saves in last 7 days
+  badge_new?: boolean // Created within last 7 days
+  badge_official?: boolean // Pre-built by Soteria team
+  // Creator info (for community routines)
+  creator_name?: string
+  creator_username?: string
+  creator_avatar?: string
+}
+
+// Routine Discovery Types
+export type RoutineSortOption = 'popular' | 'trending' | 'newest' | 'most_saved'
+export type RoutineSourceFilter = 'all' | 'official' | 'community'
+
+export interface RoutineFilters {
+  category?: RoutineCategory
+  difficulty?: RoutineDifficulty
+  journeyFocus?: JourneyFocus
+  source?: RoutineSourceFilter
+  durationMin?: number
+  durationMax?: number
+  searchQuery?: string
+}
+
+export interface RoutineDiscoverParams {
+  sort?: RoutineSortOption
+  filters?: RoutineFilters
+  limit?: number
+  offset?: number
 }
 
 // Completion Types
