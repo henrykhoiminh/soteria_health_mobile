@@ -320,6 +320,12 @@ function getActivityIcon(type: string): any {
       return 'people';
     case 'shared_routine':
       return 'share-social';
+    case 'completed_circle_routine':
+      return 'checkmark-done-circle';
+    case 'added_routine_to_circle':
+      return 'add-circle-outline';
+    case 'routine_became_popular':
+      return 'flame';
     default:
       return 'radio-button-on';
   }

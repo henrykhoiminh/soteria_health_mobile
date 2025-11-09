@@ -40,6 +40,12 @@ export default function ActivityCard({
         return 'person-remove';
       case 'joined_soteria':
         return 'hand-right';
+      case 'completed_circle_routine':
+        return 'checkmark-done-circle';
+      case 'added_routine_to_circle':
+        return 'add-circle-outline';
+      case 'routine_became_popular':
+        return 'flame';
       default:
         return 'radio-button-on';
     }

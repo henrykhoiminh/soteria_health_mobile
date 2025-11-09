@@ -38,6 +38,7 @@ import {
 import { getFormattedCircleActivity } from '@/lib/utils/social';
 import FriendInviteModal from '@/components/FriendInviteModal';
 import ActivityCard from '@/components/ActivityCard';
+import EnhancedCircleRoutinesTab from '@/components/EnhancedCircleRoutinesTab';
 
 type Tab = 'members' | 'routines' | 'activity';
 
@@ -159,6 +160,18 @@ export default function CircleDetailScreen() {
     );
   }
 
+  if (!user) {
+    return (
+      <View style={styles.errorContainer}>
+        <Ionicons name="alert-circle-outline" size={48} color={AppColors.textTertiary} />
+        <Text style={styles.errorText}>Please log in to view circles</Text>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.replace('/(auth)/login')}>
+          <Text style={styles.backButtonText}>Go to Login</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   if (!circle) {
     return (
       <View style={styles.errorContainer}>
@@ -172,7 +185,7 @@ export default function CircleDetailScreen() {
   }
 
   const isAdmin = userRole === 'admin';
-  const isCreator = circle.created_by === user?.id;
+  const isCreator = circle.created_by === user.id;
 
   return (
     <View style={styles.container}>
@@ -223,20 +236,14 @@ export default function CircleDetailScreen() {
           </View>
 
           {/* Action Buttons */}
-          <View style={styles.actionButtons}>
-            {isCreator && (
-              <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteCircle}>
-                <Ionicons name="trash-outline" size={20} color={AppColors.destructive} />
-                <Text style={styles.deleteButtonText}>Delete Circle</Text>
-              </TouchableOpacity>
-            )}
-            {!isCreator && (
+          {!isCreator && (
+            <View style={styles.actionButtons}>
               <TouchableOpacity style={styles.leaveButton} onPress={handleLeaveCircle}>
                 <Ionicons name="exit-outline" size={20} color={AppColors.destructive} />
                 <Text style={styles.leaveButtonText}>Leave Circle</Text>
               </TouchableOpacity>
-            )}
-          </View>
+            </View>
+          )}
         </View>
 
         {/* Tab Navigation */}
@@ -277,7 +284,13 @@ export default function CircleDetailScreen() {
             currentUserId={user!.id}
           />
         )}
-        {activeTab === 'routines' && <RoutinesTab circleId={id!} userId={user!.id} />}
+        {activeTab === 'routines' && (
+          <EnhancedCircleRoutinesTab
+            circleId={id!}
+            isAdmin={isAdmin}
+            onRefresh={handleRefresh}
+          />
+        )}
         {activeTab === 'activity' && <CircleActivityTab circleId={id!} key={refreshing.toString()} />}
 
         <View style={{ height: 100 }} />
@@ -293,6 +306,8 @@ export default function CircleDetailScreen() {
             setShowEditModal(false);
             handleRefresh();
           }}
+          isCreator={isCreator}
+          onDelete={handleDeleteCircle}
         />
       )}
 
@@ -302,7 +317,7 @@ export default function CircleDetailScreen() {
         onClose={() => setShowInviteModal(false)}
         onInvite={handleInviteFriend}
         currentMemberIds={circle.members.map(m => m.user_id)}
-        userId={user!.id}
+        userId={user.id}
         circleId={id!}
       />
     </View>
@@ -543,11 +558,15 @@ function EditCircleModal({
   circle,
   onClose,
   onSuccess,
+  isCreator,
+  onDelete,
 }: {
   visible: boolean;
   circle: CircleWithMembers;
   onClose: () => void;
   onSuccess: () => void;
+  isCreator: boolean;
+  onDelete: () => void;
 }) {
   const [name, setName] = useState(circle.name);
   const [description, setDescription] = useState(circle.description || '');
@@ -643,6 +662,19 @@ function EditCircleModal({
                 {updating ? 'Updating...' : 'Update Circle'}
               </Text>
             </TouchableOpacity>
+
+            {isCreator && (
+              <TouchableOpacity
+                style={styles.deleteButtonModal}
+                onPress={() => {
+                  onClose();
+                  onDelete();
+                }}
+              >
+                <Ionicons name="trash-outline" size={20} color={AppColors.destructive} />
+                <Text style={styles.deleteButtonModalText}>Delete Circle</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </View>
@@ -1086,5 +1118,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: AppColors.textPrimary,
+  },
+  deleteButtonModal: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: AppColors.surfaceSecondary,
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: AppColors.destructive,
+    gap: 8,
+  },
+  deleteButtonModalText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: AppColors.destructive,
   },
 });

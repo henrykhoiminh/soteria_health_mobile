@@ -1,6 +1,7 @@
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { AppColors } from '@/constants/theme';
 import { completeRoutine, getRoutineById } from '@/lib/utils/dashboard';
+import { completeCircleRoutine } from '@/lib/utils/social';
 import { Exercise, Routine } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -15,7 +16,7 @@ import {
 } from 'react-native';
 
 export default function ExecuteRoutineScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, circleId } = useLocalSearchParams<{ id: string; circleId?: string }>();
   const { user } = useAuth();
   const router = useRouter();
 
@@ -106,7 +107,18 @@ export default function ExecuteRoutineScreen() {
     setIsComplete(true);
 
     try {
+      // Complete routine for individual daily progress
       await completeRoutine(user.id, routine.id, routine.category);
+
+      // If executed from a circle, also track circle completion
+      if (circleId) {
+        try {
+          await completeCircleRoutine(circleId, routine.id, user.id);
+        } catch (circleError) {
+          console.error('Error tracking circle completion:', circleError);
+          // Don't fail the whole completion if circle tracking fails
+        }
+      }
 
       Alert.alert(
         'Congratulations!',

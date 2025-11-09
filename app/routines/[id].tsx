@@ -17,7 +17,7 @@ import {
 } from 'react-native';
 
 export default function RoutineDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, circleId } = useLocalSearchParams<{ id: string; circleId?: string }>();
   const { user } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -43,7 +43,12 @@ export default function RoutineDetailScreen() {
 
   const handleStartRoutine = () => {
     if (!routine) return;
-    router.push(`/routines/${routine.id}/execute`);
+    // Pass circleId to execute screen if present (for circle routine completions)
+    if (circleId) {
+      router.push(`/routines/${routine.id}/execute?circleId=${circleId}` as any);
+    } else {
+      router.push(`/routines/${routine.id}/execute`);
+    }
   };
 
   const handleEditRoutine = () => {

@@ -108,7 +108,14 @@ This is the mobile companion app to the Soteria Health web application, built wi
   - Join public circles directly
   - View circle members
   - Admin controls (invite, remove members)
-  - Share routines within circles
+  - **Enhanced Circle Routines**:
+    - Add any routine to circle library
+    - Browse circle routines with search and filters
+    - Complete routines directly from circle
+    - Track completion stats per routine
+    - Popular badges for routines with 50%+ completion
+    - Sort by popularity, recency, or name
+    - View "X of Y members completed" stats
   - Circle activity feed
   - Leave circles
 
@@ -301,6 +308,18 @@ sql/social_migration/MASTER_FIX_infinite_recursion.sql
 
 # 10. IMPORTANT: Fix activity feeds separation (global vs circle)
 sql/social_migration/fix_activity_feeds_separation.sql
+
+# 11. FEATURE: Circle Routines Enhancements
+sql/social_migration/add_circle_routines_enhancements.sql
+
+# 12. UPDATE: Remove Circle Routine Daily Completion Limit
+sql/social_migration/update_circle_routine_completions_constraint.sql
+
+# 13. UPDATE: Circle Routine Stats to Total Completions
+sql/social_migration/update_circle_routine_stats_to_total_completions.sql
+
+# 14. FIX: Circle Routines Delete Policy for Admins
+sql/social_migration/fix_circle_routines_delete_policy.sql
 ```
 
 **⚠️ CRITICAL: RLS Infinite Recursion Fix**
@@ -338,6 +357,110 @@ The activity feed system properly separates global activities from circle-specif
 - Use `recordUserActivity()` for global activities (completed routine outside circles, created custom routine, streak milestones)
 - Use `recordCircleActivity()` for circle-specific activities (shared routine to circle, joined circle, left circle)
 - Activities are automatically filtered by `related_circle_id` in queries
+
+**🎯 Circle Routines Feature**
+
+The Circle Routines enhancement adds comprehensive routine management within circles, including completion tracking, popularity detection, and advanced discovery features.
+
+**The add_circle_routines_enhancements.sql migration adds:**
+
+1. **Circle Routine Completions Table**
+   - Tracks when members complete circle routines
+   - No completion limit - users can complete same routine multiple times per day
+   - Stores completion time, duration, and optional notes
+   - Indexed for efficient queries by circle, routine, and user
+
+2. **Completion Stats & Analytics**
+   - Auto-calculating **total completion** counts per routine
+   - Tracks all completions (not unique users)
+   - Popular routine detection (top 3 by completion count per circle)
+   - Real-time stats via database view (`circle_routine_stats`)
+   - Stats display: "47 completions" (total times, not unique members)
+
+3. **Auto-Update Trigger**
+   - Automatically updates stats after each completion
+   - Marks top 3 routines per circle as "Popular"
+   - Rankings update dynamically as completions change
+   - Efficient function with `SECURITY DEFINER` privileges
+
+4. **New Activity Types**
+   - `completed_circle_routine` - Member completes a routine from circle
+   - `added_routine_to_circle` - Member adds routine to circle
+   - `routine_became_popular` - Routine reaches popularity threshold (celebration! 🔥)
+
+**Features Enabled:**
+- ✅ Browse circle routines with search, filter, and sort
+- ✅ Add any routine to circle (unique constraint prevents duplicates)
+- ✅ Complete routines directly from circle page (unlimited completions)
+- ✅ View completion stats: "47 completions" (total times completed)
+- ✅ Popular badge for top 3 most-completed routines per circle
+- ✅ Filter by category (Mind, Body, Soul) or search by name
+- ✅ Sort by: Most Popular, Recently Added, or Name
+- ✅ Admin controls to remove routines
+- ✅ Activity logging for all circle routine events
+- ✅ Users can complete same routine multiple times (no daily limit)
+
+**UI Components:**
+- **EnhancedCircleRoutinesTab**: Full-featured routines browser with:
+  - Search bar with real-time filtering
+  - Category and sort filters
+  - Add Routine modal showing available routines
+  - Completion tracking and stats display
+  - Popular badges and completion percentages
+  - Admin remove controls
+- **ActivityCard**: Updated with new activity type icons
+  - `checkmark-done-circle` for circle completions
+  - `add-circle-outline` for added routines
+  - `flame` for popular routines
+
+**📝 Migration 12 - Completion Limit Update:**
+
+The `update_circle_routine_completions_constraint.sql` migration removes the daily completion limit:
+
+**What Changed:**
+- ❌ **Removed**: Daily uniqueness constraint (users can now complete unlimited times)
+
+**Why This Matters:**
+- Users can complete the same routine multiple times per day (e.g., morning and evening meditation)
+- More flexible for daily routines and repeated practices
+
+**📝 Migration 13 - Total Completions Stats:**
+
+The `update_circle_routine_stats_to_total_completions.sql` migration changes from unique user counts to total completion counts:
+
+**📝 Migration 14 - Admin Delete Permissions:**
+
+The `fix_circle_routines_delete_policy.sql` migration fixes the RLS policy to allow circle admins to delete routines:
+
+**What Changed:**
+- ✅ **Fixed**: Circle admins can now delete ANY routine in their circle
+- ✅ **Preserved**: Users can still delete routines they added
+- ✅ **Security**: Only admins and original posters can delete
+
+**Why This Matters:**
+- Admins need to be able to manage circle routines effectively
+- Removes inappropriate or duplicate routines
+- Original poster can still remove their own routines
+- Proper permission hierarchy for circle management
+
+**📝 Migration 13 - Total Completions Stats (continued):**
+
+The `update_circle_routine_stats_to_total_completions.sql` migration changes from unique user counts to total completion counts:
+
+**What Changed:**
+- ✅ **Updated**: Stats function to count **total completions** (not unique members)
+- ✅ **Updated**: Popular detection now based on **top 3 ranking** per circle
+- ✅ **Clarified**: `completion_count` column now stores total completions
+- ✅ **Improved**: Only top 3 most-completed routines get the popular badge
+
+**Why This Matters:**
+- Popular badge stays meaningful as circles mature
+- Only the 3 most-completed routines per circle get the badge
+- Rankings update dynamically as members complete routines
+- Ties broken by creation date (oldest routine wins)
+- Encourages variety and prevents badge inflation
+- Example: Circle with 20 routines → only top 3 by completion count get the flame
+- Stats display shows total completions (e.g., "47 completions")
 
 **Migration 1 - Journey Enhancements** includes:
 - Profile table updates for journey tracking

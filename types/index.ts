@@ -232,6 +232,9 @@ export type ActivityType =
   | 'invited_to_circle'
   | 'removed_from_circle'
   | 'shared_routine'
+  | 'completed_circle_routine'
+  | 'added_routine_to_circle'
+  | 'routine_became_popular'
 
 export interface FriendActivity {
   id: string

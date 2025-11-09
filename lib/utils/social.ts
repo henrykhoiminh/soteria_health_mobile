@@ -970,6 +970,15 @@ export function formatActivityFeedItem(activity: FriendActivity): ActivityFeedIt
     case 'shared_routine':
       message = `shared ${activity.routine?.name || 'a routine'} to ${activity.circle?.name || 'a circle'}`;
       break;
+    case 'completed_circle_routine':
+      message = `completed ${activity.routine?.name || 'a routine'} in ${activity.circle?.name || 'a circle'}`;
+      break;
+    case 'added_routine_to_circle':
+      message = `added ${activity.routine?.name || 'a routine'} to ${activity.circle?.name || 'a circle'}`;
+      break;
+    case 'routine_became_popular':
+      message = `${activity.routine?.name || 'A routine'} became popular in ${activity.circle?.name || 'a circle'}! 🔥`;
+      break;
   }
 
   return {
@@ -1092,4 +1101,260 @@ export async function getUserCircleRole(circleId: string, userId: string): Promi
     .maybeSingle();
 
   return data?.role || null;
+}
+
+// =====================================================
+// CIRCLE ROUTINES MANAGEMENT FUNCTIONS
+// =====================================================
+
+/**
+ * Add a routine to a circle
+ * @param circleId - Circle ID
+ * @param routineId - Routine ID
+ * @param userId - User adding the routine
+ */
+export async function addRoutineToCircle(
+  circleId: string,
+  routineId: string,
+  userId: string
+): Promise<CircleRoutine> {
+  // Check if routine already exists in circle
+  const { data: existing } = await supabase
+    .from('circle_routines')
+    .select('id')
+    .eq('circle_id', circleId)
+    .eq('routine_id', routineId)
+    .maybeSingle();
+
+  if (existing) {
+    throw new Error('This routine is already in the circle');
+  }
+
+  const { data, error } = await supabase
+    .from('circle_routines')
+    .insert({
+      circle_id: circleId,
+      routine_id: routineId,
+      shared_by: userId,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  // Record circle activity for adding routine
+  await recordCircleActivity(circleId, userId, 'added_routine_to_circle', {
+    routine_id: routineId,
+  });
+
+  return data;
+}
+
+/**
+ * Get all routines in a circle with stats
+ * @param circleId - Circle ID
+ */
+export async function getCircleRoutinesWithStats(circleId: string) {
+  const { data, error } = await supabase
+    .from('circle_routine_stats')
+    .select('*')
+    .eq('circle_id', circleId)
+    .order('shared_at', { ascending: false });
+
+  if (error) throw error;
+  return data || [];
+}
+
+/**
+ * Complete a circle routine
+ * Users can complete the same routine multiple times (no daily limit)
+ * Stats will show unique members who completed, not total completions
+ * @param circleId - Circle ID
+ * @param routineId - Routine ID
+ * @param userId - User ID
+ * @param durationSeconds - How long it took (optional)
+ * @param notes - Completion notes (optional)
+ */
+export async function completeCircleRoutine(
+  circleId: string,
+  routineId: string,
+  userId: string,
+  durationSeconds?: number,
+  notes?: string
+): Promise<void> {
+  // Get stats BEFORE completion to detect if this is the completion that makes it popular
+  const statsBefore = await getCircleRoutineStats(circleId, routineId);
+
+  // Record the completion (no limit - users can complete multiple times)
+  const { error } = await supabase
+    .from('circle_routine_completions')
+    .insert({
+      circle_id: circleId,
+      routine_id: routineId,
+      user_id: userId,
+      duration_seconds: durationSeconds,
+      notes: notes,
+    });
+
+  if (error) throw error;
+
+  // Record circle activity for completing the routine
+  await recordCircleActivity(circleId, userId, 'completed_circle_routine', {
+    routine_id: routineId,
+  });
+
+  // Check if routine just became popular (50% threshold just crossed)
+  const statsAfter = await getCircleRoutineStats(circleId, routineId);
+  if (statsAfter && statsAfter.is_popular && !statsBefore?.is_popular) {
+    // Just became popular! Log celebratory activity
+    await recordCircleActivity(circleId, userId, 'routine_became_popular', {
+      routine_id: routineId,
+    });
+  }
+}
+
+/**
+ * Get stats for a specific circle routine
+ * @param circleId - Circle ID
+ * @param routineId - Routine ID
+ */
+export async function getCircleRoutineStats(circleId: string, routineId: string) {
+  const { data, error } = await supabase
+    .from('circle_routine_stats')
+    .select('*')
+    .eq('circle_id', circleId)
+    .eq('routine_id', routineId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Check if user has completed a circle routine today (at least once)
+ * Note: This does NOT prevent multiple completions - users can complete unlimited times
+ * This is only for UI display purposes (e.g., showing a checkmark indicator)
+ * @param circleId - Circle ID
+ * @param routineId - Routine ID
+ * @param userId - User ID
+ */
+export async function hasCompletedCircleRoutineToday(
+  circleId: string,
+  routineId: string,
+  userId: string
+): Promise<boolean> {
+  const today = new Date().toISOString().split('T')[0];
+
+  const { data, error } = await supabase
+    .from('circle_routine_completions')
+    .select('id')
+    .eq('circle_id', circleId)
+    .eq('routine_id', routineId)
+    .eq('user_id', userId)
+    .gte('completed_at', `${today}T00:00:00`)
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  return !!data;
+}
+
+/**
+ * Get user's completion history for circle routines
+ * @param circleId - Circle ID
+ * @param userId - User ID
+ */
+export async function getUserCircleRoutineCompletions(
+  circleId: string,
+  userId: string
+) {
+  const { data, error } = await supabase
+    .from('circle_routine_completions')
+    .select(`
+      *,
+      routine:routines(*)
+    `)
+    .eq('circle_id', circleId)
+    .eq('user_id', userId)
+    .order('completed_at', { ascending: false });
+
+  if (error) throw error;
+  return data || [];
+}
+
+/**
+ * Get all routines NOT yet in a circle (for adding)
+ * @param circleId - Circle ID
+ */
+export async function getAvailableRoutinesForCircle(circleId: string) {
+  // Get all routine IDs already in the circle
+  const { data: circleRoutines } = await supabase
+    .from('circle_routines')
+    .select('routine_id')
+    .eq('circle_id', circleId);
+
+  const existingIds = circleRoutines?.map(cr => cr.routine_id) || [];
+
+  // Get all routines NOT in the existing IDs
+  const query = supabase
+    .from('routines')
+    .select('*')
+    .order('name', { ascending: true });
+
+  if (existingIds.length > 0) {
+    query.not('id', 'in', `(${existingIds.join(',')})`);
+  }
+
+  const { data, error } = await query;
+
+  if (error) throw error;
+  return data || [];
+}
+
+/**
+ * Search and filter circle routines
+ * @param circleId - Circle ID
+ * @param searchQuery - Search term (optional)
+ * @param category - Filter by category (optional)
+ * @param sortBy - Sort method: 'popular', 'recent', 'name'
+ */
+export async function searchCircleRoutines(
+  circleId: string,
+  searchQuery?: string,
+  category?: string,
+  sortBy: 'popular' | 'recent' | 'name' = 'recent'
+) {
+  let query = supabase
+    .from('circle_routine_stats')
+    .select('*')
+    .eq('circle_id', circleId);
+
+  // Apply search filter
+  if (searchQuery && searchQuery.trim()) {
+    query = query.or(`routine_name.ilike.%${searchQuery}%,routine_description.ilike.%${searchQuery}%`);
+  }
+
+  // Apply category filter
+  if (category && category !== 'All') {
+    query = query.eq('category', category);
+  }
+
+  // Apply sorting
+  switch (sortBy) {
+    case 'popular':
+      query = query.order('completion_count', { ascending: false });
+      break;
+    case 'name':
+      query = query.order('routine_name', { ascending: true });
+      break;
+    case 'recent':
+    default:
+      query = query.order('shared_at', { ascending: false });
+      break;
+  }
+
+  const { data, error } = await query;
+
+  if (error) throw error;
+  return data || [];
 }
