@@ -897,7 +897,7 @@ const styles = StyleSheet.create({
     backgroundColor: AppColors.surface,
   },
   filterChipActive: {
-    backgroundColor: AppColors.lightBlue,
+    backgroundColor: AppColors.lightGold,
     borderColor: AppColors.primary,
   },
   filterChipText: {
@@ -909,7 +909,7 @@ const styles = StyleSheet.create({
     color: AppColors.primary,
   },
   activeFilterChip: {
-    backgroundColor: AppColors.lightBlue,
+    backgroundColor: AppColors.lightGold,
     borderColor: AppColors.primary,
   },
   activeFilterText: {
@@ -989,7 +989,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
-    backgroundColor: AppColors.lightBlue,
+    backgroundColor: AppColors.lightGold,
     borderWidth: 1,
     borderColor: AppColors.primary,
   },

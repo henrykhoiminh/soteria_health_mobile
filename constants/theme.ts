@@ -5,8 +5,8 @@
 
 import { Platform } from 'react-native';
 
-const tintColorLight = '#3533cd';
-const tintColorDark = '#fff';
+const tintColorLight = '#F7DD6F';  // Soteria's guiding light - soft gold
+const tintColorDark = '#F7DD6F';   // Soteria's guiding light - soft gold
 
 export const Colors = {
   light: {
@@ -29,8 +29,8 @@ export const Colors = {
 
 // Soteria Health App Colors - Dark Mode Aesthetic
 export const AppColors = {
-  // Primary Brand Colors (kept for good contrast on dark backgrounds)
-  primary: '#3533cd',
+  // Primary Brand Colors - Soteria's Guiding Light
+  primary: '#F7DD6F',      // Soft gold - Soteria's aura of light
   destructive: '#FF3B30',
 
   // Category Colors (kept for good contrast on dark backgrounds)
@@ -61,6 +61,7 @@ export const AppColors = {
   // Tag Backgrounds - Dark Mode
   lightBlue: '#1E3A5F',       // Dark blue for goals/mind tags
   lightOrange: '#4A3A1F',     // Dark amber for warnings/injuries
+  lightGold: '#3D3520',       // Dark gold for Soteria-related highlights
 };
 
 // Card Elevation Style (for consistent card appearance) - Dark Mode Adjusted
