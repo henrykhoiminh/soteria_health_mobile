@@ -268,8 +268,8 @@ export async function createCircle(
 
   if (error) throw error;
 
-  // Record activity
-  await recordActivity(userId, 'joined_circle', { circle_id: data.id, circle_name: name });
+  // Record circle activity - user created and joined the circle
+  await recordCircleActivity(data.id, userId, 'joined_circle', { circle_name: name });
 
   return data;
 }
@@ -392,9 +392,8 @@ export async function inviteToCircle(
     .eq('id', circleId)
     .single();
 
-  // Record activity for the inviter
-  await recordActivity(inviterId, 'invited_to_circle', {
-    circle_id: circleId,
+  // Record circle activity for the inviter
+  await recordCircleActivity(circleId, inviterId, 'invited_to_circle', {
     circle_name: circle?.name || 'a circle',
     invited_user_id: inviteeId,
   });
@@ -449,7 +448,7 @@ export async function acceptCircleInvitation(invitationId: string): Promise<void
 
   if (error) throw error;
 
-  // Get invitation details for activity logging (without circle name for now)
+  // Get invitation details for activity logging
   const { data: invitation } = await supabase
     .from('circle_invitations')
     .select('circle_id, invitee_id')
@@ -457,9 +456,8 @@ export async function acceptCircleInvitation(invitationId: string): Promise<void
     .single();
 
   if (invitation) {
-    // Record activity for joining (circle name will be generic)
-    await recordActivity(invitation.invitee_id, 'joined_circle', {
-      circle_id: invitation.circle_id,
+    // Record circle activity for joining
+    await recordCircleActivity(invitation.circle_id, invitation.invitee_id, 'joined_circle', {
       circle_name: 'a circle',
     });
   }
@@ -506,9 +504,8 @@ export async function joinCircle(circleId: string, userId: string): Promise<Circ
 
   if (error) throw error;
 
-  // Record activity for joining the circle
-  await recordActivity(userId, 'joined_circle', {
-    circle_id: circleId,
+  // Record circle activity for joining
+  await recordCircleActivity(circleId, userId, 'joined_circle', {
     circle_name: circle?.name || 'a circle',
   });
 
@@ -536,9 +533,8 @@ export async function leaveCircle(circleId: string, userId: string): Promise<voi
 
   if (error) throw error;
 
-  // Record activity for leaving the circle
-  await recordActivity(userId, 'left_circle', {
-    circle_id: circleId,
+  // Record circle activity for leaving
+  await recordCircleActivity(circleId, userId, 'left_circle', {
     circle_name: circle?.name || 'a circle',
   });
 }
@@ -569,17 +565,15 @@ export async function removeMemberFromCircle(
 
   if (error) throw error;
 
-  // Record activity for the removed user
-  await recordActivity(userId, 'removed_from_circle', {
-    circle_id: circleId,
+  // Record circle activity for the removed user
+  await recordCircleActivity(circleId, userId, 'removed_from_circle', {
     circle_name: circle?.name || 'a circle',
     removed_by: removedBy,
   });
 
-  // If removedBy is provided, also record activity for the admin who removed them
+  // If removedBy is provided, also record circle activity for the admin who removed them
   if (removedBy && removedBy !== userId) {
-    await recordActivity(removedBy, 'removed_from_circle', {
-      circle_id: circleId,
+    await recordCircleActivity(circleId, removedBy, 'removed_from_circle', {
       circle_name: circle?.name || 'a circle',
       removed_user_id: userId,
     });
@@ -664,10 +658,9 @@ export async function shareRoutineToCircle(
 
   if (error) throw error;
 
-  // Record activity
-  await recordActivity(userId, 'shared_routine', {
+  // Record circle activity for sharing routine
+  await recordCircleActivity(circleId, userId, 'shared_routine', {
     routine_id: routineId,
-    circle_id: circleId,
   });
 
   return data;
@@ -710,24 +703,24 @@ export async function removeRoutineFromCircle(circleRoutineId: string): Promise<
 // =====================================================
 
 /**
- * Record a user activity
- * Uses a database function with SECURITY DEFINER to bypass RLS
- * This allows recording activities on behalf of other users (e.g., when inviting to circles)
+ * Record a GLOBAL user activity (not associated with any circle)
+ * Examples: completed routine (outside circles), created custom routine, streak milestone, joined Soteria
  * @param userId - User ID
  * @param activityType - Type of activity
  * @param activityData - Additional data about the activity
  */
-export async function recordActivity(
+export async function recordUserActivity(
   userId: string,
   activityType: ActivityType,
   activityData?: Record<string, any>
 ): Promise<FriendActivity> {
   // Use the database function to record activity with elevated privileges
+  // related_circle_id is explicitly NULL for global activities
   const { data: activityId, error: rpcError } = await supabase.rpc('record_friend_activity', {
     p_user_id: userId,
     p_activity_type: activityType,
     p_related_routine_id: activityData?.routine_id || null,
-    p_related_circle_id: activityData?.circle_id || null,
+    p_related_circle_id: null, // GLOBAL activity - no circle association
     p_activity_data: activityData || null,
   });
 
@@ -745,12 +738,71 @@ export async function recordActivity(
 }
 
 /**
- * Get activity feed for a user (friend activities only)
+ * Record a CIRCLE-SPECIFIC activity
+ * Examples: shared routine to circle, joined circle, left circle, member joined
+ * @param circleId - Circle ID where the activity occurred
+ * @param userId - User ID who performed the activity
+ * @param activityType - Type of activity
+ * @param activityData - Additional data about the activity
+ */
+export async function recordCircleActivity(
+  circleId: string,
+  userId: string,
+  activityType: ActivityType,
+  activityData?: Record<string, any>
+): Promise<FriendActivity> {
+  // Use the database function to record activity with elevated privileges
+  // related_circle_id is set to the circleId
+  const { data: activityId, error: rpcError } = await supabase.rpc('record_friend_activity', {
+    p_user_id: userId,
+    p_activity_type: activityType,
+    p_related_routine_id: activityData?.routine_id || null,
+    p_related_circle_id: circleId, // CIRCLE-SPECIFIC activity
+    p_activity_data: activityData || null,
+  });
+
+  if (rpcError) throw rpcError;
+
+  // Fetch the created activity to return
+  const { data, error } = await supabase
+    .from('friend_activity')
+    .select('*')
+    .eq('id', activityId)
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * DEPRECATED: Use recordUserActivity() for global activities or recordCircleActivity() for circle activities
+ * This function is kept for backward compatibility
+ */
+export async function recordActivity(
+  userId: string,
+  activityType: ActivityType,
+  activityData?: Record<string, any>
+): Promise<FriendActivity> {
+  // If circle_id is in activityData, use recordCircleActivity
+  if (activityData?.circle_id) {
+    return recordCircleActivity(activityData.circle_id, userId, activityType, activityData);
+  }
+  // Otherwise, use recordUserActivity
+  return recordUserActivity(userId, activityType, activityData);
+}
+
+/**
+ * Get GLOBAL activity feed for a user (for Social tab)
+ * Returns:
+ * 1. User's own global activities (not associated with any circle)
+ * 2. Friends' global activities
+ * 3. Activities from circles user is a member of
  * @param userId - User ID
  * @param limit - Maximum activities to fetch
+ * @param offset - Offset for pagination
  */
-export async function getFriendActivity(userId: string, limit: number = 50): Promise<FriendActivity[]> {
-  // First, get all friend IDs
+export async function getGlobalActivityFeed(userId: string, limit: number = 50, offset: number = 0): Promise<FriendActivity[]> {
+  // Get all friend IDs
   const { data: friendships } = await supabase
     .from('friendships')
     .select('friend_id, user_id')
@@ -761,11 +813,90 @@ export async function getFriendActivity(userId: string, limit: number = 50): Pro
     f.user_id === userId ? f.friend_id : f.user_id
   ) || [];
 
-  if (friendIds.length === 0) {
-    return [];
+  // Get all circle IDs user is member of
+  const { data: circleMembers } = await supabase
+    .from('circle_members')
+    .select('circle_id')
+    .eq('user_id', userId);
+
+  const userCircleIds = circleMembers?.map(cm => cm.circle_id) || [];
+
+  // Build the query for global activities
+  // Include: user's own activities + friends' activities (where circle_id IS NULL)
+  // PLUS activities from circles user is member of (where circle_id IN user's circles)
+
+  const userAndFriendIds = [userId, ...friendIds];
+
+  // Query 1: Global activities (no circle association) from user and friends
+  const globalQuery = supabase
+    .from('friend_activity')
+    .select(`
+      *,
+      user_profile:profiles!friend_activity_user_id_fkey(*),
+      routine:routines(*),
+      circle:circles(*)
+    `)
+    .in('user_id', userAndFriendIds)
+    .is('related_circle_id', null)
+    .order('created_at', { ascending: false })
+    .range(offset, offset + limit - 1);
+
+  // Query 2: Circle activities from circles user is member of (if any)
+  let circleQuery = null;
+  if (userCircleIds.length > 0) {
+    circleQuery = supabase
+      .from('friend_activity')
+      .select(`
+        *,
+        user_profile:profiles!friend_activity_user_id_fkey(*),
+        routine:routines(*),
+        circle:circles(*)
+      `)
+      .in('related_circle_id', userCircleIds)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
   }
 
-  // Get activities from friends
+  // Execute queries in parallel
+  const queries = [globalQuery];
+  if (circleQuery) queries.push(circleQuery);
+
+  const results = await Promise.all(queries);
+
+  // Combine and sort by created_at
+  const allActivities: FriendActivity[] = [];
+  results.forEach(result => {
+    if (result.data) {
+      allActivities.push(...result.data);
+    }
+  });
+
+  // Sort combined activities by created_at descending
+  allActivities.sort((a, b) =>
+    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+
+  // Limit to requested number
+  return allActivities.slice(0, limit);
+}
+
+/**
+ * DEPRECATED: Use getGlobalActivityFeed() instead
+ * This function is kept for backward compatibility
+ */
+export async function getFriendActivity(userId: string, limit: number = 50): Promise<FriendActivity[]> {
+  return getGlobalActivityFeed(userId, limit, 0);
+}
+
+/**
+ * Get activity feed for a specific circle (ONLY circle-specific activities)
+ * Returns activities where related_circle_id = circleId
+ * @param circleId - Circle ID
+ * @param limit - Maximum activities to fetch
+ * @param offset - Offset for pagination
+ */
+export async function getCircleActivity(circleId: string, limit: number = 50, offset: number = 0): Promise<FriendActivity[]> {
+  // Get activities specifically associated with this circle
   const { data, error } = await supabase
     .from('friend_activity')
     .select(`
@@ -774,47 +905,26 @@ export async function getFriendActivity(userId: string, limit: number = 50): Pro
       routine:routines(*),
       circle:circles(*)
     `)
-    .in('user_id', friendIds)
+    .eq('related_circle_id', circleId)
     .order('created_at', { ascending: false })
-    .limit(limit);
+    .range(offset, offset + limit - 1);
 
   if (error) throw error;
   return data || [];
 }
 
 /**
- * Get activity feed for a specific circle
- * @param circleId - Circle ID
- * @param limit - Maximum activities to fetch
+ * Helper function to get all circle IDs user is a member of
+ * @param userId - User ID
  */
-export async function getCircleActivity(circleId: string, limit: number = 50): Promise<FriendActivity[]> {
-  // Get all circle member IDs
-  const { data: members } = await supabase
-    .from('circle_members')
-    .select('user_id')
-    .eq('circle_id', circleId);
-
-  const memberIds = members?.map(m => m.user_id) || [];
-
-  if (memberIds.length === 0) {
-    return [];
-  }
-
-  // Get activities from circle members
+export async function getUserCircleIds(userId: string): Promise<string[]> {
   const { data, error } = await supabase
-    .from('friend_activity')
-    .select(`
-      *,
-      user_profile:profiles!friend_activity_user_id_fkey(*),
-      routine:routines(*),
-      circle:circles(*)
-    `)
-    .in('user_id', memberIds)
-    .order('created_at', { ascending: false })
-    .limit(limit);
+    .from('circle_members')
+    .select('circle_id')
+    .eq('user_id', userId);
 
   if (error) throw error;
-  return data || [];
+  return data?.map(cm => cm.circle_id) || [];
 }
 
 /**
@@ -877,16 +987,44 @@ export function formatActivityFeedItem(activity: FriendActivity): ActivityFeedIt
 }
 
 /**
- * Get formatted activity feed
+ * Get formatted GLOBAL activity feed (for Social tab)
  * @param userId - User ID
  * @param limit - Maximum activities
+ * @param offset - Offset for pagination
+ */
+export async function getFormattedGlobalActivity(
+  userId: string,
+  limit: number = 50,
+  offset: number = 0
+): Promise<ActivityFeedItem[]> {
+  const activities = await getGlobalActivityFeed(userId, limit, offset);
+  return activities.map(formatActivityFeedItem);
+}
+
+/**
+ * Get formatted circle activity feed
+ * @param circleId - Circle ID
+ * @param limit - Maximum activities
+ * @param offset - Offset for pagination
+ */
+export async function getFormattedCircleActivity(
+  circleId: string,
+  limit: number = 50,
+  offset: number = 0
+): Promise<ActivityFeedItem[]> {
+  const activities = await getCircleActivity(circleId, limit, offset);
+  return activities.map(formatActivityFeedItem);
+}
+
+/**
+ * DEPRECATED: Use getFormattedGlobalActivity() instead
+ * This function is kept for backward compatibility
  */
 export async function getFormattedFriendActivity(
   userId: string,
   limit: number = 50
 ): Promise<ActivityFeedItem[]> {
-  const activities = await getFriendActivity(userId, limit);
-  return activities.map(formatActivityFeedItem);
+  return getFormattedGlobalActivity(userId, limit, 0);
 }
 
 // =====================================================

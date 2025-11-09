@@ -16,7 +16,7 @@ import {
 import {
   CircleWithMembers,
   CircleRoutine,
-  FriendActivity,
+  ActivityFeedItem,
   CircleRole,
 } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
@@ -35,8 +35,9 @@ import {
   View,
   RefreshControl,
 } from 'react-native';
-import { formatActivityFeedItem } from '@/lib/utils/social';
+import { getFormattedCircleActivity } from '@/lib/utils/social';
 import FriendInviteModal from '@/components/FriendInviteModal';
+import ActivityCard from '@/components/ActivityCard';
 
 type Tab = 'members' | 'routines' | 'activity';
 
@@ -482,7 +483,8 @@ function RoutinesTab({ circleId, userId }: { circleId: string; userId: string })
 // =====================================================
 
 function CircleActivityTab({ circleId }: { circleId: string }) {
-  const [activities, setActivities] = useState<FriendActivity[]>([]);
+  const router = useRouter();
+  const [activities, setActivities] = useState<ActivityFeedItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -492,7 +494,7 @@ function CircleActivityTab({ circleId }: { circleId: string }) {
   const loadActivity = async () => {
     try {
       setLoading(true);
-      const data = await getCircleActivity(circleId);
+      const data = await getFormattedCircleActivity(circleId, 50, 0);
       setActivities(data);
     } catch (error) {
       console.error('Error loading circle activity:', error);
@@ -513,35 +515,21 @@ function CircleActivityTab({ circleId }: { circleId: string }) {
     return (
       <View style={styles.emptyState}>
         <Ionicons name="newspaper-outline" size={48} color={AppColors.textTertiary} />
-        <Text style={styles.emptyText}>No activity yet</Text>
-        <Text style={styles.emptySubtext}>Circle activity will appear here</Text>
+        <Text style={styles.emptyText}>No activity in this circle yet</Text>
+        <Text style={styles.emptySubtext}>Be the first to share a routine!</Text>
       </View>
     );
   }
 
   return (
     <View style={styles.tabContent}>
-      {activities.map((activity) => {
-        const formattedActivity = formatActivityFeedItem(activity);
-        return (
-          <View key={activity.id} style={styles.activityCard}>
-            <View style={styles.activityIconContainer}>
-              <Ionicons name="checkmark-circle" size={24} color={AppColors.primary} />
-            </View>
-            <View style={styles.activityContent}>
-              <Text style={styles.activityText}>
-                <Text style={styles.activityUserName}>
-                  {activity.user_profile ? getDisplayName(activity.user_profile) : 'Unknown User'}
-                </Text>{' '}
-                {formattedActivity.message}
-              </Text>
-              <Text style={styles.activityTime}>
-                {new Date(activity.created_at).toLocaleDateString()}
-              </Text>
-            </View>
-          </View>
-        );
-      })}
+      {activities.map((activity) => (
+        <ActivityCard
+          key={activity.id}
+          activity={activity}
+          onRoutinePress={(routineId) => router.push(`/routines/${routineId}`)}
+        />
+      ))}
     </View>
   );
 }

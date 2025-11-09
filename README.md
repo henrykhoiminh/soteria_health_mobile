@@ -298,6 +298,9 @@ sql/social_migration/fix_circle_invitation_constraint.sql
 
 # 9. CRITICAL: Fix infinite recursion in RLS policies
 sql/social_migration/MASTER_FIX_infinite_recursion.sql
+
+# 10. IMPORTANT: Fix activity feeds separation (global vs circle)
+sql/social_migration/fix_activity_feeds_separation.sql
 ```
 
 **⚠️ CRITICAL: RLS Infinite Recursion Fix**
@@ -318,6 +321,23 @@ The social features initially caused an infinite recursion error in PostgreSQL's
 ```
 Error: infinite recursion detected in policy for relation "circles"
 ```
+
+**📊 IMPORTANT: Activity Feeds Separation**
+
+The activity feed system properly separates global activities from circle-specific activities:
+- **Global Activity Feed** (Social tab): Shows user's own activities, friends' activities, and activities from circles user is a member of
+- **Circle Activity Feed** (Inside specific circle): Shows ONLY activities related to that specific circle
+
+**The fix_activity_feeds_separation.sql migration adds:**
+- Index on `related_circle_id` for efficient circle activity queries
+- Composite index `(related_circle_id, created_at)` for chronological circle feeds
+- Partial index for global activities (where `related_circle_id IS NULL`)
+- Updated activity types constraint to include all activity types
+
+**Activity Logging:**
+- Use `recordUserActivity()` for global activities (completed routine outside circles, created custom routine, streak milestones)
+- Use `recordCircleActivity()` for circle-specific activities (shared routine to circle, joined circle, left circle)
+- Activities are automatically filtered by `related_circle_id` in queries
 
 **Migration 1 - Journey Enhancements** includes:
 - Profile table updates for journey tracking

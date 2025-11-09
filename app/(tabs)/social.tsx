@@ -13,7 +13,7 @@ import {
   getPublicCircles,
   createCircle,
   joinCircle,
-  getFormattedFriendActivity,
+  getFormattedGlobalActivity,
   getPendingCircleInvitations,
   acceptCircleInvitation,
   declineCircleInvitation,
@@ -27,7 +27,8 @@ import {
   CircleInvitation,
 } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import ActivityCard from '@/components/ActivityCard';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -48,9 +49,20 @@ type Tab = 'friends' | 'circles' | 'activity';
 export default function SocialScreen() {
   const { user } = useAuth();
   const router = useRouter();
+  const params = useLocalSearchParams<{ tab?: string }>();
   const [activeTab, setActiveTab] = useState<Tab>('friends');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Handle tab query parameter from navigation (e.g., from dashboard "See All" link)
+  useEffect(() => {
+    if (params.tab) {
+      const tab = params.tab as Tab;
+      if (tab === 'friends' || tab === 'circles' || tab === 'activity') {
+        setActiveTab(tab);
+      }
+    }
+  }, [params.tab]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -648,7 +660,7 @@ function ActivityTab({ userId, onRefresh }: { userId: string; onRefresh: () => v
   const loadActivity = async () => {
     try {
       setLoading(true);
-      const activityData = await getFormattedFriendActivity(userId, 50);
+      const activityData = await getFormattedGlobalActivity(userId, 50, 0);
       setActivities(activityData);
     } catch (error) {
       console.error('Error loading activity:', error);
@@ -661,38 +673,6 @@ function ActivityTab({ userId, onRefresh }: { userId: string; onRefresh: () => v
     setRefreshing(true);
     await loadActivity();
     setRefreshing(false);
-  };
-
-  const getTimeAgo = (timestamp: string): string => {
-    const now = new Date();
-    const past = new Date(timestamp);
-    const diffMs = now.getTime() - past.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return past.toLocaleDateString();
-  };
-
-  const getActivityIcon = (type: string): string => {
-    switch (type) {
-      case 'completed_routine':
-        return 'checkmark-circle';
-      case 'created_routine':
-        return 'add-circle';
-      case 'streak_milestone':
-        return 'flame';
-      case 'joined_circle':
-        return 'people';
-      case 'shared_routine':
-        return 'share-social';
-      default:
-        return 'radio-button-on';
-    }
   };
 
   if (loading) {
@@ -713,35 +693,19 @@ function ActivityTab({ userId, onRefresh }: { userId: string; onRefresh: () => v
         <View style={styles.emptyState}>
           <Ionicons name="newspaper-outline" size={48} color={AppColors.textTertiary} />
           <Text style={styles.emptyText}>No activity yet</Text>
-          <Text style={styles.emptySubtext}>Add friends to see their activity</Text>
+          <Text style={styles.emptySubtext}>Add friends or join circles to see activity</Text>
         </View>
       )}
       renderItem={({ item }) => (
-        <TouchableOpacity
-          style={styles.activityCard}
-          onPress={() => {
-            if (item.routineId) {
-              router.push(`/routines/${item.routineId}`);
-            }
-          }}
-        >
-          <View style={styles.activityIconContainer}>
-            <Ionicons
-              name={getActivityIcon(item.activityType) as any}
-              size={24}
-              color={AppColors.primary}
-            />
-          </View>
-          <View style={styles.activityContent}>
-            <Text style={styles.activityText}>
-              <Text style={styles.activityUserName}>{item.user.full_name}</Text>{' '}
-              {item.message}
-            </Text>
-            <Text style={styles.activityTime}>{getTimeAgo(item.timestamp)}</Text>
-          </View>
-        </TouchableOpacity>
+        <View style={{ paddingHorizontal: 16 }}>
+          <ActivityCard
+            activity={item}
+            onRoutinePress={(routineId) => router.push(`/routines/${routineId}`)}
+            onCirclePress={(circleId) => router.push(`/circles/${circleId}`)}
+          />
+        </View>
       )}
-      contentContainerStyle={{ paddingBottom: 100 }}
+      contentContainerStyle={{ paddingTop: 16, paddingBottom: 100 }}
     />
   );
 }
