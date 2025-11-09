@@ -433,6 +433,7 @@ function CirclesTab({ userId, onRefresh }: { userId: string; onRefresh: () => vo
         getPublicCircles(),
         getPendingCircleInvitations(userId),
       ]);
+
       setMyCircles(myCirclesData);
       setPublicCircles(publicCirclesData);
       setPendingInvitations(invitationsData);
@@ -508,22 +509,17 @@ function CirclesTab({ userId, onRefresh }: { userId: string; onRefresh: () => vo
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Circle Invitations ({pendingInvitations.length})</Text>
             {pendingInvitations.map((invitation) => {
-              // Get circle data - Supabase returns it as 'circles' (table name) not 'circle'
-              const circleData = (invitation as any).circles;
-              const circleName = circleData?.name || 'Unknown Circle';
-              const isPrivate = circleData?.is_private ?? true;
-
               return (
               <View key={invitation.id} style={styles.invitationCard}>
                 <View style={styles.circleIcon}>
                   <Ionicons
-                    name={isPrivate ? 'lock-closed' : 'globe'}
+                    name="lock-closed"
                     size={24}
                     color={AppColors.primary}
                   />
                 </View>
                 <View style={styles.invitationInfo}>
-                  <Text style={styles.circleName}>{circleName}</Text>
+                  <Text style={styles.circleName}>Circle Invitation</Text>
                   <Text style={styles.invitationMeta}>
                     Invited by {getDisplayName(invitation.inviter_profile || { full_name: 'Unknown', username: null })}
                   </Text>

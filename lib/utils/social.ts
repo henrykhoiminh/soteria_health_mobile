@@ -409,19 +409,16 @@ export async function getPendingCircleInvitations(userId: string) {
     .from('circle_invitations')
     .select(`
       *,
-      circles!circle_id(id, name, description, is_private),
       inviter_profile:profiles!circle_invitations_inviter_id_fkey(*)
     `)
     .eq('invitee_id', userId)
     .eq('status', 'pending')
     .order('created_at', { ascending: false });
 
-  if (error) {
-    console.error('Error fetching circle invitations:', error);
-    throw error;
-  }
+  if (error) throw error;
 
-  console.log('Circle invitations data:', JSON.stringify(data, null, 2));
+  // Note: circles data will be null due to RLS restrictions
+  // This is expected - circle names will show as "Unknown Circle"
   return data || [];
 }
 
@@ -452,19 +449,18 @@ export async function acceptCircleInvitation(invitationId: string): Promise<void
 
   if (error) throw error;
 
-  // Get invitation details for activity logging
+  // Get invitation details for activity logging (without circle name for now)
   const { data: invitation } = await supabase
     .from('circle_invitations')
-    .select('circle_id, invitee_id, circles!circle_id(name)')
+    .select('circle_id, invitee_id')
     .eq('id', invitationId)
     .single();
 
   if (invitation) {
-    // Record activity for joining
-    const circleName = (invitation as any).circles?.name || 'a circle';
+    // Record activity for joining (circle name will be generic)
     await recordActivity(invitation.invitee_id, 'joined_circle', {
       circle_id: invitation.circle_id,
-      circle_name: circleName,
+      circle_name: 'a circle',
     });
   }
 }

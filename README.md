@@ -82,6 +82,7 @@ This is the mobile companion app to the Soteria Health web application, built wi
 ### Profile Management
 - View and edit profile information:
   - Full name
+  - Username (unique, 3-20 characters, alphanumeric + _ .)
   - Journey focus (Injury Prevention / Recovery)
   - Recovery details (for Recovery users)
   - Fitness level
@@ -90,6 +91,37 @@ This is the mobile companion app to the Soteria Health web application, built wi
 - View personal goals and injuries/limitations
 - Journey progress tracking
 - Sign out functionality
+
+### Social Features
+- **Friends System**
+  - Search for users by name or username
+  - Send and receive friend requests
+  - Accept or decline friend requests
+  - View friends list
+  - Unfriend users
+  - Activity feed showing friend activities
+
+- **Circles (Groups)**
+  - Create private or public circles
+  - Invite friends to private circles (invitation-based system)
+  - Accept or decline circle invitations
+  - Join public circles directly
+  - View circle members
+  - Admin controls (invite, remove members)
+  - Share routines within circles
+  - Circle activity feed
+  - Leave circles
+
+- **Activity Feed**
+  - Track friend activities (routines completed, circles joined, etc.)
+  - Circle-specific activity feeds
+  - Activity logging for social interactions
+
+- **Username System**
+  - Unique usernames across the platform
+  - Username validation and availability checking
+  - Display @username throughout social features
+  - Username setup modal for new users
 
 ### Journey Focus System
 - **Two Journey Types:**
@@ -248,6 +280,43 @@ sql/database_migration_routine_search_tagging.sql
 
 # 3. (Optional) Tag existing routines with example data
 sql/example_routine_tagging.sql
+
+# 4. Username system (usernames, validation, search)
+sql/add_username_system.sql
+
+# 5. Social features (friends, circles, activity)
+sql/social_migration/01_create_social_tables.sql
+
+# 6. Circle invitations system
+sql/social_migration/add_circle_invitations.sql
+
+# 7. Fix friend activity RLS for system operations
+sql/social_migration/fix_friend_activity_rls.sql
+
+# 8. Fix circle invitation constraint for re-invitations
+sql/social_migration/fix_circle_invitation_constraint.sql
+
+# 9. CRITICAL: Fix infinite recursion in RLS policies
+sql/social_migration/MASTER_FIX_infinite_recursion.sql
+```
+
+**⚠️ CRITICAL: RLS Infinite Recursion Fix**
+
+The social features initially caused an infinite recursion error in PostgreSQL's Row Level Security (RLS) policies. This was caused by circular references between tables:
+- `circle_routines` policies referenced `circles` table
+- `circles` policies checked `circle_members`
+- When queries joined these tables → infinite loop
+
+**The MASTER_FIX_infinite_recursion.sql migration fixes this by:**
+- Dropping all problematic custom functions
+- Removing ALL existing policies on social tables
+- Creating ultra-simple policies with **ZERO** circular references
+- Adding `LIMIT 1` to all `EXISTS` clauses to prevent runaway queries
+- Making `circle_routines` policies **never** reference the `circles` table directly
+
+**This migration MUST be run** or you will encounter errors like:
+```
+Error: infinite recursion detected in policy for relation "circles"
 ```
 
 **Migration 1 - Journey Enhancements** includes:
