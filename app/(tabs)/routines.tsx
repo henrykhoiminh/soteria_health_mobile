@@ -11,7 +11,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { AppColors } from '@/constants/theme';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import {
   Routine,
@@ -41,8 +41,11 @@ type TabType = 'discover' | 'my-routines';
 
 export default function RoutinesScreen() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<TabType>('discover');
+  const params = useLocalSearchParams<{ category?: string }>();
   const router = useRouter();
+
+  // If navigating with a category filter, show discover tab
+  const [activeTab, setActiveTab] = useState<TabType>(params.category ? 'discover' : 'discover');
 
   return (
     <View style={styles.container}>
@@ -84,7 +87,7 @@ export default function RoutinesScreen() {
       </View>
 
       {/* Tab Content */}
-      {activeTab === 'discover' && user && <DiscoverTab userId={user.id} />}
+      {activeTab === 'discover' && user && <DiscoverTab userId={user.id} initialCategory={params.category as RoutineCategory | undefined} />}
       {activeTab === 'my-routines' && user && <MyRoutinesTab userId={user.id} />}
     </View>
   );
@@ -94,15 +97,24 @@ export default function RoutinesScreen() {
 // DISCOVER TAB
 // =====================================================
 
-function DiscoverTab({ userId }: { userId: string }) {
+function DiscoverTab({ userId, initialCategory }: { userId: string; initialCategory?: RoutineCategory }) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<RoutineSortOption>('popular');
-  const [filters, setFilters] = useState<RoutineFilters>({});
+  const [filters, setFilters] = useState<RoutineFilters>(
+    initialCategory ? { category: initialCategory } : {}
+  );
   const [showFilterModal, setShowFilterModal] = useState(false);
+
+  // Update filters when initialCategory changes (e.g., navigating from dashboard)
+  useEffect(() => {
+    if (initialCategory) {
+      setFilters({ category: initialCategory });
+    }
+  }, [initialCategory]);
 
   useEffect(() => {
     loadRoutines();

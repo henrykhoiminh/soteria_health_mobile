@@ -1,24 +1,26 @@
-import { useAuth } from '@/lib/contexts/AuthContext';
+import Avatar from '@/components/Avatar';
+import JourneyBadge from '@/components/JourneyBadge';
+import UsernameSetupModal from '@/components/UsernameSetupModal';
 import { AppColors } from '@/constants/theme';
-import { getBalancedRoutines, getTodayProgress, getUserStats } from '@/lib/utils/dashboard';
+import { useAuth } from '@/lib/contexts/AuthContext';
 import { calculateJourneyDays } from '@/lib/utils/auth';
+import { getBalancedRoutines, getTodayProgress, getUserStats } from '@/lib/utils/dashboard';
 import { getFormattedFriendActivity } from '@/lib/utils/social';
+import { getAllAvatarStates } from '@/lib/utils/stats';
 import { getDisplayName } from '@/lib/utils/username';
-import { DailyProgress, Routine, UserStats, ActivityFeedItem } from '@/types';
+import { ActivityFeedItem, AvatarState, DailyProgress, Routine, UserStats } from '@/types';
+import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  Image,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import JourneyBadge from '@/components/JourneyBadge';
-import UsernameSetupModal from '@/components/UsernameSetupModal';
 
 export default function DashboardScreen() {
   const { user, profile } = useAuth();
@@ -30,6 +32,7 @@ export default function DashboardScreen() {
   const [friendActivity, setFriendActivity] = useState<ActivityFeedItem[]>([]);
   const [showJourneyDetails, setShowJourneyDetails] = useState(false);
   const [showUsernameSetup, setShowUsernameSetup] = useState(false);
+  const [avatarStates, setAvatarStates] = useState<AvatarState[]>([]);
 
   useEffect(() => {
     loadDashboardData();
@@ -58,11 +61,12 @@ export default function DashboardScreen() {
 
     try {
       setLoading(true);
-      const [progressData, statsData, routinesData, activityData] = await Promise.all([
+      const [progressData, statsData, routinesData, activityData, avatarsData] = await Promise.all([
         getTodayProgress(user.id),
         getUserStats(user.id),
         getBalancedRoutines(profile?.journey_focus || null, profile?.fitness_level || null),
         getFormattedFriendActivity(user.id, 5), // Get latest 5 activities
+        getAllAvatarStates(user.id), // Load avatar states
       ]);
 
       console.log('Today Progress:', progressData); // Debug log
@@ -70,6 +74,7 @@ export default function DashboardScreen() {
       setStats(statsData);
       setRecommendedRoutines(routinesData);
       setFriendActivity(activityData);
+      setAvatarStates(avatarsData);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     } finally {
@@ -154,28 +159,22 @@ export default function DashboardScreen() {
         )}
       </View>
 
-      {/* Today's Progress */}
+      {/* Avatars Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Today's Progress</Text>
-        <View style={styles.progressGrid}>
-          <ProgressCard
-            title="Mind"
-            completed={todayProgress?.mind_complete || false}
-            color="#3B82F6"
-            onPress={() => router.push('/routines?category=Mind')}
-          />
-          <ProgressCard
-            title="Body"
-            completed={todayProgress?.body_complete || false}
-            color="#EF4444"
-            onPress={() => router.push('/routines?category=Body')}
-          />
-          <ProgressCard
-            title="Soul"
-            completed={todayProgress?.soul_complete || false}
-            color="#F59E0B"
-            onPress={() => router.push('/routines?category=Soul')}
-          />
+        <Text style={styles.sectionTitle}>Awaken Your Light</Text>
+        <View style={styles.avatarsGrid}>
+          {avatarStates.map((avatarState) => (
+            <TouchableOpacity
+              key={avatarState.category}
+              onPress={() => router.push(`/(tabs)/routines?category=${avatarState.category}`)}
+              activeOpacity={0.8}
+            >
+              <Avatar
+                category={avatarState.category}
+                lightState={avatarState.lightState}
+              />
+            </TouchableOpacity>
+          ))}
         </View>
       </View>
 
@@ -458,6 +457,14 @@ const styles = StyleSheet.create({
     color: AppColors.textPrimary,
     fontSize: 20,
     fontWeight: 'bold',
+  },
+  // Avatar Section Styles
+  avatarsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    gap: 16,
+    marginTop: 16,
+    marginBottom: 16,
   },
   statsGrid: {
     flexDirection: 'row',

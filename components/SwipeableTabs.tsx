@@ -11,6 +11,7 @@ import PagerView from 'react-native-pager-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useSegments } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 
 interface TabConfig {
@@ -28,8 +29,23 @@ interface SwipeableTabsProps {
 export default function SwipeableTabs({ tabs, initialPage = 0 }: SwipeableTabsProps) {
   const colorScheme = useColorScheme();
   const pagerRef = useRef<PagerView>(null);
+  const segments = useSegments();
   const [currentPage, setCurrentPage] = useState(initialPage);
   const [scrollEnabled, setScrollEnabled] = useState(true);
+
+  // Listen to route changes and switch tabs accordingly
+  useEffect(() => {
+    // Get the tab segment (e.g., 'index', 'routines', 'builder', etc.)
+    const tabSegment = segments[1]; // segments[0] is '(tabs)', segments[1] is the tab name
+
+    if (tabSegment) {
+      const tabIndex = tabs.findIndex(tab => tab.name === tabSegment);
+      if (tabIndex !== -1 && tabIndex !== currentPage) {
+        pagerRef.current?.setPage(tabIndex);
+        setCurrentPage(tabIndex);
+      }
+    }
+  }, [segments]);
 
   // Handle tab press - navigate to page with haptic feedback
   const handleTabPress = (index: number) => {

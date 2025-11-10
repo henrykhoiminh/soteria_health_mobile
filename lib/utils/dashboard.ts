@@ -2,6 +2,7 @@ import { supabase } from '../supabase/client'
 import { DailyProgress, Routine, RoutineCategory, UserStats, JourneyFocus, FitnessLevel } from '@/types'
 import { format } from 'date-fns'
 import { recordActivity } from './social'
+import { updateEnhancedStats } from './stats'
 
 export async function getTodayProgress(userId: string): Promise<DailyProgress | null> {
   // Use UTC date to match database (CURRENT_DATE in Postgres uses UTC)
@@ -170,6 +171,13 @@ export async function completeRoutine(userId: string, routineId: string, categor
     .single()
 
   if (error) throw error
+
+  // Update enhanced stats (per-category streaks, unique routines, harmony score)
+  try {
+    await updateEnhancedStats(userId)
+  } catch (statsError) {
+    console.error('Failed to update enhanced stats:', statsError)
+  }
 
   // Get current user stats for streak info
   const stats = await getUserStats(userId)

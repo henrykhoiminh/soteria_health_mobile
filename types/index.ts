@@ -14,7 +14,6 @@ export interface Profile {
   recovery_areas: string[] // Array of body parts user is recovering from
   recovery_goals: string[] // Array of predefined recovery goals
   injuries: string[]
-  goals: string[]
   profile_picture_url: string | null
   created_at: string
   updated_at: string
@@ -115,6 +114,23 @@ export interface UserStats {
   soul_routines: number
   last_activity_date: string | null
   updated_at: string
+  // Phase 1: Per-category streaks
+  mind_current_streak: number
+  body_current_streak: number
+  soul_current_streak: number
+  mind_longest_streak: number
+  body_longest_streak: number
+  soul_longest_streak: number
+  // Phase 1: Unique routine tracking
+  unique_mind_routines: number
+  unique_body_routines: number
+  unique_soul_routines: number
+  // Phase 1: Last activity per category (for avatar light levels)
+  last_mind_activity: string | null
+  last_body_activity: string | null
+  last_soul_activity: string | null
+  // Phase 1: Harmony score (0-100)
+  harmony_score: number
 }
 
 // Health Score Tiers
@@ -123,6 +139,17 @@ export type HealthScoreTier = 'Getting Started' | 'Building Momentum' | 'Thrivin
 export interface HealthScoreInfo {
   score: number
   tier: HealthScoreTier
+  color: string
+}
+
+// Avatar Light States (Phase 2)
+export type AvatarLightState = 'Dormant' | 'Awakening' | 'Glowing' | 'Radiant'
+
+export interface AvatarState {
+  category: RoutineCategory
+  lightState: AvatarLightState
+  lastActivity: string | null
+  currentStreak: number
   color: string
 }
 

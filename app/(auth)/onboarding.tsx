@@ -26,15 +26,6 @@ const JOURNEY_GOALS: JourneyFocus[] = ['Injury Prevention', 'Recovery'];
 
 const FITNESS_LEVELS: FitnessLevel[] = ['Beginner', 'Intermediate', 'Advanced'];
 
-const GOALS = [
-  'Improve flexibility',
-  'Build strength',
-  'Reduce stress',
-  'Better sleep',
-  'Increase energy',
-  'Mental clarity',
-];
-
 export default function OnboardingScreen() {
   const [step, setStep] = useState(1);
   const [journeyFocus, setJourneyFocus] = useState<JourneyFocus | null>(null);
@@ -42,7 +33,6 @@ export default function OnboardingScreen() {
   const [bodyRegionFilter, setBodyRegionFilter] = useState<BodyRegion>('All');
   const [recoveryGoals, setRecoveryGoals] = useState<string[]>([]);
   const [fitnessLevel, setFitnessLevel] = useState<FitnessLevel | null>(null);
-  const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const { refreshProfile } = useAuth();
   const router = useRouter();
@@ -80,13 +70,6 @@ export default function OnboardingScreen() {
     }
   };
 
-  const toggleGoal = (goal: string) => {
-    setSelectedGoals((prev) =>
-      prev.includes(goal)
-        ? prev.filter((g) => g !== goal)
-        : [...prev, goal]
-    );
-  };
 
   const toggleRecoveryArea = (area: string) => {
     setRecoveryAreas((prev) =>
@@ -173,11 +156,6 @@ export default function OnboardingScreen() {
       return;
     }
 
-    if (selectedGoals.length === 0) {
-      Alert.alert('Error', 'Please select at least one goal');
-      return;
-    }
-
     setLoading(true);
     try {
       // Get the current user directly from Supabase in case AuthContext hasn't updated yet
@@ -196,7 +174,6 @@ export default function OnboardingScreen() {
         full_name: fullName,
         journey_focus: journeyFocus,
         fitness_level: fitnessLevel,
-        goals: selectedGoals,
         journey_started_at: new Date().toISOString(), // Set journey start date
       };
 
@@ -218,7 +195,7 @@ export default function OnboardingScreen() {
 
   // Calculate total steps dynamically
   const getTotalSteps = () => {
-    return journeyFocus === 'Recovery' ? 5 : 3;
+    return journeyFocus === 'Recovery' ? 4 : 2;
   };
 
   // Get current step display
@@ -227,7 +204,6 @@ export default function OnboardingScreen() {
     if (step === 2) return 2; // Recovery areas
     if (step === 3) return 3; // Recovery goals
     if (step === 4) return journeyFocus === 'Recovery' ? 4 : 2; // Fitness
-    if (step === 5) return journeyFocus === 'Recovery' ? 5 : 3; // Goals
     return step;
   };
 
@@ -475,35 +451,6 @@ export default function OnboardingScreen() {
         </View>
       )}
 
-      {step === 5 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>What are your goals?</Text>
-          <Text style={styles.sectionSubtitle}>Select all that apply</Text>
-          <View style={styles.optionsGrid}>
-            {GOALS.map((goal) => (
-              <TouchableOpacity
-                key={goal}
-                style={[
-                  styles.option,
-                  selectedGoals.includes(goal) && styles.optionSelected,
-                ]}
-                onPress={() => toggleGoal(goal)}
-                disabled={loading}
-              >
-                <Text
-                  style={[
-                    styles.optionText,
-                    selectedGoals.includes(goal) && styles.optionTextSelected,
-                  ]}
-                >
-                  {goal}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-      )}
-
       <View style={styles.buttonContainer}>
         {step > 1 && (
           <TouchableOpacity
@@ -517,7 +464,7 @@ export default function OnboardingScreen() {
           </TouchableOpacity>
         )}
 
-        {step < 5 ? (
+        {step < 4 ? (
           <TouchableOpacity
             style={[styles.button, step > 1 && styles.buttonFlex]}
             onPress={handleNextStep}

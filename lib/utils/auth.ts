@@ -213,7 +213,6 @@ export async function hardResetUserData(userId: string) {
         recovery_areas: [],
         recovery_goals: [],
         fitness_level: null,
-        goals: [],
         injuries: [],
         age: null,
         // Keep full_name and profile_picture_url

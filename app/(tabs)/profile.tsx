@@ -2,7 +2,8 @@ import { useAuth } from '@/lib/contexts/AuthContext';
 import { AppColors } from '@/constants/theme';
 import { updateUserProfile, uploadProfilePicture, hardResetUserData } from '@/lib/utils/auth';
 import { validateUsername, getSuggestedUsernames } from '@/lib/utils/username';
-import { FitnessLevel, JourneyFocus } from '@/types';
+import { getUserStats } from '@/lib/utils/dashboard';
+import { FitnessLevel, JourneyFocus, UserStats } from '@/types';
 import { useState, useEffect } from 'react';
 import {
   Alert,
@@ -39,6 +40,27 @@ export default function ProfileScreen() {
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const [userStats, setUserStats] = useState<UserStats | null>(null);
+  const [loadingStats, setLoadingStats] = useState(true);
+
+  // Load user stats
+  useEffect(() => {
+    async function loadStats() {
+      if (!user) return;
+
+      try {
+        setLoadingStats(true);
+        const stats = await getUserStats(user.id);
+        setUserStats(stats);
+      } catch (error) {
+        console.error('Error loading stats:', error);
+      } finally {
+        setLoadingStats(false);
+      }
+    }
+
+    loadStats();
+  }, [user]);
 
   const handlePickImage = async () => {
     try {
@@ -390,18 +412,85 @@ export default function ProfileScreen() {
         )}
       </View>
 
-      {profile?.goals && profile.goals.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Your Goals</Text>
-          <View style={styles.goalsContainer}>
-            {profile.goals.map((goal, index) => (
-              <View key={index} style={styles.goalTag}>
-                <Text style={styles.goalText}>{goal}</Text>
+      {/* Enhanced Stats Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Your Progress</Text>
+
+        {loadingStats ? (
+          <ActivityIndicator size="small" color={AppColors.primary} style={{ marginVertical: 20 }} />
+        ) : userStats ? (
+          <>
+            {/* Harmony Score */}
+            <View style={styles.harmonyScoreCard}>
+              <View style={styles.harmonyScoreHeader}>
+                <Ionicons name="sparkles" size={24} color={AppColors.primary} />
+                <Text style={styles.harmonyScoreTitle}>Harmony Score</Text>
               </View>
-            ))}
-          </View>
-        </View>
-      )}
+              <Text style={styles.harmonyScoreValue}>{userStats.harmony_score}/100</Text>
+              <Text style={styles.harmonyScoreSubtext}>
+                Balance across Mind, Body, and Soul
+              </Text>
+            </View>
+
+            {/* Per-Category Streaks */}
+            <View style={styles.streaksContainer}>
+              <View style={styles.streakCard}>
+                <View style={[styles.streakIcon, { backgroundColor: '#3B82F620' }]}>
+                  <Ionicons name="fitness" size={24} color="#3B82F6" />
+                </View>
+                <Text style={styles.streakCategory}>Mind</Text>
+                <Text style={styles.streakValue}>{userStats.mind_current_streak} days</Text>
+                <Text style={styles.streakSubtext}>
+                  Longest: {userStats.mind_longest_streak}
+                </Text>
+              </View>
+
+              <View style={styles.streakCard}>
+                <View style={[styles.streakIcon, { backgroundColor: '#EF444420' }]}>
+                  <Ionicons name="body" size={24} color="#EF4444" />
+                </View>
+                <Text style={styles.streakCategory}>Body</Text>
+                <Text style={styles.streakValue}>{userStats.body_current_streak} days</Text>
+                <Text style={styles.streakSubtext}>
+                  Longest: {userStats.body_longest_streak}
+                </Text>
+              </View>
+
+              <View style={styles.streakCard}>
+                <View style={[styles.streakIcon, { backgroundColor: '#F59E0B20' }]}>
+                  <Ionicons name="heart" size={24} color="#F59E0B" />
+                </View>
+                <Text style={styles.streakCategory}>Soul</Text>
+                <Text style={styles.streakValue}>{userStats.soul_current_streak} days</Text>
+                <Text style={styles.streakSubtext}>
+                  Longest: {userStats.soul_longest_streak}
+                </Text>
+              </View>
+            </View>
+
+            {/* Unique Routines */}
+            <View style={styles.uniqueRoutinesContainer}>
+              <Text style={styles.uniqueRoutinesTitle}>Unique Routines Explored</Text>
+              <View style={styles.uniqueRoutinesRow}>
+                <View style={styles.uniqueRoutineStat}>
+                  <Text style={styles.uniqueRoutineValue}>{userStats.unique_mind_routines}</Text>
+                  <Text style={styles.uniqueRoutineLabel}>Mind</Text>
+                </View>
+                <View style={styles.uniqueRoutineStat}>
+                  <Text style={styles.uniqueRoutineValue}>{userStats.unique_body_routines}</Text>
+                  <Text style={styles.uniqueRoutineLabel}>Body</Text>
+                </View>
+                <View style={styles.uniqueRoutineStat}>
+                  <Text style={styles.uniqueRoutineValue}>{userStats.unique_soul_routines}</Text>
+                  <Text style={styles.uniqueRoutineLabel}>Soul</Text>
+                </View>
+              </View>
+            </View>
+          </>
+        ) : (
+          <Text style={styles.noDataText}>No stats available yet. Start completing routines!</Text>
+        )}
+      </View>
 
       {profile?.injuries && profile.injuries.length > 0 && (
         <View style={styles.section}>
@@ -806,5 +895,109 @@ const styles = StyleSheet.create({
     color: AppColors.destructive,
     fontSize: 16,
     fontWeight: '600',
+  },
+  // Enhanced Stats Styles
+  harmonyScoreCard: {
+    backgroundColor: AppColors.lightGold,
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  harmonyScoreHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  harmonyScoreTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: AppColors.textPrimary,
+  },
+  harmonyScoreValue: {
+    fontSize: 48,
+    fontWeight: 'bold',
+    color: AppColors.primary,
+    marginBottom: 4,
+  },
+  harmonyScoreSubtext: {
+    fontSize: 14,
+    color: AppColors.textSecondary,
+  },
+  streaksContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 20,
+  },
+  streakCard: {
+    flex: 1,
+    backgroundColor: AppColors.surface,
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: AppColors.borderLight,
+  },
+  streakIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  streakCategory: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: AppColors.textPrimary,
+    marginBottom: 4,
+  },
+  streakValue: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: AppColors.textPrimary,
+    marginBottom: 4,
+  },
+  streakSubtext: {
+    fontSize: 12,
+    color: AppColors.textSecondary,
+  },
+  uniqueRoutinesContainer: {
+    backgroundColor: AppColors.surface,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: AppColors.borderLight,
+  },
+  uniqueRoutinesTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: AppColors.textSecondary,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  uniqueRoutinesRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  uniqueRoutineStat: {
+    alignItems: 'center',
+  },
+  uniqueRoutineValue: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: AppColors.textPrimary,
+    marginBottom: 4,
+  },
+  uniqueRoutineLabel: {
+    fontSize: 12,
+    color: AppColors.textSecondary,
+  },
+  noDataText: {
+    fontSize: 14,
+    color: AppColors.textSecondary,
+    textAlign: 'center',
+    marginVertical: 20,
   },
 });
