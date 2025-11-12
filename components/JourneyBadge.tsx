@@ -48,13 +48,6 @@ export default function JourneyBadge({
 
   // Format label text
   const getLabel = () => {
-    if (recoveryAreas && recoveryAreas.length > 0 && isRecovery) {
-      // Show first area if only one, or count if multiple
-      if (recoveryAreas.length === 1) {
-        return `${focus} - ${recoveryAreas[0]}`;
-      }
-      return `${focus} - ${recoveryAreas.length} areas`;
-    }
     return focus;
   };
 

@@ -2,6 +2,7 @@ import { useAuth } from '@/lib/contexts/AuthContext';
 import { AppColors } from '@/constants/theme';
 import { supabase } from '@/lib/supabase/client';
 import { updateUserProfile } from '@/lib/utils/auth';
+import { submitPainCheckIn, getPainLevelInfo } from '@/lib/utils/pain-checkin';
 import {
   FitnessLevel,
   JourneyFocus,
@@ -21,6 +22,7 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import Slider from '@react-native-community/slider';
 
 const JOURNEY_GOALS: JourneyFocus[] = ['Injury Prevention', 'Recovery'];
 
@@ -33,6 +35,7 @@ export default function OnboardingScreen() {
   const [bodyRegionFilter, setBodyRegionFilter] = useState<BodyRegion>('All');
   const [recoveryGoals, setRecoveryGoals] = useState<string[]>([]);
   const [fitnessLevel, setFitnessLevel] = useState<FitnessLevel | null>(null);
+  const [painLevel, setPainLevel] = useState<number>(0);
   const [loading, setLoading] = useState(false);
   const { refreshProfile } = useAuth();
   const router = useRouter();
@@ -102,42 +105,50 @@ export default function OnboardingScreen() {
       Alert.alert('Error', 'Please select your journey focus');
       return;
     }
-    // If Recovery was selected, show recovery area selection
+    // If Recovery was selected, show pain check-in first
     if (step === 1 && journeyFocus === 'Recovery') {
-      setStep(2); // Go to recovery areas
+      setStep(2); // Go to pain check-in
       return;
     }
-    // If Injury Prevention, skip recovery steps
+    // If Injury Prevention, skip to fitness level
     if (step === 1 && journeyFocus === 'Injury Prevention') {
-      setStep(4); // Skip to fitness level
+      setStep(5); // Skip to fitness level
       return;
     }
-    // Step 2: Recovery areas (optional)
+    // Step 2: Pain check-in (Recovery only)
     if (step === 2) {
-      setStep(3); // Go to recovery goals
+      setStep(3); // Go to recovery areas
       return;
     }
-    // Step 3: Recovery goals (optional)
+    // Step 3: Recovery areas (optional)
     if (step === 3) {
-      setStep(4); // Go to fitness level
+      setStep(4); // Go to recovery goals
       return;
     }
-    // Step 4: Fitness level (required)
-    if (step === 4 && !fitnessLevel) {
+    // Step 4: Recovery goals (optional)
+    if (step === 4) {
+      setStep(5); // Go to fitness level
+      return;
+    }
+    // Step 5: Fitness level (required)
+    if (step === 5 && !fitnessLevel) {
       Alert.alert('Error', 'Please select your fitness level');
       return;
     }
+    // Otherwise proceed (shouldn't reach here normally)
     setStep(step + 1);
   };
 
   const handlePreviousStep = () => {
     // Handle back navigation considering the conditional recovery steps
-    if (step === 4 && journeyFocus === 'Injury Prevention') {
+    if (step === 5 && journeyFocus === 'Injury Prevention') {
       setStep(1); // Go back to journey selection
-    } else if (step === 4 && journeyFocus === 'Recovery') {
-      setStep(3); // Go back to recovery goals
+    } else if (step === 5 && journeyFocus === 'Recovery') {
+      setStep(4); // Go back to recovery goals
+    } else if (step === 4) {
+      setStep(3); // Go back to recovery areas
     } else if (step === 3) {
-      setStep(2); // Go back to recovery areas
+      setStep(2); // Go back to pain check-in
     } else if (step === 2) {
       setStep(1); // Go back to journey selection
     } else {
@@ -184,6 +195,13 @@ export default function OnboardingScreen() {
       }
 
       await updateUserProfile(currentUser.id, profileUpdates);
+
+      // Submit initial pain check-in for Recovery users
+      // Pain locations are not collected during onboarding (Step 3 Recovery Areas serves this purpose)
+      if (journeyFocus === 'Recovery') {
+        await submitPainCheckIn(currentUser.id, painLevel, [], null);
+      }
+
       await refreshProfile();
       router.replace('/(tabs)');
     } catch (error: any) {
@@ -195,24 +213,30 @@ export default function OnboardingScreen() {
 
   // Calculate total steps dynamically
   const getTotalSteps = () => {
-    return journeyFocus === 'Recovery' ? 4 : 2;
+    return journeyFocus === 'Recovery' ? 5 : 2;
   };
 
   // Get current step display
   const getCurrentStepDisplay = () => {
-    if (step === 1) return 1;
-    if (step === 2) return 2; // Recovery areas
-    if (step === 3) return 3; // Recovery goals
-    if (step === 4) return journeyFocus === 'Recovery' ? 4 : 2; // Fitness
+    if (step === 1) return 1; // Journey focus
+    if (step === 2) return 2; // Pain check-in (Recovery only)
+    if (step === 3) return 3; // Recovery areas (Recovery only)
+    if (step === 4) return 4; // Recovery goals (Recovery only)
+    if (step === 5) return journeyFocus === 'Recovery' ? 5 : 2; // Fitness
     return step;
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Complete Your Profile</Text>
-      <Text style={styles.subtitle}>
-        Step {getCurrentStepDisplay()} of {getTotalSteps()}
-      </Text>
+    <View style={styles.container}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={styles.title}>Complete Your Profile</Text>
+        <Text style={styles.subtitle}>
+          Step {getCurrentStepDisplay()} of {getTotalSteps()}
+        </Text>
 
       {step === 1 && (
         <View style={styles.section}>
@@ -322,7 +346,63 @@ export default function OnboardingScreen() {
         </View>
       )}
 
+      {/* Step 2: Initial Pain Check-In (Recovery Only) */}
       {step === 2 && journeyFocus === 'Recovery' && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>How are you feeling today?</Text>
+          <Text style={styles.sectionSubtitle}>
+            Rate your current pain level to establish a baseline
+          </Text>
+
+          {/* Pain Level Display */}
+          <View style={styles.painLevelDisplay}>
+            <Text
+              style={[
+                styles.painLevelNumber,
+                { color: getPainLevelInfo(painLevel).color },
+              ]}
+            >
+              {painLevel}
+            </Text>
+            <Text
+              style={[
+                styles.painLevelLabel,
+                { color: getPainLevelInfo(painLevel).color },
+              ]}
+            >
+              {getPainLevelInfo(painLevel).label}
+            </Text>
+          </View>
+
+          {/* Slider */}
+          <View style={styles.sliderContainer}>
+            <Slider
+              style={styles.slider}
+              minimumValue={0}
+              maximumValue={10}
+              step={1}
+              value={painLevel}
+              onValueChange={setPainLevel}
+              minimumTrackTintColor={getPainLevelInfo(painLevel).color}
+              maximumTrackTintColor={AppColors.border}
+              thumbTintColor={getPainLevelInfo(painLevel).color}
+            />
+            <View style={styles.sliderLabels}>
+              <View style={styles.sliderLabel}>
+                <Text style={styles.sliderLabelNumber}>0</Text>
+                <Text style={styles.sliderLabelText}>Pain Free</Text>
+              </View>
+              <View style={styles.sliderLabel}>
+                <Text style={styles.sliderLabelNumber}>10</Text>
+                <Text style={styles.sliderLabelText}>Severe</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* Step 3: Recovery Areas (Recovery Only) */}
+      {step === 3 && journeyFocus === 'Recovery' && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Recovery Areas</Text>
           <Text style={styles.sectionSubtitle}>
@@ -384,7 +464,8 @@ export default function OnboardingScreen() {
         </View>
       )}
 
-      {step === 3 && journeyFocus === 'Recovery' && (
+      {/* Step 4: Recovery Goals (Recovery Only) */}
+      {step === 4 && journeyFocus === 'Recovery' && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Recovery Goals</Text>
           <Text style={styles.sectionSubtitle}>
@@ -423,7 +504,8 @@ export default function OnboardingScreen() {
         </View>
       )}
 
-      {step === 4 && (
+      {/* Step 5: Fitness Level (Both journeys) */}
+      {step === 5 && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>What's your fitness level?</Text>
           <View style={styles.optionsGrid}>
@@ -450,7 +532,9 @@ export default function OnboardingScreen() {
           </View>
         </View>
       )}
+      </ScrollView>
 
+      {/* Fixed Button Container at Bottom */}
       <View style={styles.buttonContainer}>
         {step > 1 && (
           <TouchableOpacity
@@ -464,7 +548,8 @@ export default function OnboardingScreen() {
           </TouchableOpacity>
         )}
 
-        {step < 4 ? (
+        {/* Show Next button for steps before final step */}
+        {step < 5 ? (
           <TouchableOpacity
             style={[styles.button, step > 1 && styles.buttonFlex]}
             onPress={handleNextStep}
@@ -473,6 +558,7 @@ export default function OnboardingScreen() {
             <Text style={styles.buttonText}>Next</Text>
           </TouchableOpacity>
         ) : (
+          /* Show Complete button on final step (step 5) */
           <TouchableOpacity
             style={[styles.button, styles.buttonFlex, loading && styles.buttonDisabled]}
             onPress={handleComplete}
@@ -484,7 +570,7 @@ export default function OnboardingScreen() {
           </TouchableOpacity>
         )}
       </View>
-    </ScrollView>
+    </View>
   );
 }
 
@@ -505,10 +591,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: AppColors.background,
   },
+  scrollView: {
+    flex: 1,
+  },
   content: {
     padding: 24,
     paddingTop: 80,
-    paddingBottom: 80,
+    paddingBottom: 24,
   },
   title: {
     fontSize: 32,
@@ -673,14 +762,21 @@ const styles = StyleSheet.create({
   buttonContainer: {
     flexDirection: 'row',
     gap: 12,
-    marginTop: 24,
+    padding: 24,
+    paddingBottom: 40,
+    backgroundColor: AppColors.background,
+    borderTopWidth: 1,
+    borderTopColor: AppColors.border,
   },
   button: {
     backgroundColor: AppColors.primary,
-    borderRadius: 8,
-    padding: 16,
+    borderRadius: 12,
+    paddingVertical: 18,
+    paddingHorizontal: 24,
     alignItems: 'center',
+    justifyContent: 'center',
     flex: 1,
+    minHeight: 56,
   },
   buttonFlex: {
     flex: 1,
@@ -700,5 +796,70 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: {
     color: AppColors.primary,
+  },
+  // Pain Check-In Styles
+  painLevelDisplay: {
+    alignItems: 'center',
+    marginVertical: 24,
+  },
+  painLevelNumber: {
+    fontSize: 64,
+    fontWeight: 'bold',
+  },
+  painLevelLabel: {
+    fontSize: 20,
+    fontWeight: '600',
+    marginTop: 8,
+  },
+  sliderContainer: {
+    marginBottom: 24,
+  },
+  slider: {
+    width: '100%',
+    height: 40,
+  },
+  sliderLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
+  sliderLabel: {
+    alignItems: 'center',
+  },
+  sliderLabelNumber: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: AppColors.textPrimary,
+  },
+  sliderLabelText: {
+    fontSize: 12,
+    color: AppColors.textSecondary,
+  },
+  painLocationsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 12,
+  },
+  painLocationChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    backgroundColor: AppColors.surface,
+    borderWidth: 1,
+    borderColor: AppColors.border,
+  },
+  painLocationChipSelected: {
+    backgroundColor: AppColors.lightGold,
+    borderColor: AppColors.primary,
+  },
+  painLocationText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: AppColors.textSecondary,
+  },
+  painLocationTextSelected: {
+    color: AppColors.primary,
+    fontWeight: '600',
   },
 });

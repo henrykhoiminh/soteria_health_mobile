@@ -8,7 +8,8 @@ import { getBalancedRoutines, getTodayProgress, getUserStats } from '@/lib/utils
 import { getFormattedFriendActivity } from '@/lib/utils/social';
 import { getAllAvatarStates } from '@/lib/utils/stats';
 import { getDisplayName } from '@/lib/utils/username';
-import { ActivityFeedItem, AvatarState, DailyProgress, Routine, UserStats } from '@/types';
+import { getPainStatistics, getPainCheckInHistory, getPainLevelInfo, getPainTrendInfo } from '@/lib/utils/pain-checkin';
+import { ActivityFeedItem, AvatarState, DailyProgress, Routine, UserStats, PainStatistics, PainCheckIn } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
@@ -33,6 +34,8 @@ export default function DashboardScreen() {
   const [showJourneyDetails, setShowJourneyDetails] = useState(false);
   const [showUsernameSetup, setShowUsernameSetup] = useState(false);
   const [avatarStates, setAvatarStates] = useState<AvatarState[]>([]);
+  const [painStats, setPainStats] = useState<PainStatistics | null>(null);
+  const [painHistory, setPainHistory] = useState<PainCheckIn[]>([]);
 
   useEffect(() => {
     loadDashboardData();
@@ -61,12 +64,14 @@ export default function DashboardScreen() {
 
     try {
       setLoading(true);
-      const [progressData, statsData, routinesData, activityData, avatarsData] = await Promise.all([
+      const [progressData, statsData, routinesData, activityData, avatarsData, painStatsData, painHistoryData] = await Promise.all([
         getTodayProgress(user.id),
         getUserStats(user.id),
         getBalancedRoutines(profile?.journey_focus || null, profile?.fitness_level || null),
         getFormattedFriendActivity(user.id, 5), // Get latest 5 activities
         getAllAvatarStates(user.id), // Load avatar states
+        getPainStatistics(user.id, 30), // Get pain statistics
+        getPainCheckInHistory(user.id, 14), // Get last 14 days for mini chart
       ]);
 
       console.log('Today Progress:', progressData); // Debug log
@@ -75,6 +80,8 @@ export default function DashboardScreen() {
       setRecommendedRoutines(routinesData);
       setFriendActivity(activityData);
       setAvatarStates(avatarsData);
+      setPainStats(painStatsData);
+      setPainHistory(painHistoryData);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     } finally {
@@ -127,7 +134,7 @@ export default function DashboardScreen() {
               <JourneyBadge
                 focus={profile.journey_focus}
                 size="sm"
-                showLabel={false}
+                showLabel={true}
                 recoveryAreas={profile.recovery_areas || []}
               />
             </TouchableOpacity>
@@ -199,6 +206,108 @@ export default function DashboardScreen() {
           />
         </View>
       </View>
+
+      {/* Pain Progress Section */}
+      {painStats && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Pain Progress</Text>
+          <View style={styles.painProgressCard}>
+            {/* Current Pain Level */}
+            <View style={styles.painLevelSection}>
+              <View style={styles.painLevelLeft}>
+                <Text style={styles.painLevelLabel}>Current Pain</Text>
+                <View style={styles.painLevelDisplay}>
+                  <Text
+                    style={[
+                      styles.painLevelNumber,
+                      { color: getPainLevelInfo(painStats.current_pain).color },
+                    ]}
+                  >
+                    {painStats.current_pain}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.painLevelText,
+                      { color: getPainLevelInfo(painStats.current_pain).color },
+                    ]}
+                  >
+                    {getPainLevelInfo(painStats.current_pain).label}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Trend Indicator */}
+              <View style={styles.trendIndicator}>
+                <Text
+                  style={[
+                    styles.trendIcon,
+                    { color: getPainTrendInfo(painStats.trend).color },
+                  ]}
+                >
+                  {getPainTrendInfo(painStats.trend).icon}
+                </Text>
+                <Text style={styles.trendText}>
+                  {getPainTrendInfo(painStats.trend).description}
+                </Text>
+              </View>
+            </View>
+
+            {/* Mini Chart */}
+            {painHistory.length > 0 ? (
+              <View style={styles.miniChart}>
+                {painHistory
+                  .slice()
+                  .reverse()
+                  .map((checkIn, index) => {
+                    const height = (checkIn.pain_level / 10) * 60; // Max height 60px
+                    const painInfo = getPainLevelInfo(checkIn.pain_level);
+                    return (
+                      <View key={checkIn.id} style={styles.chartBarContainer}>
+                        <View
+                          style={[
+                            styles.chartBar,
+                            {
+                              height: Math.max(height, 4), // Minimum 4px for visibility
+                              backgroundColor: painInfo.color,
+                            },
+                          ]}
+                        />
+                      </View>
+                    );
+                  })}
+              </View>
+            ) : (
+              <View style={styles.emptyChartContainer}>
+                <Text style={styles.emptyChartText}>
+                  Check in daily to see your pain trends
+                </Text>
+              </View>
+            )}
+
+            {/* Stats Row */}
+            <View style={styles.painStatsRow}>
+              <View style={styles.painStatItem}>
+                <Text style={styles.painStatValue}>
+                  {painStats.avg_7_days.toFixed(1)}
+                </Text>
+                <Text style={styles.painStatLabel}>7-Day Avg</Text>
+              </View>
+              <View style={styles.painStatDivider} />
+              <View style={styles.painStatItem}>
+                <Text style={styles.painStatValue}>
+                  {painStats.avg_30_days.toFixed(1)}
+                </Text>
+                <Text style={styles.painStatLabel}>30-Day Avg</Text>
+              </View>
+              <View style={styles.painStatDivider} />
+              <View style={styles.painStatItem}>
+                <Text style={styles.painStatValue}>{painStats.pain_free_days}</Text>
+                <Text style={styles.painStatLabel}>Pain-Free Days</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+      )}
 
       {/* Friend Activity */}
       {friendActivity.length > 0 && (
@@ -588,5 +697,124 @@ const styles = StyleSheet.create({
   activityTime: {
     fontSize: 12,
     color: AppColors.textTertiary,
+  },
+  // Pain Progress Section Styles
+  painProgressCard: {
+    padding: 20,
+    borderRadius: 12,
+    backgroundColor: AppColors.surfaceSecondary,
+    borderWidth: 1,
+    borderColor: AppColors.cardBorder,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  painLevelSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  painLevelLeft: {
+    flex: 1,
+  },
+  painLevelLabel: {
+    fontSize: 12,
+    color: AppColors.textSecondary,
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  painLevelDisplay: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 8,
+  },
+  painLevelNumber: {
+    fontSize: 40,
+    fontWeight: 'bold',
+  },
+  painLevelText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  trendIndicator: {
+    alignItems: 'center',
+    backgroundColor: AppColors.surface,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: AppColors.border,
+  },
+  trendIcon: {
+    fontSize: 28,
+    marginBottom: 4,
+  },
+  trendText: {
+    fontSize: 11,
+    color: AppColors.textSecondary,
+    textAlign: 'center',
+  },
+  miniChart: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    height: 70,
+    marginBottom: 20,
+    paddingHorizontal: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: AppColors.border,
+  },
+  chartBarContainer: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    marginHorizontal: 1,
+  },
+  chartBar: {
+    width: '100%',
+    borderRadius: 2,
+    minHeight: 4,
+  },
+  painStatsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+  },
+  painStatItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  painStatValue: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: AppColors.textPrimary,
+    marginBottom: 4,
+  },
+  painStatLabel: {
+    fontSize: 11,
+    color: AppColors.textSecondary,
+    textAlign: 'center',
+  },
+  painStatDivider: {
+    width: 1,
+    height: 30,
+    backgroundColor: AppColors.border,
+  },
+  emptyChartContainer: {
+    height: 70,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: AppColors.border,
+  },
+  emptyChartText: {
+    fontSize: 13,
+    color: AppColors.textTertiary,
+    fontStyle: 'italic',
   },
 });

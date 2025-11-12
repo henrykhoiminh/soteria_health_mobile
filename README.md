@@ -18,16 +18,25 @@ This is the mobile companion app to the Soteria Health web application, built wi
 ### Authentication & Onboarding
 - User sign up with email verification
 - Secure login with password visibility toggle
-- Enhanced multi-step onboarding flow
+- Enhanced multi-step onboarding flow with mobile-optimized buttons
   - **Journey Focus Selection** - Detailed cards with icons and benefits
     - Injury Prevention: Shield icon (blue #3B82F6) with prevention-focused features
     - Recovery: Heart icon (red #EF4444) with recovery-focused features
-  - **Recovery Details** (Recovery users only) - Optional personalization
-    - Recovery area selection (Lower Back, Knee, Shoulder, Hip, Neck, Ankle, Wrist, Elbow, Other)
-    - Recovery goals and notes text area
-  - Fitness level selection (Beginner / Intermediate / Advanced)
-  - Personal goals selection (multi-select)
+  - **Initial Pain Check-In** (Recovery users only) - Baseline pain tracking
+    - Pain level slider (0-10) with color-coded display
+    - Pain-free (green) → Mild (yellow) → Moderate (orange) → Severe (red)
+    - Establishes baseline for progress tracking
+  - **Recovery Areas** (Recovery users only) - Optional body part selection
+    - Filter by region: All, Upper Body, Lower Body
+    - Select multiple affected areas
+    - Body parts: Lower Back, Knee, Shoulder, Hip, Neck, Ankle, Wrist, Elbow, and more
+  - **Recovery Goals** (Recovery users only) - Optional goal selection
+    - Multiple predefined recovery goals
+    - Personalization for recovery journey
+  - **Fitness Level** (All users) - Select experience level
+    - Beginner / Intermediate / Advanced
 - Journey start date automatically recorded
+- Fixed button positioning for easy thumb access on mobile
 
 ### Dashboard
 - Personalized greeting with profile picture
@@ -35,6 +44,15 @@ This is the mobile companion app to the Soteria Health web application, built wi
   - Journey badge with icon (Shield for Prevention, Heart for Recovery)
   - Day counter showing "Day X of [Journey Name]"
   - Recovery area display for Recovery users
+- **Pain Progress Tracking** (Recovery users only)
+  - Visual pain level chart showing trend over time
+  - Daily pain check-in modal (appears once per day)
+  - Multi-step pain check-in:
+    1. Pain level slider (0-10) with color coding
+    2. Pain location selection (body parts, Mind, Soul)
+    3. Optional notes about pain experience
+  - Pain history visualization
+  - Track pain reduction progress over time
 - Today's progress tracking (Mind, Body, Soul)
 - Clickable progress cards that filter routines by category
 - User statistics (Current Streak, Health Score, Total Routines)
@@ -90,6 +108,16 @@ This is the mobile companion app to the Soteria Health web application, built wi
 - Upload and change profile picture
 - View personal goals and injuries/limitations
 - Journey progress tracking
+- **Settings**
+  - Account settings
+  - **Reset Journey** - Fresh start feature
+    - Completely resets user journey
+    - Deletes all progress data (daily progress, routine completions, routine saves)
+    - Deletes all pain check-in history
+    - Clears friend activity feed
+    - Resets stats to zero
+    - Redirects to onboarding for new journey setup
+    - Secure function with proper RLS bypass
 - Sign out functionality
 
 ### Social Features
@@ -225,6 +253,7 @@ soteria-health-mobile/
 │       └── soteria-logo.png     # App logo
 ├── components/                   # Reusable components
 │   ├── JourneyBadge.tsx         # Journey badge with icon and label
+│   ├── PainCheckInModal.tsx     # Multi-step pain check-in modal
 │   └── themed-text.tsx          # Themed text component
 ├── constants/
 │   └── theme.ts                 # Theme constants and colors
@@ -236,11 +265,15 @@ soteria-health-mobile/
 │   └── utils/                   # Utility functions
 │       ├── auth.ts             # Auth, profile, journey tracking & upload
 │       ├── dashboard.ts        # Dashboard data, balanced routines, search functions
+│       ├── pain-checkin.ts     # Pain check-in submission & retrieval
 │       └── routine-builder.ts  # Routine builder utilities & validation
 ├── sql/                          # Database migration files
 │   ├── database_migration_journey_enhancements.sql  # Journey tracking migrations
 │   ├── database_migration_routine_search_tagging.sql # Search & tagging migrations
-│   └── example_routine_tagging.sql                  # Example routine tags
+│   ├── example_routine_tagging.sql                  # Example routine tags
+│   ├── add_pain_checkins_table.sql                  # Pain check-in system
+│   ├── add_hard_reset_function.sql                  # Reset journey function
+│   └── social_migration/                            # Social features migrations
 └── types/                        # TypeScript types
     └── index.ts                 # Shared type definitions
 ```
@@ -261,7 +294,9 @@ npm install
 - `base64-arraybuffer` - Base64 encoding for image uploads
 - `date-fns` - Date utilities
 - `@expo/vector-icons` - Icon library
-- `@react-native-picker/picker` - Native dropdown component for recovery area selection
+- `@react-native-picker/picker` - Native dropdown component for selections
+- `@react-native-community/slider` - Slider component for pain level input
+- `react-native-dropdown-picker` - Multi-select dropdown component
 
 ### 2. Environment Variables
 
@@ -320,6 +355,12 @@ sql/social_migration/update_circle_routine_stats_to_total_completions.sql
 
 # 14. FIX: Circle Routines Delete Policy for Admins
 sql/social_migration/fix_circle_routines_delete_policy.sql
+
+# 15. FEATURE: Pain Check-In System (Recovery Journey)
+sql/add_pain_checkins_table.sql
+
+# 16. FEATURE: Reset Journey Function (Hard Reset)
+sql/add_hard_reset_function.sql
 ```
 
 **⚠️ CRITICAL: RLS Infinite Recursion Fix**
@@ -442,6 +483,102 @@ The `fix_circle_routines_delete_policy.sql` migration fixes the RLS policy to al
 - Removes inappropriate or duplicate routines
 - Original poster can still remove their own routines
 - Proper permission hierarchy for circle management
+
+**🩹 Pain Check-In System (Migration 15)**
+
+The Pain Check-In System tracks pain levels and locations for Recovery journey users, enabling progress monitoring and personalized recommendations.
+
+**The add_pain_checkins_table.sql migration creates:**
+
+1. **Pain Check-Ins Table**
+   - Stores daily pain check-ins with level (0-10) and locations
+   - User ID reference with cascade deletion
+   - Check-in date with automatic timestamp
+   - Pain locations array (body parts, Mind, Soul)
+   - Optional notes for additional context
+   - Indexed for efficient queries by user and date
+
+2. **Multi-Step Pain Modal**
+   - Step 1: Pain level slider (0-10) with color coding
+     - 0: Pain Free (green #34C759)
+     - 1-3: Mild (yellow #FFD60A)
+     - 4-6: Moderate (orange #FF9500)
+     - 7-10: Severe (red #FF3B30)
+   - Step 2: Pain location selection (multi-select dropdown)
+     - Body parts (Lower Back, Knee, Shoulder, etc.)
+     - Mind (mental/emotional pain)
+     - Soul (spiritual pain)
+   - Step 3: Optional notes text area
+
+3. **Daily Check-In Logic**
+   - Modal appears once per day for Recovery users
+   - Checks if user has completed today's check-in
+   - Only prompts when profile is complete (not during Reset Journey)
+   - Stores check-in with date, level, locations, and notes
+
+4. **Pain Progress Visualization**
+   - Line chart showing pain level trend over time
+   - Color-coded data points
+   - Pain-free days highlighted
+   - Recovery progress tracking
+
+**Features Enabled:**
+- ✅ Initial pain check-in during onboarding (Recovery only)
+- ✅ Daily pain check-in modal with 3-step flow
+- ✅ Pain level history and visualization
+- ✅ Pain location tracking
+- ✅ Progress monitoring and trend analysis
+- ✅ Color-coded pain severity indicators
+- ✅ Integration with dashboard for Recovery users
+
+**🔄 Reset Journey Feature (Migration 16)**
+
+The Reset Journey feature allows users to completely reset their wellness journey and start fresh with a new focus.
+
+**The add_hard_reset_function.sql migration creates:**
+
+1. **Hard Reset Function**
+   - PostgreSQL function with `SECURITY DEFINER` to bypass RLS
+   - Atomic transaction ensuring all-or-nothing execution
+   - Returns detailed count of deleted records
+
+2. **What Gets Deleted:**
+   - Daily progress records (all historical progress)
+   - Routine completions (all completed routines)
+   - Routine saves (all saved routines)
+   - Friend activity (user's activity feed entries)
+   - **Pain check-ins** (all pain history)
+   - User stats reset to zero (streak, health_score, total_routines)
+   - Profile journey data cleared (journey_focus, fitness_level, recovery info)
+
+3. **Reset Flow:**
+   - User clicks "Reset Journey" in Settings
+   - Confirmation dialog explains what will be deleted
+   - Function executes hard reset
+   - User redirected to onboarding
+   - New journey setup with fresh baseline
+   - Pain modal won't appear until profile complete
+
+4. **Security & Safety:**
+   - Requires authentication
+   - Uses `SECURITY DEFINER` for RLS bypass
+   - Atomic transaction prevents partial resets
+   - Detailed logging of deleted records
+   - User must confirm before reset
+
+**Features Enabled:**
+- ✅ Complete journey reset with one click
+- ✅ Deletes ALL progress and pain data
+- ✅ Redirects to onboarding for fresh start
+- ✅ Prevents pain modal during reset
+- ✅ Secure function with proper permissions
+- ✅ Returns detailed deletion counts
+
+**Use Cases:**
+- User wants to switch from Recovery to Injury Prevention
+- User wants to start completely fresh
+- User had incorrect data during initial setup
+- User completed recovery and wants to prevent future injuries
 
 **📝 Migration 13 - Total Completions Stats (continued):**
 
@@ -651,15 +788,35 @@ npm run web
 7. If profile complete → Redirects to dashboard (tabs)
 
 ### Journey Focus Onboarding Flow
+
+**Recovery Journey (5 Steps):**
 1. **Step 1:** Journey selection with detailed cards
    - Injury Prevention card (blue) shows prevention benefits
    - Recovery card (red) shows recovery benefits
-2. **Step 2 (Recovery only):** Recovery details
-   - Optional recovery area dropdown
-   - Optional recovery notes text area
-3. **Step 3:** Fitness level selection
-4. **Step 4:** Personal goals selection
-5. **Completion:** Journey start date automatically recorded
+2. **Step 2 (Recovery only):** Initial Pain Check-In
+   - Pain level slider (0-10) with color-coded display
+   - Establishes baseline pain level for progress tracking
+   - No pain locations collected (redundant with Step 3)
+3. **Step 3 (Recovery only):** Recovery Areas
+   - Filter by region (All, Upper Body, Lower Body)
+   - Multi-select body parts affected
+   - Optional personalization
+4. **Step 4 (Recovery only):** Recovery Goals
+   - Multi-select recovery goals
+   - Optional personalization
+5. **Step 5:** Fitness level selection (Beginner / Intermediate / Advanced)
+6. **Completion:** Journey start date and initial pain level recorded
+
+**Injury Prevention Journey (2 Steps):**
+1. **Step 1:** Journey selection (select Injury Prevention)
+2. **Step 5:** Fitness level selection (skips steps 2-4)
+3. **Completion:** Journey start date recorded
+
+**Mobile UX:**
+- Fixed button positioning at bottom for easy thumb access
+- Larger touch targets (56px minimum height)
+- Smooth scrolling content with buttons always visible
+- Border separator between content and action buttons
 
 ### Profile Picture Upload
 - Uses Expo Image Picker for image selection
@@ -782,7 +939,31 @@ npx expo start --ios
 
 ## Recent Updates
 
-### Routine Search & Tagging System (Latest)
+### Pain Check-In System & Reset Journey (Latest)
+- ✅ **Pain Check-In System for Recovery Journey:**
+  - Initial pain check-in during onboarding (Step 2 for Recovery users)
+  - Daily pain check-in modal with 3-step flow
+  - Pain level slider (0-10) with color-coded visualization
+  - Pain location tracking (body parts, Mind, Soul)
+  - Optional notes for additional context
+  - Pain progress chart on dashboard
+  - Database table with RLS policies
+- ✅ **Reset Journey Feature:**
+  - Complete journey reset with confirmation dialog
+  - PostgreSQL function with SECURITY DEFINER
+  - Deletes all progress, completions, pain data, and activity
+  - Resets stats to zero and clears profile journey data
+  - Redirects to onboarding for fresh start
+  - Pain modal prevented during reset (checks profile completion)
+- ✅ **Onboarding Reorganization:**
+  - Pain check-in moved from Step 5 to Step 2 (Recovery only)
+  - Recovery flow: Journey → Pain → Areas → Goals → Fitness (5 steps)
+  - Injury Prevention flow: Journey → Fitness (2 steps)
+  - Fixed button positioning at bottom for mobile thumb access
+  - Larger touch targets (56px minimum) for accessibility
+  - No pain locations collected in onboarding (redundant with Recovery Areas)
+
+### Routine Search & Tagging System
 - ✅ Added search functionality for routines by name and description
 - ✅ Database schema enhancements:
   - Tags array column (text[]) for general categorization

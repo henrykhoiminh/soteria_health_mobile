@@ -347,3 +347,42 @@ export interface UserSearchResult {
   friendship_status?: FriendshipStatus | null
   match_score?: number
 }
+
+// Pain Check-In Types
+export const PAIN_LOCATIONS = [
+  'Mind',
+  'Soul',
+  'Neck',
+  'Shoulders',
+  'Upper Back',
+  'Lower Back',
+  'Hips',
+  'Knees',
+  'Ankles',
+  'Wrists',
+  'Elbows',
+  'Other',
+] as const
+
+export type PainLocation = typeof PAIN_LOCATIONS[number]
+
+export interface PainCheckIn {
+  id: string
+  user_id: string
+  pain_level: number // 0-10
+  pain_locations: string[] // Array of body parts with pain
+  notes: string | null
+  check_in_date: string // Date in YYYY-MM-DD format
+  created_at: string
+  updated_at: string
+}
+
+export type PainTrend = 'decreasing' | 'stable' | 'increasing' | 'insufficient_data'
+
+export interface PainStatistics {
+  current_pain: number
+  avg_7_days: number
+  avg_30_days: number
+  pain_free_days: number
+  trend: PainTrend
+}
