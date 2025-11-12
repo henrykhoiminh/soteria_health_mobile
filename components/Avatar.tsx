@@ -53,6 +53,14 @@ export default function Avatar({ category, lightState }: AvatarProps) {
           statusText: 'Dormant',
           statusColor: AppColors.textTertiary,
         };
+      case 'Sleepy':
+        return {
+          opacity: 0.5,
+          glowIntensity: 0.15,
+          pulseEnabled: true,
+          statusText: 'Sleepy',
+          statusColor: config.color,
+        };
       case 'Awakening':
         return {
           opacity: 0.6,

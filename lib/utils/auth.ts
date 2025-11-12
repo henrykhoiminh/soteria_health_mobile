@@ -172,56 +172,21 @@ export async function setJourneyStartDate(userId: string, startDate?: string) {
  */
 export async function hardResetUserData(userId: string) {
   try {
-    // 1. Delete all daily progress records
-    const { error: progressError } = await supabase
-      .from('daily_progress')
-      .delete()
-      .eq('user_id', userId)
+    console.log('[Hard Reset] Starting reset for user:', userId)
 
-    if (progressError) throw progressError
+    // Call the Postgres function which has SECURITY DEFINER to bypass RLS
+    const { data, error } = await supabase.rpc('hard_reset_user_data', {
+      target_user_id: userId
+    })
 
-    // 2. Delete all routine completions
-    const { error: completionsError } = await supabase
-      .from('routine_completions')
-      .delete()
-      .eq('user_id', userId)
+    if (error) {
+      console.error('[Hard Reset] Error:', error)
+      throw error
+    }
 
-    if (completionsError) throw completionsError
+    console.log('[Hard Reset] Success:', data)
 
-    // 3. Delete user stats
-    const { error: statsError } = await supabase
-      .from('user_stats')
-      .delete()
-      .eq('user_id', userId)
-
-    if (statsError) throw statsError
-
-    // 4. Delete journey goals
-    const { error: goalsError } = await supabase
-      .from('journey_goals')
-      .delete()
-      .eq('user_id', userId)
-
-    if (goalsError) throw goalsError
-
-    // 5. Reset profile to initial state (keep name and email, clear everything else)
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .update({
-        journey_focus: null,
-        journey_started_at: null,
-        recovery_areas: [],
-        recovery_goals: [],
-        fitness_level: null,
-        injuries: [],
-        age: null,
-        // Keep full_name and profile_picture_url
-      })
-      .eq('id', userId)
-
-    if (profileError) throw profileError
-
-    return { success: true }
+    return { success: true, data }
   } catch (error) {
     console.error('Error during hard reset:', error)
     throw error

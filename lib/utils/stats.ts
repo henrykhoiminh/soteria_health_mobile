@@ -113,6 +113,95 @@ export async function calculateUniqueRoutines(
 }
 
 /**
+ * Calculate harmony streak
+ * Counts consecutive days where user achieved daily harmony (all 3 categories completed)
+ */
+export async function calculateHarmonyStreak(
+  userId: string
+): Promise<{ currentStreak: number; longestStreak: number }> {
+  // Get all daily_progress records, ordered by date (most recent first)
+  const { data: progressRecords, error } = await supabase
+    .from('daily_progress')
+    .select('date, mind_complete, body_complete, soul_complete')
+    .eq('user_id', userId)
+    .order('date', { ascending: false })
+    .limit(365) // Look back max 1 year
+
+  if (error) throw error
+  if (!progressRecords || progressRecords.length === 0) {
+    return { currentStreak: 0, longestStreak: 0 }
+  }
+
+  // Filter to only days with harmony (all 3 categories complete)
+  const harmonyDates = progressRecords
+    .filter(p => p.mind_complete && p.body_complete && p.soul_complete)
+    .map(p => p.date)
+
+  if (harmonyDates.length === 0) {
+    return { currentStreak: 0, longestStreak: 0 }
+  }
+
+  // Calculate current streak
+  let currentStreak = 0
+  let checkDate = new Date()
+
+  // Start checking from today backwards
+  while (true) {
+    const dateStr = checkDate.toISOString().split('T')[0]
+
+    if (harmonyDates.includes(dateStr)) {
+      currentStreak++
+      // Move to previous day
+      checkDate.setDate(checkDate.getDate() - 1)
+    } else {
+      // Streak broken
+      break
+    }
+  }
+
+  // Calculate longest streak (historical)
+  let longestStreak = 0
+  let tempStreak = 0
+  let prevDate: Date | null = null
+
+  // Sort dates in ascending order for longest streak calculation
+  const sortedDates = [...harmonyDates].sort()
+
+  for (const dateStr of sortedDates) {
+    const currentDate = new Date(dateStr)
+
+    if (prevDate === null) {
+      // First date
+      tempStreak = 1
+    } else {
+      // Check if this date is consecutive to previous
+      const daysDiff = Math.floor(
+        (currentDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24)
+      )
+
+      if (daysDiff === 1) {
+        // Consecutive day
+        tempStreak++
+      } else {
+        // Streak broken, start new streak
+        longestStreak = Math.max(longestStreak, tempStreak)
+        tempStreak = 1
+      }
+    }
+
+    prevDate = currentDate
+  }
+
+  // Check final streak
+  longestStreak = Math.max(longestStreak, tempStreak)
+
+  return {
+    currentStreak,
+    longestStreak: Math.max(longestStreak, currentStreak),
+  }
+}
+
+/**
  * Calculate harmony score (0-100)
  * Measures balance across Mind/Body/Soul based on last 7 days
  *
@@ -215,22 +304,32 @@ export async function updateEnhancedStats(userId: string): Promise<UserStats | n
   // Calculate harmony score
   const harmonyScore = await calculateHarmonyScore(userId)
 
+  // Calculate harmony-based streak (consecutive days with all 3 categories)
+  const harmonyStreak = await calculateHarmonyStreak(userId)
+
   // Update user_stats table
   const { data, error } = await supabase
     .from('user_stats')
     .update({
+      // Harmony-based streaks (overall day streaks)
+      current_streak: harmonyStreak.currentStreak,
+      longest_streak: harmonyStreak.longestStreak,
+      // Per-category streaks
       mind_current_streak: mindStreak.currentStreak,
       body_current_streak: bodyStreak.currentStreak,
       soul_current_streak: soulStreak.currentStreak,
       mind_longest_streak: mindStreak.longestStreak,
       body_longest_streak: bodyStreak.longestStreak,
       soul_longest_streak: soulStreak.longestStreak,
+      // Unique routines
       unique_mind_routines: uniqueMind,
       unique_body_routines: uniqueBody,
       unique_soul_routines: uniqueSoul,
+      // Last activity dates
       last_mind_activity: lastMindActivity,
       last_body_activity: lastBodyActivity,
       last_soul_activity: lastSoulActivity,
+      // Harmony score
       harmony_score: harmonyScore,
       updated_at: new Date().toISOString(),
     })
@@ -272,12 +371,15 @@ async function getLastActivityDate(
  * Get avatar light state based on today's progress
  *
  * State Hierarchy (highest state persists):
- * - Dormant: Category not completed today
+ * - Dormant: Category not completed today AND user missed yesterday (no harmony)
+ * - Sleepy: New day begins after achieving harmony yesterday (all categories completed)
  * - Awakening: User is currently executing a routine in this category (only if not already Glowing)
  * - Glowing: Category routine completed today (stays Glowing even if doing another routine)
  * - Radiant: ALL three categories completed today (perfect harmony)
  *
- * Important: Once Glowing, stays Glowing. Awakening only shows when going from Dormant during execution.
+ * Important:
+ * - Once Glowing, stays Glowing. Awakening only shows when going from Dormant/Sleepy during execution.
+ * - Sleepy state is determined by getAllAvatarStates when checking start-of-day state
  */
 export function getAvatarLightState(
   categoryCompleted: boolean,
@@ -294,6 +396,7 @@ export function getAvatarLightState(
   if (isExecutingThisCategory) return 'Awakening'
 
   // Dormant: Not completed today and not currently executing
+  // Note: "Sleepy" state is set by getAllAvatarStates when no progress exists yet
   return 'Dormant'
 }
 
@@ -310,28 +413,59 @@ export async function getAllAvatarStates(userId: string): Promise<AvatarState[]>
     .select('*')
     .eq('user_id', userId)
     .eq('date', today)
-    .single()
+    .maybeSingle() // Use maybeSingle to avoid error when no rows exist
 
-  // Default to all dormant if no progress today
-  if (error || !todayProgress) {
+  console.log('[Avatar States] Today progress:', { todayProgress, error, date: today })
+
+  // Check yesterday's harmony to determine if avatars should be "Sleepy" or "Dormant"
+  let yesterdayHadHarmony = false
+  if (!todayProgress) {
+    // No progress today yet, check yesterday
+    const yesterday = new Date()
+    yesterday.setDate(yesterday.getDate() - 1)
+    const yesterdayStr = yesterday.toISOString().split('T')[0]
+
+    const { data: yesterdayProgress } = await supabase
+      .from('daily_progress')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('date', yesterdayStr)
+      .maybeSingle() // Use maybeSingle to avoid error when no rows exist
+
+    console.log('[Avatar States] Yesterday progress:', { yesterdayProgress, date: yesterdayStr })
+
+    // Check if yesterday had harmony (all 3 categories completed)
+    // If no yesterdayProgress exists (e.g., after Journey Reset), this evaluates to false
+    yesterdayHadHarmony =
+      yesterdayProgress?.mind_complete &&
+      yesterdayProgress?.body_complete &&
+      yesterdayProgress?.soul_complete
+
+    // Return default states:
+    // - "Sleepy" if had harmony yesterday (continuing positive streak)
+    // - "Dormant" if no harmony yesterday OR no data (fresh start/reset)
+    const defaultState: AvatarLightState = yesterdayHadHarmony ? 'Sleepy' : 'Dormant'
+
+    console.log('[Avatar States] Default state:', defaultState, 'yesterdayHadHarmony:', yesterdayHadHarmony)
+
     return [
       {
         category: 'Mind',
-        lightState: 'Dormant',
+        lightState: defaultState,
         lastActivity: null,
         currentStreak: 0,
         color: '#3B82F6',
       },
       {
         category: 'Body',
-        lightState: 'Dormant',
+        lightState: defaultState,
         lastActivity: null,
         currentStreak: 0,
         color: '#EF4444',
       },
       {
         category: 'Soul',
-        lightState: 'Dormant',
+        lightState: defaultState,
         lastActivity: null,
         currentStreak: 0,
         color: '#F59E0B',

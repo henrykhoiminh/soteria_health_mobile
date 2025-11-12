@@ -223,8 +223,15 @@ export default function ProfileScreen() {
 
             try {
               setResetting(true);
+
+              // Perform the hard reset
               await hardResetUserData(user.id);
+
+              // Refresh profile to get the cleared data
               await refreshProfile();
+
+              // Small delay to ensure database has processed all deletions
+              await new Promise(resolve => setTimeout(resolve, 500));
 
               // Redirect to onboarding
               router.replace('/(auth)/onboarding');

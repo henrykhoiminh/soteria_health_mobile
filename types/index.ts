@@ -143,7 +143,7 @@ export interface HealthScoreInfo {
 }
 
 // Avatar Light States (Phase 2)
-export type AvatarLightState = 'Dormant' | 'Awakening' | 'Glowing' | 'Radiant'
+export type AvatarLightState = 'Dormant' | 'Sleepy' | 'Awakening' | 'Glowing' | 'Radiant'
 
 export interface AvatarState {
   category: RoutineCategory
