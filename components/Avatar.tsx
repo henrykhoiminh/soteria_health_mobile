@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, Text, StyleSheet, Animated, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AvatarLightState, RoutineCategory } from '@/types';
 import { AppColors } from '@/constants/theme';
@@ -7,9 +7,10 @@ import { AppColors } from '@/constants/theme';
 interface AvatarProps {
   category: RoutineCategory;
   lightState: AvatarLightState;
+  onPress?: () => void;
 }
 
-export default function Avatar({ category, lightState }: AvatarProps) {
+export default function Avatar({ category, lightState, onPress }: AvatarProps) {
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const glowAnim = useRef(new Animated.Value(0)).current;
 
@@ -141,7 +142,7 @@ export default function Avatar({ category, lightState }: AvatarProps) {
   }, [lightState, stateConfig.glowIntensity]);
 
   return (
-    <View style={styles.container}>
+    <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.7}>
       {/* Avatar Circle with Glow */}
       <View style={styles.avatarWrapper}>
         {/* Outer Glow Effect */}
@@ -193,7 +194,7 @@ export default function Avatar({ category, lightState }: AvatarProps) {
       <Text style={[styles.statusText, { color: stateConfig.statusColor }]}>
         {stateConfig.statusText}
       </Text>
-    </View>
+    </TouchableOpacity>
   );
 }
 

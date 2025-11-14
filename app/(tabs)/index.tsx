@@ -1,20 +1,23 @@
 import Avatar from '@/components/Avatar';
+import CompletedRoutinesModal from '@/components/CompletedRoutinesModal';
 import JourneyBadge from '@/components/JourneyBadge';
+import RecommendedRoutineModal from '@/components/RecommendedRoutineModal';
 import UsernameSetupModal from '@/components/UsernameSetupModal';
 import { AppColors } from '@/constants/theme';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { calculateJourneyDays } from '@/lib/utils/auth';
-import { getBalancedRoutines, getTodayProgress, getUserStats } from '@/lib/utils/dashboard';
+import { getRoutinesByCategory, getTodayProgress, getUniqueCompletedRoutines, getUserStats } from '@/lib/utils/dashboard';
+import { getPainCheckInHistory, getPainLevelInfo, getPainStatistics, getPainTrendInfo } from '@/lib/utils/pain-checkin';
 import { getFormattedFriendActivity } from '@/lib/utils/social';
 import { getAllAvatarStates } from '@/lib/utils/stats';
 import { getDisplayName } from '@/lib/utils/username';
-import { getPainStatistics, getPainCheckInHistory, getPainLevelInfo, getPainTrendInfo } from '@/lib/utils/pain-checkin';
-import { ActivityFeedItem, AvatarState, DailyProgress, Routine, UserStats, PainStatistics, PainCheckIn } from '@/types';
+import { ActivityFeedItem, AvatarState, DailyProgress, PainCheckIn, PainStatistics, Routine, RoutineCategory, UserStats } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Dimensions,
   Image,
   ScrollView,
   StyleSheet,
@@ -22,6 +25,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { LineChart } from 'react-native-chart-kit';
 
 export default function DashboardScreen() {
   const { user, profile } = useAuth();
@@ -29,13 +33,17 @@ export default function DashboardScreen() {
   const [loading, setLoading] = useState(true);
   const [todayProgress, setTodayProgress] = useState<DailyProgress | null>(null);
   const [stats, setStats] = useState<UserStats | null>(null);
-  const [recommendedRoutines, setRecommendedRoutines] = useState<Routine[]>([]);
   const [friendActivity, setFriendActivity] = useState<ActivityFeedItem[]>([]);
   const [showJourneyDetails, setShowJourneyDetails] = useState(false);
   const [showUsernameSetup, setShowUsernameSetup] = useState(false);
   const [avatarStates, setAvatarStates] = useState<AvatarState[]>([]);
   const [painStats, setPainStats] = useState<PainStatistics | null>(null);
   const [painHistory, setPainHistory] = useState<PainCheckIn[]>([]);
+  const [showRecommendedModal, setShowRecommendedModal] = useState(false);
+  const [selectedRoutine, setSelectedRoutine] = useState<Routine | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<RoutineCategory>('Mind');
+  const [showCompletedRoutinesModal, setShowCompletedRoutinesModal] = useState(false);
+  const [completedRoutines, setCompletedRoutines] = useState<Routine[]>([]);
 
   useEffect(() => {
     loadDashboardData();
@@ -64,10 +72,9 @@ export default function DashboardScreen() {
 
     try {
       setLoading(true);
-      const [progressData, statsData, routinesData, activityData, avatarsData, painStatsData, painHistoryData] = await Promise.all([
+      const [progressData, statsData, activityData, avatarsData, painStatsData, painHistoryData] = await Promise.all([
         getTodayProgress(user.id),
         getUserStats(user.id),
-        getBalancedRoutines(profile?.journey_focus || null, profile?.fitness_level || null),
         getFormattedFriendActivity(user.id, 5), // Get latest 5 activities
         getAllAvatarStates(user.id), // Load avatar states
         getPainStatistics(user.id, 30), // Get pain statistics
@@ -77,7 +84,6 @@ export default function DashboardScreen() {
       console.log('Today Progress:', progressData); // Debug log
       setTodayProgress(progressData);
       setStats(statsData);
-      setRecommendedRoutines(routinesData);
       setFriendActivity(activityData);
       setAvatarStates(avatarsData);
       setPainStats(painStatsData);
@@ -87,6 +93,70 @@ export default function DashboardScreen() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleAvatarClick = async (category: RoutineCategory) => {
+    try {
+      // Find the avatar state for this category
+      const avatarState = avatarStates.find(state => state.category === category);
+
+      // If user has already completed this category today (Glowing or Radiant),
+      // skip the recommendation modal and go straight to browse
+      if (avatarState && (avatarState.lightState === 'Glowing' || avatarState.lightState === 'Radiant')) {
+        router.push(`/(tabs)/routines?category=${category}`);
+        return;
+      }
+
+      // Otherwise, show recommendation modal for incomplete categories
+      const routines = await getRoutinesByCategory(category);
+
+      if (routines && routines.length > 0) {
+        // Show modal with the first (most popular) routine
+        setSelectedRoutine(routines[0]);
+        setSelectedCategory(category);
+        setShowRecommendedModal(true);
+      } else {
+        // If no routines available, navigate to routines tab filtered by category
+        router.push(`/(tabs)/routines?category=${category}`);
+      }
+    } catch (error) {
+      console.error('Error fetching routine:', error);
+      // Fallback to routines tab
+      router.push(`/(tabs)/routines?category=${category}`);
+    }
+  };
+
+  const handleStartRoutine = () => {
+    if (selectedRoutine) {
+      setShowRecommendedModal(false);
+      router.push(`/routines/${selectedRoutine.id}`);
+    }
+  };
+
+  const handleBrowseMore = () => {
+    setShowRecommendedModal(false);
+    router.push(`/(tabs)/routines?category=${selectedCategory}`);
+  };
+
+  const handleCloseModal = () => {
+    setShowRecommendedModal(false);
+    setSelectedRoutine(null);
+  };
+
+  const handleShowCompletedRoutines = async () => {
+    if (!user) return;
+
+    try {
+      const routines = await getUniqueCompletedRoutines(user.id);
+      setCompletedRoutines(routines);
+      setShowCompletedRoutinesModal(true);
+    } catch (error) {
+      console.error('Error fetching completed routines:', error);
+    }
+  };
+
+  const handleSelectCompletedRoutine = (routineId: string) => {
+    router.push(`/routines/${routineId}`);
   };
 
   if (loading) {
@@ -107,6 +177,20 @@ export default function DashboardScreen() {
       <UsernameSetupModal
         visible={showUsernameSetup}
         onComplete={() => setShowUsernameSetup(false)}
+      />
+      <RecommendedRoutineModal
+        visible={showRecommendedModal}
+        routine={selectedRoutine}
+        category={selectedCategory}
+        onClose={handleCloseModal}
+        onBrowseMore={handleBrowseMore}
+        onSelectRoutine={handleStartRoutine}
+      />
+      <CompletedRoutinesModal
+        visible={showCompletedRoutinesModal}
+        routines={completedRoutines}
+        onClose={() => setShowCompletedRoutinesModal(false)}
+        onSelectRoutine={handleSelectCompletedRoutine}
       />
       <ScrollView style={styles.container}>
       <View style={styles.header}>
@@ -171,16 +255,12 @@ export default function DashboardScreen() {
         <Text style={styles.sectionTitle}>Awaken Your Light</Text>
         <View style={styles.avatarsGrid}>
           {avatarStates.map((avatarState) => (
-            <TouchableOpacity
+            <Avatar
               key={avatarState.category}
-              onPress={() => router.push(`/(tabs)/routines?category=${avatarState.category}`)}
-              activeOpacity={0.8}
-            >
-              <Avatar
-                category={avatarState.category}
-                lightState={avatarState.lightState}
-              />
-            </TouchableOpacity>
+              category={avatarState.category}
+              lightState={avatarState.lightState}
+              onPress={() => handleAvatarClick(avatarState.category)}
+            />
           ))}
         </View>
       </View>
@@ -195,14 +275,10 @@ export default function DashboardScreen() {
             suffix="days"
           />
           <StatCard
-            label="Health Score"
-            value={stats?.health_score || 0}
-            suffix=""
-          />
-          <StatCard
             label="Total Routines"
             value={stats?.total_routines || 0}
             suffix=""
+            onPress={handleShowCompletedRoutines}
           />
         </View>
       </View>
@@ -252,29 +328,83 @@ export default function DashboardScreen() {
               </View>
             </View>
 
-            {/* Mini Chart */}
+            {/* Mini Line Chart */}
             {painHistory.length > 0 ? (
-              <View style={styles.miniChart}>
-                {painHistory
-                  .slice()
-                  .reverse()
-                  .map((checkIn, index) => {
-                    const height = (checkIn.pain_level / 10) * 60; // Max height 60px
-                    const painInfo = getPainLevelInfo(checkIn.pain_level);
-                    return (
-                      <View key={checkIn.id} style={styles.chartBarContainer}>
-                        <View
-                          style={[
-                            styles.chartBar,
-                            {
-                              height: Math.max(height, 4), // Minimum 4px for visibility
-                              backgroundColor: painInfo.color,
-                            },
-                          ]}
-                        />
-                      </View>
-                    );
-                  })}
+              <View style={styles.chartWrapper}>
+                <LineChart
+                  data={{
+                    labels: painHistory.slice().reverse().map((_, i) => i.toString()),
+                    datasets: [
+                      {
+                        data: painHistory.slice().reverse().map(c => c.pain_level),
+                      },
+                      {
+                        data: [0], // Min value for Y-axis scale
+                        withDots: false,
+                        strokeWidth: 0,
+                      },
+                      {
+                        data: [10], // Max value for Y-axis scale
+                        withDots: false,
+                        strokeWidth: 0,
+                      },
+                    ],
+                  }}
+                  width={Dimensions.get('window').width - 64}
+                  height={180}
+                  yAxisSuffix=""
+                  yAxisInterval={1}
+                  fromZero
+                  chartConfig={{
+                    backgroundColor: AppColors.surface,
+                    backgroundGradientFrom: AppColors.surface,
+                    backgroundGradientTo: AppColors.surface,
+                    decimalPlaces: 0,
+                    color: () => AppColors.primary,
+                    labelColor: () => AppColors.primary,
+                    propsForVerticalLabels: {
+                      fontSize: 11,
+                      fill: AppColors.primary,
+                    },
+                    propsForHorizontalLabels: {
+                      fontSize: 0,
+                    },
+                    style: {
+                      borderRadius: 12,
+                    },
+                    propsForDots: {
+                      r: '6',
+                      strokeWidth: '3',
+                      stroke: AppColors.primary,
+                      fill: AppColors.surface,
+                    },
+                    propsForBackgroundLines: {
+                      strokeDasharray: '',
+                      stroke: AppColors.border,
+                      strokeOpacity: 0.3,
+                      strokeWidth: 1,
+                    },
+                    fillShadowGradientFrom: AppColors.lightGold,
+                    fillShadowGradientTo: AppColors.lightGold,
+                    fillShadowGradientFromOpacity: 0.3,
+                    fillShadowGradientToOpacity: 0.05,
+                  }}
+                  bezier={painHistory.length > 2}
+                  style={styles.chart}
+                  withInnerLines={true}
+                  withOuterLines={true}
+                  withVerticalLines={false}
+                  withHorizontalLines={true}
+                  withVerticalLabels={true}
+                  withHorizontalLabels={true}
+                  withDots={true}
+                  segments={5}
+                  yLabelsOffset={20}
+                  xLabelsOffset={0}
+                  withScrollableDot={false}
+                  getDotColor={() => AppColors.primary}
+                  renderDotContent={() => null}
+                />
               </View>
             ) : (
               <View style={styles.emptyChartContainer}>
@@ -347,73 +477,49 @@ export default function DashboardScreen() {
         </View>
       )}
 
-      {/* Recommended Routines */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Recommended for You</Text>
-        {recommendedRoutines.map((routine) => (
-          <TouchableOpacity
-            key={routine.id}
-            style={styles.routineCard}
-            onPress={() => router.push(`/routines/${routine.id}`)}
-          >
-            <View style={styles.routineHeader}>
-              <Text style={styles.routineName}>{routine.name}</Text>
-              <View
-                style={[
-                  styles.categoryBadge,
-                  { backgroundColor: getCategoryColor(routine.category) },
-                ]}
-              >
-                <Text style={styles.categoryText}>{routine.category}</Text>
-              </View>
-            </View>
-            <Text style={styles.routineDescription} numberOfLines={2}>
-              {routine.description}
-            </Text>
-            <Text style={styles.routineDetails}>
-              {routine.duration_minutes} min • {routine.difficulty}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
     </ScrollView>
     </>
   );
 }
 
-function ProgressCard({ title, completed, color, onPress }: { title: string; completed: boolean; color: string; onPress: () => void }) {
-  return (
-    <TouchableOpacity style={[styles.progressCard, { borderColor: color }]} onPress={onPress}>
-      <Text style={styles.progressTitle}>{title}</Text>
-      <View style={[styles.progressIndicator, completed && { backgroundColor: color }]}>
-        {completed && <Text style={styles.checkmark}>✓</Text>}
-      </View>
-    </TouchableOpacity>
-  );
-}
-
-function StatCard({ label, value, suffix }: { label: string; value: number; suffix: string }) {
-  return (
-    <View style={styles.statCard}>
+function StatCard({
+  label,
+  value,
+  suffix,
+  onPress
+}: {
+  label: string;
+  value: number;
+  suffix: string;
+  onPress?: () => void;
+}) {
+  const content = (
+    <>
       <Text style={styles.statValue}>
         {value}{suffix && <Text style={styles.statSuffix}> {suffix}</Text>}
       </Text>
       <Text style={styles.statLabel}>{label}</Text>
+      {onPress && (
+        <View style={styles.tapIndicator}>
+          <Ionicons name="chevron-forward" size={16} color={AppColors.textTertiary} />
+        </View>
+      )}
+    </>
+  );
+
+  if (onPress) {
+    return (
+      <TouchableOpacity style={styles.statCard} onPress={onPress} activeOpacity={0.7}>
+        {content}
+      </TouchableOpacity>
+    );
+  }
+
+  return (
+    <View style={styles.statCard}>
+      {content}
     </View>
   );
-}
-
-function getCategoryColor(category: string): string {
-  switch (category) {
-    case 'Mind':
-      return AppColors.mind;
-    case 'Body':
-      return AppColors.body;
-    case 'Soul':
-      return AppColors.soul;
-    default:
-      return AppColors.primary;
-  }
 }
 
 function getActivityIcon(type: string): any {
@@ -609,6 +715,11 @@ const styles = StyleSheet.create({
     marginTop: 4,
     textAlign: 'center',
   },
+  tapIndicator: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+  },
   routineCard: {
     padding: 16,
     borderRadius: 12,
@@ -758,26 +869,13 @@ const styles = StyleSheet.create({
     color: AppColors.textSecondary,
     textAlign: 'center',
   },
-  miniChart: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    height: 70,
+  chartWrapper: {
     marginBottom: 20,
-    paddingHorizontal: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: AppColors.border,
-  },
-  chartBarContainer: {
-    flex: 1,
-    justifyContent: 'flex-end',
+    marginTop: 5,
     alignItems: 'center',
-    marginHorizontal: 1,
   },
-  chartBar: {
-    width: '100%',
-    borderRadius: 2,
-    minHeight: 4,
+  chart: {
+    borderRadius: 12,
   },
   painStatsRow: {
     flexDirection: 'row',

@@ -107,7 +107,6 @@ export interface UserStats {
   user_id: string
   current_streak: number
   longest_streak: number
-  health_score: number
   total_routines: number
   mind_routines: number
   body_routines: number
@@ -129,17 +128,9 @@ export interface UserStats {
   last_mind_activity: string | null
   last_body_activity: string | null
   last_soul_activity: string | null
-  // Phase 1: Harmony score (0-100)
-  harmony_score: number
-}
-
-// Health Score Tiers
-export type HealthScoreTier = 'Getting Started' | 'Building Momentum' | 'Thriving' | 'Optimal Health'
-
-export interface HealthScoreInfo {
-  score: number
-  tier: HealthScoreTier
-  color: string
+  // Deprecated fields (still in DB but no longer used)
+  health_score?: number
+  harmony_score?: number
 }
 
 // Avatar Light States (Phase 2)

@@ -22,6 +22,13 @@ export async function getTodayProgress(userId: string): Promise<DailyProgress | 
 export async function getUserStats(userId: string): Promise<UserStats | null> {
   console.log('Querying user_stats for user:', userId); // Debug
 
+  // Refresh stats to ensure streaks are up-to-date (handles missed days)
+  try {
+    await updateEnhancedStats(userId)
+  } catch (statsError) {
+    console.error('Failed to update stats on load:', statsError)
+  }
+
   const { data, error } = await supabase
     .from('user_stats')
     .select('*')
@@ -350,4 +357,40 @@ export async function searchRoutinesByTags(
   }
 
   return data || []
+}
+
+/**
+ * Get all unique routines that the user has completed
+ * Returns full routine details with completion counts
+ */
+export async function getUniqueCompletedRoutines(userId: string): Promise<Routine[]> {
+  // First, get all unique routine IDs that the user has completed
+  const { data: completions, error: completionsError } = await supabase
+    .from('routine_completions')
+    .select('routine_id')
+    .eq('user_id', userId)
+
+  if (completionsError) throw completionsError
+  if (!completions || completions.length === 0) return []
+
+  // Get unique routine IDs
+  const uniqueRoutineIds = [...new Set(completions.map(c => c.routine_id))]
+
+  // Fetch full routine details for each unique routine
+  const { data: routines, error: routinesError } = await supabase
+    .from('routines')
+    .select('*')
+    .in('id', uniqueRoutineIds)
+
+  if (routinesError) throw routinesError
+
+  // Sort by category (Mind, Body, Soul) then by completion count
+  const categoryOrder: Record<RoutineCategory, number> = { Mind: 0, Body: 1, Soul: 2 }
+  return (routines || []).sort((a, b) => {
+    // First sort by category
+    const categoryDiff = categoryOrder[a.category as RoutineCategory] - categoryOrder[b.category as RoutineCategory]
+    if (categoryDiff !== 0) return categoryDiff
+    // Then by completion count (descending)
+    return b.completion_count - a.completion_count
+  })
 }

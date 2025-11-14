@@ -33,19 +33,33 @@ export async function calculateCategoryStreak(
   // Calculate current streak
   let currentStreak = 0
   const today = new Date().toISOString().split('T')[0]
-  let checkDate = new Date()
+  const yesterday = new Date()
+  yesterday.setDate(yesterday.getDate() - 1)
+  const yesterdayStr = yesterday.toISOString().split('T')[0]
 
-  // Start checking from today backwards
-  while (true) {
-    const dateStr = checkDate.toISOString().split('T')[0]
+  // Check if user completed today OR yesterday
+  // If neither, streak is broken (missed a day)
+  const hasCompletionToday = completionDates.has(today)
+  const hasCompletionYesterday = completionDates.has(yesterdayStr)
 
-    if (completionDates.has(dateStr)) {
-      currentStreak++
-      // Move to previous day
-      checkDate.setDate(checkDate.getDate() - 1)
-    } else {
-      // Streak broken
-      break
+  if (!hasCompletionToday && !hasCompletionYesterday) {
+    // User missed yesterday (and hasn't completed today), streak is 0
+    currentStreak = 0
+  } else {
+    // Start checking from today backwards
+    let checkDate = new Date()
+
+    while (true) {
+      const dateStr = checkDate.toISOString().split('T')[0]
+
+      if (completionDates.has(dateStr)) {
+        currentStreak++
+        // Move to previous day
+        checkDate.setDate(checkDate.getDate() - 1)
+      } else {
+        // Streak broken
+        break
+      }
     }
   }
 
@@ -143,19 +157,34 @@ export async function calculateHarmonyStreak(
 
   // Calculate current streak
   let currentStreak = 0
-  let checkDate = new Date()
+  const today = new Date().toISOString().split('T')[0]
+  const yesterday = new Date()
+  yesterday.setDate(yesterday.getDate() - 1)
+  const yesterdayStr = yesterday.toISOString().split('T')[0]
 
-  // Start checking from today backwards
-  while (true) {
-    const dateStr = checkDate.toISOString().split('T')[0]
+  // Check if user achieved harmony today OR yesterday
+  // If neither, streak is broken (missed a day)
+  const hasHarmonyToday = harmonyDates.includes(today)
+  const hasHarmonyYesterday = harmonyDates.includes(yesterdayStr)
 
-    if (harmonyDates.includes(dateStr)) {
-      currentStreak++
-      // Move to previous day
-      checkDate.setDate(checkDate.getDate() - 1)
-    } else {
-      // Streak broken
-      break
+  if (!hasHarmonyToday && !hasHarmonyYesterday) {
+    // User missed yesterday (and hasn't achieved harmony today), streak is 0
+    currentStreak = 0
+  } else {
+    // Start checking from today backwards
+    let checkDate = new Date()
+
+    while (true) {
+      const dateStr = checkDate.toISOString().split('T')[0]
+
+      if (harmonyDates.includes(dateStr)) {
+        currentStreak++
+        // Move to previous day
+        checkDate.setDate(checkDate.getDate() - 1)
+      } else {
+        // Streak broken
+        break
+      }
     }
   }
 
@@ -202,86 +231,6 @@ export async function calculateHarmonyStreak(
 }
 
 /**
- * Calculate harmony score (0-100)
- * Measures balance across Mind/Body/Soul based on last 7 days
- *
- * Formula:
- * - +30 points: All three categories active in last 7 days
- * - +20 points: Smallest category streak is healthy (≥3 days)
- * - +50 points: Distribution score (closer to 33/33/33 split = higher)
- */
-export async function calculateHarmonyScore(userId: string): Promise<number> {
-  const sevenDaysAgo = new Date()
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-
-  // Get completions from last 7 days
-  const { data: recentCompletions, error } = await supabase
-    .from('routine_completions')
-    .select('category')
-    .eq('user_id', userId)
-    .gte('completed_at', sevenDaysAgo.toISOString())
-
-  if (error) throw error
-  if (!recentCompletions || recentCompletions.length === 0) return 0
-
-  // Count completions per category
-  const counts = {
-    Mind: 0,
-    Body: 0,
-    Soul: 0,
-  }
-
-  recentCompletions.forEach(c => {
-    if (c.category === 'Mind') counts.Mind++
-    else if (c.category === 'Body') counts.Body++
-    else if (c.category === 'Soul') counts.Soul++
-  })
-
-  let score = 0
-
-  // Check 1: All three categories active (+30 points)
-  const allActive = counts.Mind > 0 && counts.Body > 0 && counts.Soul > 0
-  if (allActive) score += 30
-
-  // Check 2: Get current streaks for each category
-  const mindStreak = await calculateCategoryStreak(userId, 'Mind')
-  const bodyStreak = await calculateCategoryStreak(userId, 'Body')
-  const soulStreak = await calculateCategoryStreak(userId, 'Soul')
-
-  const smallestStreak = Math.min(
-    mindStreak.currentStreak,
-    bodyStreak.currentStreak,
-    soulStreak.currentStreak
-  )
-
-  // Smallest category streak is healthy (≥3 days) (+20 points)
-  if (smallestStreak >= 3) score += 20
-
-  // Check 3: Distribution score (+50 points)
-  // Calculate how close the distribution is to perfect balance (33/33/33)
-  const total = counts.Mind + counts.Body + counts.Soul
-  if (total > 0) {
-    const mindPercent = (counts.Mind / total) * 100
-    const bodyPercent = (counts.Body / total) * 100
-    const soulPercent = (counts.Soul / total) * 100
-
-    // Calculate deviation from ideal 33.33%
-    const idealPercent = 33.33
-    const deviation =
-      Math.abs(mindPercent - idealPercent) +
-      Math.abs(bodyPercent - idealPercent) +
-      Math.abs(soulPercent - idealPercent)
-
-    // Max deviation is 66.66 (100% in one category, 0% in others)
-    // Convert deviation to 0-50 scale (lower deviation = higher score)
-    const distributionScore = Math.max(0, 50 - (deviation / 66.66) * 50)
-    score += Math.round(distributionScore)
-  }
-
-  return Math.min(100, Math.round(score))
-}
-
-/**
  * Update all enhanced stats for a user
  * Call this after every routine completion
  */
@@ -300,9 +249,6 @@ export async function updateEnhancedStats(userId: string): Promise<UserStats | n
   const lastMindActivity = await getLastActivityDate(userId, 'Mind')
   const lastBodyActivity = await getLastActivityDate(userId, 'Body')
   const lastSoulActivity = await getLastActivityDate(userId, 'Soul')
-
-  // Calculate harmony score
-  const harmonyScore = await calculateHarmonyScore(userId)
 
   // Calculate harmony-based streak (consecutive days with all 3 categories)
   const harmonyStreak = await calculateHarmonyStreak(userId)
@@ -329,8 +275,6 @@ export async function updateEnhancedStats(userId: string): Promise<UserStats | n
       last_mind_activity: lastMindActivity,
       last_body_activity: lastBodyActivity,
       last_soul_activity: lastSoulActivity,
-      // Harmony score
-      harmony_score: harmonyScore,
       updated_at: new Date().toISOString(),
     })
     .eq('user_id', userId)
