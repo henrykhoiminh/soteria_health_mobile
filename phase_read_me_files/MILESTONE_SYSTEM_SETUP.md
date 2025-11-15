@@ -19,19 +19,27 @@ The Milestone System is a comprehensive automated achievement tracking system th
 
 **IMPORTANT**: You must run the SQL migration in your Supabase project to create all necessary tables, functions, and triggers.
 
+**Use the Clean Migration Script:**
+
 1. Open Supabase SQL Editor for your project
-2. Copy the entire contents of `sql/milestones.sql`
+2. Copy the entire contents of `sql/migrations/install_milestone_system.sql`
 3. Paste and execute the SQL script
 4. Verify successful execution (you should see no errors)
+
+**Why use `install_milestone_system.sql`?**
+- This script is **idempotent** - safe to run multiple times
+- Automatically drops existing policies/triggers/functions before recreating them
+- Includes all bug fixes (correct table name: `profiles`, fixed date calculation)
+- Single complete migration with all 8 steps in one file
 
 **What this creates:**
 - `milestone_definitions` table - All possible milestone types
 - `user_milestones` table - User-achieved milestones
 - `milestone_progress` table - Real-time progress tracking
-- Database functions for milestone checking and awarding
-- Automated triggers on `routine_completions` and `user_stats` tables
-- Row Level Security policies
-- 46 pre-seeded milestone definitions
+- 4 database functions for milestone checking and awarding
+- 2 automated triggers on `routine_completions` and `user_stats` tables
+- Row Level Security policies for all 3 tables
+- 46 pre-seeded milestone definitions across 8 categories
 
 ### 2. Verify Database Setup
 
@@ -173,6 +181,19 @@ SELECT mark_milestone_celebrated('YOUR_USER_ID', 'routine_1');
 
 ## Troubleshooting
 
+### Common Installation Errors
+
+#### Error: "policy already exists"
+**Solution**: Use `sql/migrations/install_milestone_system.sql` instead. This script drops existing policies before creating new ones, making it safe to re-run.
+
+#### Error: "function pg_catalog.extract(unknown, integer) does not exist"
+**Cause**: Old version of the migration with incorrect date calculation
+**Solution**: Re-run `sql/migrations/install_milestone_system.sql` which has the corrected journey days calculation (uses `CURRENT_DATE - journey_started_at::DATE` instead of `EXTRACT`)
+
+#### Error: "relation 'user_profiles' does not exist"
+**Cause**: Old migration script referenced wrong table name
+**Solution**: Use `sql/migrations/install_milestone_system.sql` which correctly uses `profiles` table
+
 ### Milestones Not Triggering
 
 1. **Check if triggers exist:**
@@ -255,17 +276,18 @@ INSERT INTO milestone_definitions (
 
 ### Modifying Milestone Logic
 
-The main detection logic is in the `check_and_award_milestones` function in `sql/milestones.sql`.
+The main detection logic is in the `check_and_award_milestones` function in `sql/migrations/install_milestone_system.sql`.
 
 To modify:
-1. Edit the CASE statement for the relevant category
-2. Update the SQL function:
+1. Edit the CASE statement for the relevant category in the migration file
+2. Update the SQL function using CREATE OR REPLACE:
 ```sql
 CREATE OR REPLACE FUNCTION check_and_award_milestones(target_user_id UUID)
 RETURNS TABLE(...) AS $$
 -- Your modified logic here
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 ```
+3. Re-run the entire migration script to apply changes
 
 ### Customizing Celebration Animations
 
@@ -388,16 +410,68 @@ Potential additions to consider:
 
 ---
 
+## Journey Reset Integration
+
+The milestone system is fully integrated with the Journey Reset feature. When a user resets their journey:
+
+1. All achieved milestones are deleted from `user_milestones`
+2. All milestone progress is cleared from `milestone_progress`
+3. User can start earning milestones fresh from the beginning
+
+The hard reset function (`hard_reset_user_data`) automatically handles milestone cleanup and is compatible with the milestone system.
+
+---
+
+## Key Files Reference
+
+### Migration & Database
+- `sql/migrations/install_milestone_system.sql` - **Main installation script** (use this!)
+- `sql/update_hard_reset_with_milestones.sql` - Hard reset integration (already applied)
+- `sql/fix_hard_reset_table_name.sql` - Legacy fix (superseded by install script)
+
+### Frontend Components
+- `components/MilestoneCelebrationModal.tsx` - Celebration modal with animations
+- `components/MilestoneCard.tsx` - Individual milestone display cards
+- `app/(tabs)/profile.tsx` - Milestones section on Profile page
+- `app/_layout.tsx` - App-level milestone celebration trigger
+
+### Utilities & Types
+- `lib/utils/milestones.ts` - Client-side milestone functions
+- `types/index.ts` - TypeScript type definitions
+
+### Documentation
+- `phase_read_me_files/MILESTONE_SYSTEM_SETUP.md` - This file
+
+---
+
 ## Support
 
 For issues or questions:
 1. Check troubleshooting section above
 2. Review Supabase logs for errors
 3. Check browser/app console for JavaScript errors
-4. Verify database schema matches `sql/milestones.sql`
+4. Verify database schema matches `sql/migrations/install_milestone_system.sql`
 
 ---
 
-**System Version**: 1.0.0
+## Changelog
+
+### Version 1.0.1 (2025-01-14)
+- Fixed PostgreSQL EXTRACT error in journey milestone calculation
+- Changed table reference from `user_profiles` to `profiles`
+- Created idempotent migration script (`install_milestone_system.sql`)
+- Added comprehensive troubleshooting section
+- Integrated with Journey Reset functionality
+
+### Version 1.0.0 (2025-01-14)
+- Initial milestone system implementation
+- 46 milestones across 8 categories
+- Automated detection via database triggers
+- Celebration modals with animations
+- Profile page integration
+
+---
+
+**System Version**: 1.0.1
 **Last Updated**: 2025-01-14
 **Compatibility**: Soteria Health Mobile v1.0+
