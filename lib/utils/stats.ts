@@ -1,5 +1,6 @@
 import { supabase } from '../supabase/client'
 import { UserStats, RoutineCategory, AvatarState, AvatarLightState } from '@/types'
+import { getLocalDateString, getLocalYesterdayString, getLocalDateWithOffset, timestampToLocalDateString } from './timezone'
 
 /**
  * Calculate per-category streak for a user
@@ -25,17 +26,15 @@ export async function calculateCategoryStreak(
     return { currentStreak: 0, longestStreak: 0 }
   }
 
-  // Convert to dates (YYYY-MM-DD format)
+  // Convert to dates (YYYY-MM-DD format) using local timezone
   const completionDates = new Set(
-    completions.map(c => new Date(c.completed_at).toISOString().split('T')[0])
+    completions.map(c => timestampToLocalDateString(c.completed_at))
   )
 
   // Calculate current streak
   let currentStreak = 0
-  const today = new Date().toISOString().split('T')[0]
-  const yesterday = new Date()
-  yesterday.setDate(yesterday.getDate() - 1)
-  const yesterdayStr = yesterday.toISOString().split('T')[0]
+  const today = getLocalDateString()
+  const yesterdayStr = getLocalYesterdayString()
 
   // Check if user completed today OR yesterday
   // If neither, streak is broken (missed a day)
@@ -47,15 +46,15 @@ export async function calculateCategoryStreak(
     currentStreak = 0
   } else {
     // Start checking from today backwards
-    let checkDate = new Date()
+    let daysBack = 0
 
     while (true) {
-      const dateStr = checkDate.toISOString().split('T')[0]
+      const dateStr = getLocalDateWithOffset(-daysBack)
 
       if (completionDates.has(dateStr)) {
         currentStreak++
         // Move to previous day
-        checkDate.setDate(checkDate.getDate() - 1)
+        daysBack++
       } else {
         // Streak broken
         break
@@ -157,20 +156,14 @@ export async function calculateHarmonyStreak(
 
   // Calculate current streak
   let currentStreak = 0
-  const today = new Date().toISOString().split('T')[0]
-  const yesterday = new Date()
-  yesterday.setDate(yesterday.getDate() - 1)
-  const yesterdayStr = yesterday.toISOString().split('T')[0]
+  const today = getLocalDateString()
+  const yesterdayStr = getLocalYesterdayString()
+  const dayBeforeYesterdayStr = getLocalDateWithOffset(-2)
 
   // Check if user achieved harmony today OR yesterday
   // Streak only resets if user missed yesterday (completed neither yesterday nor day before)
   const hasHarmonyToday = harmonyDates.includes(today)
   const hasHarmonyYesterday = harmonyDates.includes(yesterdayStr)
-
-  // Check day before yesterday
-  const dayBeforeYesterday = new Date()
-  dayBeforeYesterday.setDate(dayBeforeYesterday.getDate() - 2)
-  const dayBeforeYesterdayStr = dayBeforeYesterday.toISOString().split('T')[0]
   const hasHarmonyDayBeforeYesterday = harmonyDates.includes(dayBeforeYesterdayStr)
 
   if (!hasHarmonyToday && !hasHarmonyYesterday && !hasHarmonyDayBeforeYesterday) {
@@ -179,15 +172,15 @@ export async function calculateHarmonyStreak(
   } else {
     // Calculate streak from most recent harmony day backwards
     // Start from today if completed, otherwise yesterday
-    let checkDate = hasHarmonyToday ? new Date() : hasHarmonyYesterday ? yesterday : dayBeforeYesterday
+    let daysBack = hasHarmonyToday ? 0 : hasHarmonyYesterday ? 1 : 2
 
     while (true) {
-      const dateStr = checkDate.toISOString().split('T')[0]
+      const dateStr = getLocalDateWithOffset(-daysBack)
 
       if (harmonyDates.includes(dateStr)) {
         currentStreak++
         // Move to previous day
-        checkDate.setDate(checkDate.getDate() - 1)
+        daysBack++
       } else {
         // Streak broken
         break
@@ -315,7 +308,7 @@ async function getLastActivityDate(
   if (error && error.code !== 'PGRST116') throw error
   if (!data) return null
 
-  return new Date(data.completed_at).toISOString().split('T')[0]
+  return timestampToLocalDateString(data.completed_at)
 }
 
 /**
@@ -356,8 +349,8 @@ export function getAvatarLightState(
  * Based on TODAY's progress, not historical streaks
  */
 export async function getAllAvatarStates(userId: string): Promise<AvatarState[]> {
-  // Get today's progress
-  const today = new Date().toISOString().split('T')[0]
+  // Get today's progress using local timezone
+  const today = getLocalDateString()
 
   const { data: todayProgress, error } = await supabase
     .from('daily_progress')
@@ -372,9 +365,7 @@ export async function getAllAvatarStates(userId: string): Promise<AvatarState[]>
   let yesterdayHadHarmony = false
   if (!todayProgress) {
     // No progress today yet, check yesterday
-    const yesterday = new Date()
-    yesterday.setDate(yesterday.getDate() - 1)
-    const yesterdayStr = yesterday.toISOString().split('T')[0]
+    const yesterdayStr = getLocalYesterdayString()
 
     const { data: yesterdayProgress } = await supabase
       .from('daily_progress')

@@ -32,10 +32,16 @@ import {
   getRecentlyCompletedRoutines,
   toggleRoutinePublicStatus,
 } from '@/lib/utils/routine-discovery';
+import RoutineAuthorBadge from '@/components/RoutineAuthorBadge';
 
 const CATEGORIES: RoutineCategory[] = ['Mind', 'Body', 'Soul'];
 const DIFFICULTIES: RoutineDifficulty[] = ['Beginner', 'Intermediate', 'Advanced'];
 const JOURNEY_FOCUSES: JourneyFocus[] = ['Injury Prevention', 'Recovery'];
+const SOURCE_FILTERS: { value: RoutineSourceFilter; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'official', label: 'Official' },
+  { value: 'community', label: 'Community' },
+];
 
 type TabType = 'discover' | 'my-routines';
 
@@ -517,11 +523,19 @@ function RoutineCard({
         </Text>
       )}
 
-      {/* Creator Info (for community routines) */}
-      {!routine.badge_official && routine.creator_name && !compact && (
-        <Text style={styles.creatorText}>
-          by {routine.creator_username ? `@${routine.creator_username}` : routine.creator_name}
-        </Text>
+      {/* Author Badge */}
+      {!compact && (
+        <View style={styles.authorBadgeContainer}>
+          <RoutineAuthorBadge
+            authorType={routine.author_type}
+            officialAuthor={routine.official_author}
+            creatorUsername={routine.creator_username}
+            creatorAvatar={routine.creator_avatar}
+            creatorName={routine.creator_name}
+            size="small"
+            showAvatar={true}
+          />
+        </View>
       )}
 
       {/* Footer */}
@@ -1090,8 +1104,18 @@ const styles = StyleSheet.create({
   routineDescription: {
     fontSize: 14,
     color: AppColors.textSecondary,
+    marginBottom: 8,
+  },
+  authorBadgeContainer: {
     marginBottom: 10,
-    lineHeight: 20,
+  },
+  authorLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: AppColors.textTertiary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 6,
   },
   creatorText: {
     fontSize: 12,

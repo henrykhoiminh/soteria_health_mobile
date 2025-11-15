@@ -3,10 +3,11 @@ import { DailyProgress, Routine, RoutineCategory, UserStats, JourneyFocus, Fitne
 import { format } from 'date-fns'
 import { recordActivity } from './social'
 import { updateEnhancedStats } from './stats'
+import { getLocalDateString, getCurrentTimestamp } from './timezone'
 
 export async function getTodayProgress(userId: string): Promise<DailyProgress | null> {
-  // Use UTC date to match database (CURRENT_DATE in Postgres uses UTC)
-  const today = new Date().toISOString().split('T')[0] // Returns YYYY-MM-DD in UTC
+  // Use local timezone date so daily progress resets at midnight local time
+  const today = getLocalDateString() // Returns YYYY-MM-DD in user's local timezone
 
   const { data, error } = await supabase
     .from('daily_progress')
@@ -157,11 +158,30 @@ export async function getBalancedRoutines(
 export async function getRoutineById(routineId: string): Promise<Routine | null> {
   const { data, error } = await supabase
     .from('routines')
-    .select('*')
+    .select(`
+      *,
+      profiles (
+        full_name,
+        username,
+        profile_picture_url
+      )
+    `)
     .eq('id', routineId)
     .single()
 
   if (error) throw error
+
+  // Map profile data to creator fields
+  if (data) {
+    const routine = data as any
+    return {
+      ...routine,
+      creator_name: routine.profiles?.full_name,
+      creator_username: routine.profiles?.username,
+      creator_avatar: routine.profiles?.profile_picture_url,
+    }
+  }
+
   return data
 }
 
@@ -172,12 +192,28 @@ export async function completeRoutine(userId: string, routineId: string, categor
       user_id: userId,
       routine_id: routineId,
       category,
-      completed_at: new Date().toISOString(),
+      completed_at: getCurrentTimestamp(), // Use precise timestamp but local date calculations will use timezone
     })
     .select()
     .single()
 
   if (error) throw error
+
+  // Update daily progress for today's local date
+  try {
+    const localDate = getLocalDateString()
+    const { error: dailyProgressError } = await supabase.rpc('update_daily_progress_for_date', {
+      p_user_id: userId,
+      p_local_date: localDate,
+      p_category: category,
+    })
+
+    if (dailyProgressError) {
+      console.error('Failed to update daily progress:', dailyProgressError)
+    }
+  } catch (dailyProgressError) {
+    console.error('Failed to update daily progress:', dailyProgressError)
+  }
 
   // Update enhanced stats (per-category streaks, unique routines, harmony score)
   try {

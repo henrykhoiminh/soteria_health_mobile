@@ -1,12 +1,12 @@
 import { supabase } from '../supabase/client'
 import { PainCheckIn, PainStatistics } from '@/types'
+import { getLocalDateString } from './timezone'
 
 /**
  * Get today's date in YYYY-MM-DD format (local timezone)
  */
 export function getTodayDate(): string {
-  const today = new Date()
-  return today.toISOString().split('T')[0]
+  return getLocalDateString()
 }
 
 /**

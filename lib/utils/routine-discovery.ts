@@ -74,7 +74,7 @@ export async function isRoutineSaved(userId: string, routineId: string): Promise
  * Get user's saved routines
  */
 export async function getSavedRoutines(userId: string): Promise<Routine[]> {
-  const { data, error } = await supabase
+  const { data, error} = await supabase
     .from('routine_saves')
     .select(`
       routine_id,
@@ -95,7 +95,14 @@ export async function getSavedRoutines(userId: string): Promise<Routine[]> {
         tags,
         body_parts,
         is_public,
-        save_count
+        save_count,
+        author_type,
+        official_author,
+        profiles (
+          full_name,
+          username,
+          profile_picture_url
+        )
       )
     `)
     .eq('user_id', userId)
@@ -111,10 +118,13 @@ export async function getSavedRoutines(userId: string): Promise<Routine[]> {
     .map((item: any) => item.routines)
     .filter((routine: any) => routine !== null);
 
-  // Add is_saved flag
+  // Add is_saved flag and map profile data
   return routines.map((routine: any) => ({
     ...routine,
     is_saved: true,
+    creator_name: routine.profiles?.full_name,
+    creator_username: routine.profiles?.username,
+    creator_avatar: routine.profiles?.profile_picture_url,
   }));
 }
 
@@ -152,6 +162,8 @@ function buildDiscoverQuery(
       body_parts,
       is_public,
       save_count,
+      author_type,
+      official_author,
       profiles (
         full_name,
         username,
@@ -317,6 +329,8 @@ export async function getDiscoverRoutines(
         badge_trending: recentSaves > 20,
         badge_new: badges.badge_new,
         badge_official: badges.badge_official,
+        author_type: routine.author_type,
+        official_author: routine.official_author,
         creator_name: routine.profiles?.full_name,
         creator_username: routine.profiles?.username,
         creator_avatar: routine.profiles?.profile_picture_url,
@@ -362,7 +376,14 @@ export async function getUserCustomRoutines(userId: string): Promise<Routine[]> 
       tags,
       body_parts,
       is_public,
-      save_count
+      save_count,
+      author_type,
+      official_author,
+      profiles (
+        full_name,
+        username,
+        profile_picture_url
+      )
     `)
     .eq('created_by', userId)
     .eq('is_custom', true)
@@ -380,6 +401,9 @@ export async function getUserCustomRoutines(userId: string): Promise<Routine[]> 
     badge_trending: false,
     badge_new: (new Date().getTime() - new Date(routine.created_at).getTime()) / (1000 * 60 * 60 * 24) <= 7,
     badge_official: false,
+    creator_name: routine.profiles?.full_name,
+    creator_username: routine.profiles?.username,
+    creator_avatar: routine.profiles?.profile_picture_url,
   }));
 }
 
@@ -442,7 +466,9 @@ export async function getRecentlyCompletedRoutines(
         tags,
         body_parts,
         is_public,
-        save_count
+        save_count,
+        author_type,
+        official_author
       )
     `)
     .eq('user_id', userId)
@@ -475,5 +501,8 @@ export async function getRecentlyCompletedRoutines(
     badge_trending: false,
     badge_new: (new Date().getTime() - new Date(routine.created_at).getTime()) / (1000 * 60 * 60 * 24) <= 7,
     badge_official: !routine.is_custom,
+    creator_name: routine.profiles?.full_name,
+    creator_username: routine.profiles?.username,
+    creator_avatar: routine.profiles?.profile_picture_url,
   }));
 }

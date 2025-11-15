@@ -22,6 +22,7 @@ export interface Profile {
 // Routine Types
 export type RoutineCategory = 'Mind' | 'Body' | 'Soul'
 export type RoutineDifficulty = 'Beginner' | 'Intermediate' | 'Advanced'
+export type RoutineAuthorType = 'official' | 'community'
 
 export interface Exercise {
   name: string
@@ -44,6 +45,9 @@ export interface Routine {
   is_custom: boolean
   created_by?: string
   created_at: string
+  // Author attribution fields
+  author_type: RoutineAuthorType // 'official' or 'community'
+  official_author?: string | null // Name of official author (e.g., "Soteria Health Team", "Dr. Smith")
   // Advanced search fields
   tags?: string[] // General tags for categorization (e.g., "Desk Work", "Upper Body")
   body_parts?: string[] // Body parts targeted by this routine (e.g., ["Neck", "Shoulder"])
@@ -55,7 +59,7 @@ export interface Routine {
   badge_popular?: boolean // >100 completions
   badge_trending?: boolean // >20 saves in last 7 days
   badge_new?: boolean // Created within last 7 days
-  badge_official?: boolean // Pre-built by Soteria team
+  badge_official?: boolean // Pre-built by Soteria team (deprecated - use author_type instead)
   // Creator info (for community routines)
   creator_name?: string
   creator_username?: string

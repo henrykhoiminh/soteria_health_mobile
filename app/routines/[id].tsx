@@ -15,6 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import RoutineAuthorBadge from '@/components/RoutineAuthorBadge';
 
 export default function RoutineDetailScreen() {
   const { id, circleId } = useLocalSearchParams<{ id: string; circleId?: string }>();
@@ -137,6 +138,20 @@ export default function RoutineDetailScreen() {
         <View style={styles.titleSection}>
           <Text style={styles.title}>{routine.name}</Text>
           <Text style={styles.description}>{routine.description}</Text>
+
+          {/* Author Badge */}
+          <View style={styles.authorSection}>
+            <Text style={styles.authorLabel}>Created by</Text>
+            <RoutineAuthorBadge
+              authorType={routine.author_type}
+              officialAuthor={routine.official_author}
+              creatorUsername={routine.creator_username}
+              creatorAvatar={routine.creator_avatar}
+              creatorName={routine.creator_name}
+              size="medium"
+              showAvatar={true}
+            />
+          </View>
 
           <View style={styles.infoRow}>
             <View style={styles.infoItem}>
@@ -316,7 +331,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: AppColors.textSecondary,
     lineHeight: 24,
+    marginBottom: 16,
+  },
+  authorSection: {
     marginBottom: 20,
+  },
+  authorLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: AppColors.textTertiary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 8,
   },
   infoRow: {
     flexDirection: 'row',
