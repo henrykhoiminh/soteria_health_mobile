@@ -40,11 +40,43 @@ export async function getAvailableExercises(): Promise<Exercise[]> {
 }
 
 /**
- * Create and publish a custom routine
+ * Check if user is a Health Team member
+ */
+export async function isHealthTeamMember(userId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', userId)
+    .single()
+
+  if (error) {
+    console.error('Error checking health team status:', error)
+    return false
+  }
+
+  return data?.role === 'health_team' || data?.role === 'admin'
+}
+
+/**
+ * Get user's full name for official author attribution
+ */
+async function getUserFullName(userId: string): Promise<string> {
+  const { data } = await supabase
+    .from('profiles')
+    .select('full_name')
+    .eq('id', userId)
+    .single()
+
+  return data?.full_name || 'Soteria Health Team'
+}
+
+/**
+ * Create and publish a custom routine or official routine (for Health Team)
  */
 export async function publishCustomRoutine(
   userId: string,
-  routineData: RoutineBuilderData
+  routineData: RoutineBuilderData,
+  isOfficialRoutine = false
 ): Promise<string> {
   // Convert journey focus from "Both" to array format
   let journeyFocusArray: JourneyFocus[]
@@ -64,6 +96,15 @@ export async function publishCustomRoutine(
   // Prepare exercises data (remove temporary IDs)
   const exercises = routineData.exercises.map(({ id, ...exercise }) => exercise)
 
+  // Check if user is Health Team member for official routines
+  const isHealthTeam = await isHealthTeamMember(userId)
+  const shouldCreateOfficial = isOfficialRoutine && isHealthTeam
+
+  // Get official author name if creating official routine
+  const officialAuthor = shouldCreateOfficial
+    ? await getUserFullName(userId)
+    : null
+
   // Insert routine into database
   const { data, error } = await supabase
     .from('routines')
@@ -75,7 +116,10 @@ export async function publishCustomRoutine(
       journey_focus: journeyFocusArray,
       duration_minutes: durationMinutes,
       exercises: exercises,
-      is_custom: true,
+      is_custom: !shouldCreateOfficial, // Official routines are not custom
+      author_type: shouldCreateOfficial ? 'official' : 'community',
+      official_author: officialAuthor,
+      is_public: shouldCreateOfficial ? true : undefined, // Official routines always public
       created_by: userId,
       completion_count: 0,
       benefits: [], // Can be expanded later

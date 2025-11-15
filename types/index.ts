@@ -2,6 +2,7 @@
 export type FitnessLevel = 'Beginner' | 'Intermediate' | 'Advanced'
 export type JourneyFocus = 'Injury Prevention' | 'Recovery'
 export type JourneyFocusOption = 'Injury Prevention' | 'Recovery' | 'Both'
+export type UserRole = 'user' | 'health_team' | 'admin'
 
 export interface Profile {
   id: string
@@ -15,6 +16,7 @@ export interface Profile {
   recovery_goals: string[] // Array of predefined recovery goals
   injuries: string[]
   profile_picture_url: string | null
+  role: UserRole // User role: 'user' (default), 'health_team', or 'admin'
   created_at: string
   updated_at: string
 }

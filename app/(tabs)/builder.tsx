@@ -6,6 +6,7 @@ import {
   publishCustomRoutine,
   updateCustomRoutine,
   validateRoutineData,
+  isHealthTeamMember,
 } from '@/lib/utils/routine-builder';
 import {
   Exercise,
@@ -39,7 +40,7 @@ import {
 type BuilderStep = 'journey' | 'exercises' | 'metadata' | 'review';
 
 export default function RoutineBuilderScreen() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const router = useRouter();
   const { editId } = useLocalSearchParams<{ editId?: string }>();
 
@@ -48,6 +49,8 @@ export default function RoutineBuilderScreen() {
   const [availableExercises, setAvailableExercises] = useState<Exercise[]>([]);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingRoutineId, setEditingRoutineId] = useState<string | null>(null);
+  const [isHealthTeam, setIsHealthTeam] = useState(false);
+  const [createAsOfficial, setCreateAsOfficial] = useState(false);
 
   // Builder state
   const [routineData, setRoutineData] = useState<RoutineBuilderData>({
@@ -63,10 +66,17 @@ export default function RoutineBuilderScreen() {
 
   useEffect(() => {
     loadExercises();
+    checkHealthTeamStatus();
     if (editId) {
       loadRoutineForEditing(editId);
     }
   }, [editId]);
+
+  const checkHealthTeamStatus = async () => {
+    if (!user) return;
+    const healthTeamStatus = await isHealthTeamMember(user.id);
+    setIsHealthTeam(healthTeamStatus);
+  };
 
   const loadExercises = async () => {
     try {
@@ -189,11 +199,15 @@ export default function RoutineBuilderScreen() {
         );
       } else {
         // Create new routine
-        const routineId = await publishCustomRoutine(user.id, routineData);
+        const routineId = await publishCustomRoutine(user.id, routineData, createAsOfficial);
+
+        const successMessage = createAsOfficial
+          ? 'Your official Soteria routine has been published to Discover!'
+          : 'Your custom routine has been published!';
 
         Alert.alert(
           'Success!',
-          'Your custom routine has been published!',
+          successMessage,
           [
             {
               text: 'View Routine',
@@ -299,6 +313,33 @@ export default function RoutineBuilderScreen() {
           <Ionicons name="refresh" size={24} color={AppColors.primary} />
         </TouchableOpacity>
       </View>
+
+      {/* Health Team Banner */}
+      {isHealthTeam && !isEditMode && (
+        <View style={styles.healthTeamBanner}>
+          <View style={styles.healthTeamBannerContent}>
+            <Ionicons name="shield-checkmark" size={24} color="#10B981" />
+            <View style={styles.healthTeamBannerText}>
+              <Text style={styles.healthTeamBannerTitle}>Soteria Health Team</Text>
+              <Text style={styles.healthTeamBannerSubtitle}>
+                {createAsOfficial
+                  ? "Creating official Soteria routine"
+                  : "Creating community routine"}
+              </Text>
+            </View>
+          </View>
+          <TouchableOpacity
+            style={styles.healthTeamToggle}
+            onPress={() => setCreateAsOfficial(!createAsOfficial)}
+          >
+            <Ionicons
+              name={createAsOfficial ? "toggle" : "toggle-outline"}
+              size={32}
+              color={createAsOfficial ? "#10B981" : AppColors.textSecondary}
+            />
+          </TouchableOpacity>
+        </View>
+      )}
 
       {renderProgressBar()}
 
@@ -1736,5 +1777,37 @@ const styles = StyleSheet.create({
   modalOptionTextActive: {
     color: AppColors.primary,
     fontWeight: '600',
+  },
+  healthTeamBanner: {
+    backgroundColor: '#ECFDF5',
+    borderBottomWidth: 2,
+    borderBottomColor: '#10B981',
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  healthTeamBannerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  healthTeamBannerText: {
+    flex: 1,
+  },
+  healthTeamBannerTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#065F46',
+    marginBottom: 2,
+  },
+  healthTeamBannerSubtitle: {
+    fontSize: 13,
+    color: '#047857',
+  },
+  healthTeamToggle: {
+    padding: 4,
   },
 });

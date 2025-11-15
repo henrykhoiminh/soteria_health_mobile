@@ -11,6 +11,7 @@ import {
   getAchievedMilestones,
 } from '@/lib/utils/milestones';
 import MilestoneCard from '@/components/MilestoneCard';
+import UserRoleBadge from '@/components/UserRoleBadge';
 import {
   Alert,
   Modal,
@@ -295,6 +296,14 @@ export default function ProfileScreen() {
         ) : (
           <Text style={styles.name}>{profile?.full_name || 'User'}</Text>
         )}
+
+        {/* User Role Badge */}
+        {profile?.role && profile.role !== 'user' && (
+          <View style={styles.roleBadgeContainer}>
+            <UserRoleBadge role={profile.role} size="medium" />
+          </View>
+        )}
+
         <Text style={styles.email}>{user?.email}</Text>
         {profile?.username && !isEditing && (
           <Text style={styles.username}>@{profile.username}</Text>
@@ -666,6 +675,10 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: AppColors.textPrimary,
     marginBottom: 4,
+  },
+  roleBadgeContainer: {
+    marginTop: 8,
+    marginBottom: 8,
   },
   email: {
     fontSize: 14,
