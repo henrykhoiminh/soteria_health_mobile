@@ -2,8 +2,15 @@ import { useAuth } from '@/lib/contexts/AuthContext';
 import { AppColors } from '@/constants/theme';
 import { updateUserProfile, uploadProfilePicture, hardResetUserData } from '@/lib/utils/auth';
 import { validateUsername, getSuggestedUsernames } from '@/lib/utils/username';
-import { FitnessLevel, JourneyFocus } from '@/types';
-import { useState } from 'react';
+import { FitnessLevel, JourneyFocus, MilestoneSummary } from '@/types';
+import { useState, useCallback } from 'react';
+import { useFocusEffect } from 'expo-router';
+import {
+  getUserMilestones,
+  getMilestoneStats,
+  getAchievedMilestones,
+} from '@/lib/utils/milestones';
+import MilestoneCard from '@/components/MilestoneCard';
 import {
   Alert,
   Modal,
@@ -39,6 +46,29 @@ export default function ProfileScreen() {
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const [milestones, setMilestones] = useState<MilestoneSummary[]>([]);
+  const [loadingMilestones, setLoadingMilestones] = useState(true);
+  const [showAllMilestones, setShowAllMilestones] = useState(false);
+
+  // Load milestones when screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      const loadMilestones = async () => {
+        if (!user) return;
+
+        try {
+          const data = await getUserMilestones(user.id);
+          setMilestones(data);
+        } catch (error) {
+          console.error('Error loading milestones:', error);
+        } finally {
+          setLoadingMilestones(false);
+        }
+      };
+
+      loadMilestones();
+    }, [user])
+  );
 
   const handlePickImage = async () => {
     try {
@@ -394,6 +424,88 @@ export default function ProfileScreen() {
               </Text>
             </TouchableOpacity>
           </View>
+        )}
+      </View>
+
+      {/* Milestones Section */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Milestones</Text>
+          {milestones.length > 0 && (
+            <TouchableOpacity
+              onPress={() => setShowAllMilestones(!showAllMilestones)}
+              style={styles.viewAllButton}
+            >
+              <Text style={styles.viewAllText}>
+                {showAllMilestones ? 'Show Less' : 'View All'}
+              </Text>
+              <Ionicons
+                name={showAllMilestones ? 'chevron-up' : 'chevron-down'}
+                size={16}
+                color={AppColors.primary}
+              />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {loadingMilestones ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color={AppColors.primary} />
+          </View>
+        ) : milestones.length === 0 ? (
+          <View style={styles.emptyMilestones}>
+            <Ionicons name="trophy-outline" size={48} color={AppColors.textTertiary} />
+            <Text style={styles.emptyText}>No milestones yet</Text>
+            <Text style={styles.emptySubtext}>
+              Complete routines and maintain streaks to earn milestones!
+            </Text>
+          </View>
+        ) : (
+          <>
+            {/* Stats Summary */}
+            <View style={styles.milestoneStats}>
+              <View style={styles.milestoneStatCard}>
+                <Text style={styles.milestoneStatValue}>
+                  {getMilestoneStats(milestones).achieved}
+                </Text>
+                <Text style={styles.milestoneStatLabel}>Achieved</Text>
+              </View>
+              <View style={styles.milestoneStatCard}>
+                <Text style={styles.milestoneStatValue}>
+                  {getMilestoneStats(milestones).inProgress}
+                </Text>
+                <Text style={styles.milestoneStatLabel}>In Progress</Text>
+              </View>
+              <View style={styles.milestoneStatCard}>
+                <Text style={styles.milestoneStatValue}>
+                  {getMilestoneStats(milestones).completionPercentage}%
+                </Text>
+                <Text style={styles.milestoneStatLabel}>Complete</Text>
+              </View>
+            </View>
+
+            {/* Milestone Cards */}
+            <View style={styles.milestonesContainer}>
+              {(showAllMilestones
+                ? milestones
+                : getAchievedMilestones(milestones).slice(0, 3)
+              ).map((milestone) => (
+                <MilestoneCard key={milestone.milestone_id} milestone={milestone} />
+              ))}
+
+              {!showAllMilestones && getAchievedMilestones(milestones).length > 3 && (
+                <TouchableOpacity
+                  style={styles.showMoreButton}
+                  onPress={() => setShowAllMilestones(true)}
+                >
+                  <Text style={styles.showMoreText}>
+                    Show {getAchievedMilestones(milestones).length - 3} more achievements
+                  </Text>
+                  <Ionicons name="chevron-down" size={20} color={AppColors.primary} />
+                </TouchableOpacity>
+              )}
+            </View>
+          </>
         )}
       </View>
 
@@ -800,5 +912,80 @@ const styles = StyleSheet.create({
     color: AppColors.destructive,
     fontSize: 16,
     fontWeight: '600',
+  },
+  viewAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  viewAllText: {
+    fontSize: 14,
+    color: AppColors.primary,
+    fontWeight: '500',
+  },
+  loadingContainer: {
+    paddingVertical: 32,
+    alignItems: 'center',
+  },
+  emptyMilestones: {
+    paddingVertical: 32,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: AppColors.textSecondary,
+    marginTop: 12,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: AppColors.textTertiary,
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  milestoneStats: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 16,
+  },
+  milestoneStatCard: {
+    flex: 1,
+    padding: 12,
+    backgroundColor: AppColors.surfaceSecondary,
+    borderRadius: 8,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: AppColors.border,
+  },
+  milestoneStatValue: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: AppColors.textPrimary,
+    marginBottom: 2,
+  },
+  milestoneStatLabel: {
+    fontSize: 11,
+    color: AppColors.textSecondary,
+    textAlign: 'center',
+  },
+  milestonesContainer: {
+    gap: 0,
+  },
+  showMoreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    padding: 16,
+    marginTop: 8,
+    backgroundColor: AppColors.surfaceSecondary,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: AppColors.border,
+  },
+  showMoreText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: AppColors.primary,
   },
 });

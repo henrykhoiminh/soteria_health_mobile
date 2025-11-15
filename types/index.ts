@@ -377,3 +377,76 @@ export interface PainStatistics {
   pain_free_days: number
   trend: PainTrend
 }
+
+// Milestone System Types
+export type MilestoneCategory =
+  | 'streak'
+  | 'completion'
+  | 'balance'
+  | 'specialization'
+  | 'pain'
+  | 'journey'
+  | 'social'
+  | 'consistency'
+
+export type MilestoneRarity = 'common' | 'rare' | 'epic' | 'legendary'
+
+export type MilestoneThresholdType = 'count' | 'days' | 'percentage' | 'boolean'
+
+export interface MilestoneDefinition {
+  id: string
+  category: MilestoneCategory
+  name: string
+  description: string
+  icon_name: string
+  icon_color: string
+  threshold: number
+  threshold_type: MilestoneThresholdType
+  rarity: MilestoneRarity
+  order_index: number
+  created_at: string
+}
+
+export interface UserMilestone {
+  id: string
+  user_id: string
+  milestone_id: string
+  achieved_at: string
+  progress_value: number | null
+  shown_celebration: boolean
+  shared_to_activity: boolean
+  created_at: string
+}
+
+export interface MilestoneProgress {
+  id: string
+  user_id: string
+  milestone_id: string
+  current_value: number
+  last_updated: string
+}
+
+export interface MilestoneSummary {
+  milestone_id: string
+  category: MilestoneCategory
+  name: string
+  description: string
+  icon_name: string
+  icon_color: string
+  rarity: MilestoneRarity
+  threshold: number
+  current_progress: number
+  is_achieved: boolean
+  achieved_at: string | null
+  percentage_complete: number
+}
+
+export interface UncelebratedMilestone {
+  milestone_id: string
+  name: string
+  description: string
+  icon_name: string
+  icon_color: string
+  rarity: MilestoneRarity
+  achieved_at: string
+}
