@@ -163,16 +163,23 @@ export async function calculateHarmonyStreak(
   const yesterdayStr = yesterday.toISOString().split('T')[0]
 
   // Check if user achieved harmony today OR yesterday
-  // If neither, streak is broken (missed a day)
+  // Streak only resets if user missed yesterday (completed neither yesterday nor day before)
   const hasHarmonyToday = harmonyDates.includes(today)
   const hasHarmonyYesterday = harmonyDates.includes(yesterdayStr)
 
-  if (!hasHarmonyToday && !hasHarmonyYesterday) {
-    // User missed yesterday (and hasn't achieved harmony today), streak is 0
+  // Check day before yesterday
+  const dayBeforeYesterday = new Date()
+  dayBeforeYesterday.setDate(dayBeforeYesterday.getDate() - 2)
+  const dayBeforeYesterdayStr = dayBeforeYesterday.toISOString().split('T')[0]
+  const hasHarmonyDayBeforeYesterday = harmonyDates.includes(dayBeforeYesterdayStr)
+
+  if (!hasHarmonyToday && !hasHarmonyYesterday && !hasHarmonyDayBeforeYesterday) {
+    // User missed a full day (no harmony for 2+ days), streak is broken
     currentStreak = 0
   } else {
-    // Start checking from today backwards
-    let checkDate = new Date()
+    // Calculate streak from most recent harmony day backwards
+    // Start from today if completed, otherwise yesterday
+    let checkDate = hasHarmonyToday ? new Date() : hasHarmonyYesterday ? yesterday : dayBeforeYesterday
 
     while (true) {
       const dateStr = checkDate.toISOString().split('T')[0]

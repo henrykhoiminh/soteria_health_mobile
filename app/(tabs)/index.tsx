@@ -1,6 +1,8 @@
 import Avatar from '@/components/Avatar';
 import CompletedRoutinesModal from '@/components/CompletedRoutinesModal';
 import JourneyBadge from '@/components/JourneyBadge';
+import JourneyFocusModal from '@/components/JourneyFocusModal';
+import PainProgressChart from '@/components/PainProgressChart';
 import RecommendedRoutineModal from '@/components/RecommendedRoutineModal';
 import UsernameSetupModal from '@/components/UsernameSetupModal';
 import { AppColors } from '@/constants/theme';
@@ -17,7 +19,6 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Dimensions,
   Image,
   ScrollView,
   StyleSheet,
@@ -25,7 +26,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { LineChart } from 'react-native-chart-kit';
 
 export default function DashboardScreen() {
   const { user, profile } = useAuth();
@@ -34,7 +34,7 @@ export default function DashboardScreen() {
   const [todayProgress, setTodayProgress] = useState<DailyProgress | null>(null);
   const [stats, setStats] = useState<UserStats | null>(null);
   const [friendActivity, setFriendActivity] = useState<ActivityFeedItem[]>([]);
-  const [showJourneyDetails, setShowJourneyDetails] = useState(false);
+  const [showJourneyFocusModal, setShowJourneyFocusModal] = useState(false);
   const [showUsernameSetup, setShowUsernameSetup] = useState(false);
   const [avatarStates, setAvatarStates] = useState<AvatarState[]>([]);
   const [painStats, setPainStats] = useState<PainStatistics | null>(null);
@@ -77,8 +77,8 @@ export default function DashboardScreen() {
         getUserStats(user.id),
         getFormattedFriendActivity(user.id, 5), // Get latest 5 activities
         getAllAvatarStates(user.id), // Load avatar states
-        getPainStatistics(user.id, 30), // Get pain statistics
-        getPainCheckInHistory(user.id, 14), // Get last 14 days for mini chart
+        getPainStatistics(user.id, 100), // Get pain statistics for up to 100 days
+        getPainCheckInHistory(user.id, 100), // Get last 100 days for chart
       ]);
 
       console.log('Today Progress:', progressData); // Debug log
@@ -178,6 +178,19 @@ export default function DashboardScreen() {
         visible={showUsernameSetup}
         onComplete={() => setShowUsernameSetup(false)}
       />
+      <JourneyFocusModal
+        visible={showJourneyFocusModal}
+        currentFocus={profile?.journey_focus || 'Injury Prevention'}
+        currentRecoveryAreas={profile?.recovery_areas}
+        currentRecoveryGoals={profile?.recovery_goals}
+        journeyStartedAt={profile?.journey_started_at || undefined}
+        userId={user?.id || ''}
+        onClose={() => setShowJourneyFocusModal(false)}
+        onUpdate={() => {
+          // Reload dashboard data after journey focus update
+          loadDashboardData();
+        }}
+      />
       <RecommendedRoutineModal
         visible={showRecommendedModal}
         routine={selectedRoutine}
@@ -212,7 +225,7 @@ export default function DashboardScreen() {
           {/* Journey Badge next to avatar */}
           {profile?.journey_focus && (
             <TouchableOpacity
-              onPress={() => setShowJourneyDetails(!showJourneyDetails)}
+              onPress={() => setShowJourneyFocusModal(true)}
               activeOpacity={0.7}
             >
               <JourneyBadge
@@ -229,25 +242,6 @@ export default function DashboardScreen() {
           Hello, {profile?.full_name || 'there'}!
         </Text>
         <Text style={styles.subtitle}>Check out your personalized routines below.</Text>
-
-        {/* Journey Day Counter - Shows only when badge is clicked */}
-        {profile?.journey_focus && showJourneyDetails && profile.journey_started_at && (
-          <View style={styles.journeyDetailsCard}>
-            <Text style={styles.journeyDetailsText}>
-              Day {journeyDays} of {profile.journey_focus}
-            </Text>
-            {profile.recovery_areas && profile.recovery_areas.length > 0 && profile.journey_focus === 'Recovery' && (
-              <Text style={styles.journeyDetailsSubtext}>
-                Recovering: {profile.recovery_areas.join(', ')}
-              </Text>
-            )}
-            {profile.recovery_goals && profile.recovery_goals.length > 0 && profile.journey_focus === 'Recovery' && (
-              <Text style={styles.journeyDetailsSubtext}>
-                Goals: {profile.recovery_goals.join(', ')}
-              </Text>
-            )}
-          </View>
-        )}
       </View>
 
       {/* Avatars Section */}
@@ -328,91 +322,8 @@ export default function DashboardScreen() {
               </View>
             </View>
 
-            {/* Mini Line Chart */}
-            {painHistory.length > 0 ? (
-              <View style={styles.chartWrapper}>
-                <LineChart
-                  data={{
-                    labels: painHistory.slice().reverse().map((_, i) => i.toString()),
-                    datasets: [
-                      {
-                        data: painHistory.slice().reverse().map(c => c.pain_level),
-                      },
-                      {
-                        data: [0], // Min value for Y-axis scale
-                        withDots: false,
-                        strokeWidth: 0,
-                      },
-                      {
-                        data: [10], // Max value for Y-axis scale
-                        withDots: false,
-                        strokeWidth: 0,
-                      },
-                    ],
-                  }}
-                  width={Dimensions.get('window').width - 64}
-                  height={180}
-                  yAxisSuffix=""
-                  yAxisInterval={1}
-                  fromZero
-                  chartConfig={{
-                    backgroundColor: AppColors.surface,
-                    backgroundGradientFrom: AppColors.surface,
-                    backgroundGradientTo: AppColors.surface,
-                    decimalPlaces: 0,
-                    color: () => AppColors.primary,
-                    labelColor: () => AppColors.primary,
-                    propsForVerticalLabels: {
-                      fontSize: 11,
-                      fill: AppColors.primary,
-                    },
-                    propsForHorizontalLabels: {
-                      fontSize: 0,
-                    },
-                    style: {
-                      borderRadius: 12,
-                    },
-                    propsForDots: {
-                      r: '6',
-                      strokeWidth: '3',
-                      stroke: AppColors.primary,
-                      fill: AppColors.surface,
-                    },
-                    propsForBackgroundLines: {
-                      strokeDasharray: '',
-                      stroke: AppColors.border,
-                      strokeOpacity: 0.3,
-                      strokeWidth: 1,
-                    },
-                    fillShadowGradientFrom: AppColors.lightGold,
-                    fillShadowGradientTo: AppColors.lightGold,
-                    fillShadowGradientFromOpacity: 0.3,
-                    fillShadowGradientToOpacity: 0.05,
-                  }}
-                  bezier={painHistory.length > 2}
-                  style={styles.chart}
-                  withInnerLines={true}
-                  withOuterLines={true}
-                  withVerticalLines={false}
-                  withHorizontalLines={true}
-                  withVerticalLabels={true}
-                  withHorizontalLabels={true}
-                  withDots={true}
-                  segments={5}
-                  yLabelsOffset={20}
-                  xLabelsOffset={0}
-                  withScrollableDot={false}
-                  getDotColor={() => AppColors.primary}
-                  renderDotContent={() => null}
-                />
-              </View>
-            ) : (
-              <View style={styles.emptyChartContainer}>
-                <Text style={styles.emptyChartText}>
-                  Check in daily to see your pain trends
-                </Text>
-              </View>
-            )}
+            {/* Pain Progress Chart */}
+            <PainProgressChart painHistory={painHistory} maxDays={100} />
 
             {/* Stats Row */}
             <View style={styles.painStatsRow}>
@@ -609,26 +520,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: AppColors.textSecondary,
     marginTop: 4,
-  },
-  journeyDetailsCard: {
-    marginTop: 16,
-    padding: 12,
-    backgroundColor: AppColors.surfaceSecondary,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: AppColors.cardBorder,
-  },
-  journeyDetailsText: {
-    fontSize: 14,
-    color: AppColors.textPrimary,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  journeyDetailsSubtext: {
-    fontSize: 13,
-    color: AppColors.textSecondary,
-    marginTop: 4,
-    lineHeight: 18,
   },
   section: {
     marginTop: 16,
@@ -869,14 +760,6 @@ const styles = StyleSheet.create({
     color: AppColors.textSecondary,
     textAlign: 'center',
   },
-  chartWrapper: {
-    marginBottom: 20,
-    marginTop: 5,
-    alignItems: 'center',
-  },
-  chart: {
-    borderRadius: 12,
-  },
   painStatsRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -901,18 +784,5 @@ const styles = StyleSheet.create({
     width: 1,
     height: 30,
     backgroundColor: AppColors.border,
-  },
-  emptyChartContainer: {
-    height: 70,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: AppColors.border,
-  },
-  emptyChartText: {
-    fontSize: 13,
-    color: AppColors.textTertiary,
-    fontStyle: 'italic',
   },
 });

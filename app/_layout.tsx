@@ -78,7 +78,14 @@ function RootLayoutNav() {
         <PainCheckInModal
           visible={showPainCheckIn}
           userId={user.id}
-          onComplete={() => setShowPainCheckIn(false)}
+          onComplete={() => {
+            setShowPainCheckIn(false);
+            // Force navigation to trigger useFocusEffect and refresh dashboard data
+            // Small delay ensures modal close animation completes
+            setTimeout(() => {
+              router.push('/(tabs)');
+            }, 50);
+          }}
         />
       )}
     </>
