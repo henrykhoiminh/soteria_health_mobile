@@ -1,6 +1,7 @@
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { AppColors } from '@/constants/theme';
 import { getRoutineById } from '@/lib/utils/dashboard';
+import { supabase } from '@/lib/supabase/client';
 import {
   getAvailableExercises,
   publishCustomRoutine,
@@ -143,7 +144,32 @@ export default function RoutineBuilderScreen() {
       setIsEditMode(true);
       setEditingRoutineId(routineId);
       setIsEditingOfficialRoutine(routine.author_type === 'official');
-      setCurrentStep('journey');
+
+      // Show delete option for health team editing official routines
+      if (routine.author_type === 'official' && canEditOfficial) {
+        Alert.alert(
+          'Edit Official Routine',
+          `You are about to edit "${routine.name}". Would you like to edit or delete this routine?`,
+          [
+            {
+              text: 'Delete Routine',
+              style: 'destructive',
+              onPress: () => handleDeleteRoutine(routineId, routine.name),
+            },
+            {
+              text: 'Edit Routine',
+              onPress: () => setCurrentStep('journey'),
+            },
+            {
+              text: 'Cancel',
+              style: 'cancel',
+              onPress: () => router.replace('/(tabs)/routines'),
+            },
+          ]
+        );
+      } else {
+        setCurrentStep('journey');
+      }
     } catch (error) {
       console.error('Error loading routine for editing:', error);
       Alert.alert('Error', 'Failed to load routine');
@@ -173,6 +199,63 @@ export default function RoutineBuilderScreen() {
               body_parts: [],
             });
             setCurrentStep('journey');
+          },
+        },
+      ]
+    );
+  };
+
+  const handleDeleteRoutine = async (routineId: string, routineName: string) => {
+    Alert.alert(
+      'Delete Official Routine?',
+      `Are you sure you want to permanently delete "${routineName}"? This action cannot be undone and will remove it from Discover for all users.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setLoading(true);
+
+              const { error, count } = await supabase
+                .from('routines')
+                .delete({ count: 'exact' })
+                .eq('id', routineId);
+
+              if (error) {
+                console.error('Error deleting routine:', error);
+                Alert.alert(
+                  'Delete Failed',
+                  `Could not delete routine: ${error.message}. You may need admin permissions.`
+                );
+                return;
+              }
+
+              if (count === 0) {
+                Alert.alert(
+                  'Delete Failed',
+                  'No routine was deleted. You may not have permission to delete this routine.'
+                );
+                return;
+              }
+
+              Alert.alert(
+                'Routine Deleted',
+                `"${routineName}" has been permanently deleted.`,
+                [
+                  {
+                    text: 'OK',
+                    onPress: () => router.replace('/(tabs)/routines'),
+                  },
+                ]
+              );
+            } catch (error) {
+              console.error('Error deleting routine:', error);
+              Alert.alert('Error', 'Failed to delete routine. Please try again.');
+            } finally {
+              setLoading(false);
+            }
           },
         },
       ]
@@ -1384,14 +1467,13 @@ const styles = StyleSheet.create({
   },
   contentWrapper: {
     flex: 1,
-    position: 'relative',
   },
   content: {
     flex: 1,
   },
   contentContainer: {
     padding: 24,
-    paddingBottom: 100,
+    paddingBottom: 32,
   },
   loadingContainer: {
     flex: 1,
@@ -1406,7 +1488,6 @@ const styles = StyleSheet.create({
   },
   stepContainer: {
     flex: 1,
-    position: 'relative',
   },
   stepTitle: {
     fontSize: 24,
@@ -1800,23 +1881,13 @@ const styles = StyleSheet.create({
     color: AppColors.textSecondary,
   },
   stepNavigation: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: 16,
-    padding: 16,
-    paddingBottom: 32,
-    backgroundColor: AppColors.background,
+    marginTop: 24,
+    paddingTop: 16,
     borderTopWidth: 1,
     borderTopColor: AppColors.borderLight,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 8,
   },
   backButton: {
     flexDirection: 'row',

@@ -191,6 +191,8 @@ export async function updateCustomRoutine(
   const exercises = routineData.exercises.map(({ id, ...exercise }) => exercise)
 
   // Update routine in database
+  // Note: Health team members can edit official routines (is_custom = false)
+  // Regular users can only edit their own custom routines (is_custom = true)
   const { error } = await supabase
     .from('routines')
     .update({
@@ -206,8 +208,6 @@ export async function updateCustomRoutine(
       body_parts: routineData.body_parts || [],
     })
     .eq('id', routineId)
-    .eq('created_by', userId)
-    .eq('is_custom', true)
 
   if (error) throw error
 }
