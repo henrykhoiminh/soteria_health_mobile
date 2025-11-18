@@ -343,6 +343,7 @@ export interface UserSearchResult {
   fitness_level: FitnessLevel | null
   friendship_status?: FriendshipStatus | null
   match_score?: number
+  role?: UserRole
 }
 
 // Pain Check-In Types
@@ -455,4 +456,26 @@ export interface UncelebratedMilestone {
   icon_color: string
   rarity: MilestoneRarity
   achieved_at: string
+}
+
+// Health Team Types
+export type HealthTeamInvitationStatus = 'pending' | 'accepted' | 'declined'
+
+export interface HealthTeamInvitation {
+  id: string
+  inviter_id: string
+  invitee_id: string
+  status: HealthTeamInvitationStatus
+  created_at: string
+  responded_at: string | null
+  // Joined data from profiles
+  inviter_name?: string
+  inviter_username?: string
+  inviter_avatar?: string
+}
+
+export interface HealthTeamStats {
+  official_routines_created: number
+  total_official_completions: number
+  official_routines_saved: number
 }

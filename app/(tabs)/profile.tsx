@@ -2,7 +2,7 @@ import { useAuth } from '@/lib/contexts/AuthContext';
 import { AppColors } from '@/constants/theme';
 import { updateUserProfile, uploadProfilePicture, hardResetUserData } from '@/lib/utils/auth';
 import { validateUsername, getSuggestedUsernames } from '@/lib/utils/username';
-import { FitnessLevel, JourneyFocus, MilestoneSummary } from '@/types';
+import { FitnessLevel, JourneyFocus, MilestoneSummary, HealthTeamInvitation, HealthTeamStats } from '@/types';
 import { useState, useCallback } from 'react';
 import { useFocusEffect } from 'expo-router';
 import {
@@ -10,8 +10,14 @@ import {
   getMilestoneStats,
   getAchievedMilestones,
 } from '@/lib/utils/milestones';
+import {
+  getMyPendingHealthTeamInvitations,
+  getHealthTeamStats,
+  leaveHealthTeam,
+} from '@/lib/utils/health-team';
 import MilestoneCard from '@/components/MilestoneCard';
 import UserRoleBadge from '@/components/UserRoleBadge';
+import HealthTeamInvitationCard from '@/components/HealthTeamInvitationCard';
 import {
   Alert,
   Modal,
@@ -50,8 +56,11 @@ export default function ProfileScreen() {
   const [milestones, setMilestones] = useState<MilestoneSummary[]>([]);
   const [loadingMilestones, setLoadingMilestones] = useState(true);
   const [showAllMilestones, setShowAllMilestones] = useState(false);
+  const [healthTeamInvitations, setHealthTeamInvitations] = useState<HealthTeamInvitation[]>([]);
+  const [healthTeamStats, setHealthTeamStats] = useState<HealthTeamStats | null>(null);
+  const [loadingHealthTeam, setLoadingHealthTeam] = useState(false);
 
-  // Load milestones when screen is focused
+  // Load milestones and health team data when screen is focused
   useFocusEffect(
     useCallback(() => {
       const loadMilestones = async () => {
@@ -67,8 +76,31 @@ export default function ProfileScreen() {
         }
       };
 
+      const loadHealthTeamData = async () => {
+        if (!user) return;
+
+        try {
+          setLoadingHealthTeam(true);
+
+          // Load pending invitations (for all users)
+          const invitations = await getMyPendingHealthTeamInvitations();
+          setHealthTeamInvitations(invitations);
+
+          // Load health team stats (only if user is health_team or admin)
+          if (profile?.role === 'health_team' || profile?.role === 'admin') {
+            const stats = await getHealthTeamStats(user.id);
+            setHealthTeamStats(stats);
+          }
+        } catch (error) {
+          console.error('Error loading health team data:', error);
+        } finally {
+          setLoadingHealthTeam(false);
+        }
+      };
+
       loadMilestones();
-    }, [user])
+      loadHealthTeamData();
+    }, [user, profile])
   );
 
   const handlePickImage = async () => {
@@ -435,6 +467,96 @@ export default function ProfileScreen() {
           </View>
         )}
       </View>
+
+      {/* Health Team Invitations */}
+      {healthTeamInvitations.length > 0 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Health Team Invitation</Text>
+          <View style={styles.healthTeamInvitationContainer}>
+            {healthTeamInvitations.map((invitation) => (
+              <HealthTeamInvitationCard
+                key={invitation.id}
+                invitation={invitation}
+                onAccept={async () => {
+                  // Refresh profile and reload data
+                  await refreshProfile();
+                  setHealthTeamInvitations([]);
+                }}
+                onDecline={() => {
+                  // Remove invitation from list
+                  setHealthTeamInvitations((prev) =>
+                    prev.filter((inv) => inv.id !== invitation.id)
+                  );
+                }}
+              />
+            ))}
+          </View>
+        </View>
+      )}
+
+      {/* Health Team Stats */}
+      {(profile?.role === 'health_team' || profile?.role === 'admin') && healthTeamStats && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Health Team Stats</Text>
+          <View style={styles.healthTeamStatsContainer}>
+            <View style={styles.statsGrid}>
+              <View style={styles.healthTeamStatCard}>
+                <Text style={styles.healthTeamStatValue}>
+                  {healthTeamStats.official_routines_created}
+                </Text>
+                <Text style={styles.healthTeamStatLabel}>Official Routines Created</Text>
+              </View>
+              <View style={styles.healthTeamStatCard}>
+                <Text style={styles.healthTeamStatValue}>
+                  {healthTeamStats.total_official_completions}
+                </Text>
+                <Text style={styles.healthTeamStatLabel}>Total Completions</Text>
+              </View>
+            </View>
+            {healthTeamStats.official_routines_saved > 0 && (
+              <View style={[styles.healthTeamStatCard, styles.fullWidthStatCard]}>
+                <Text style={styles.healthTeamStatValue}>
+                  {healthTeamStats.official_routines_saved}
+                </Text>
+                <Text style={styles.healthTeamStatLabel}>Total Saves</Text>
+              </View>
+            )}
+
+            {/* Leave Health Team Button */}
+            <TouchableOpacity
+              style={styles.leaveHealthTeamButton}
+              onPress={async () => {
+                Alert.alert(
+                  'Leave Health Team?',
+                  'You will no longer be able to create or edit official routines. You can be re-invited later if you change your mind.',
+                  [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                      text: 'Leave Team',
+                      style: 'destructive',
+                      onPress: async () => {
+                        try {
+                          await leaveHealthTeam();
+                          await refreshProfile();
+                          Alert.alert(
+                            'Left Health Team',
+                            'You are now a regular user. You can be re-invited to the Health Team at any time.'
+                          );
+                        } catch (error: any) {
+                          Alert.alert('Error', error.message || 'Failed to leave health team');
+                        }
+                      },
+                    },
+                  ]
+                );
+              }}
+            >
+              <Ionicons name="exit-outline" size={18} color="#EF4444" />
+              <Text style={styles.leaveHealthTeamButtonText}>Leave Health Team</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
 
       {/* Milestones Section */}
       <View style={styles.section}>
@@ -1000,5 +1122,59 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: AppColors.primary,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 12,
+  },
+  healthTeamInvitationContainer: {
+    marginTop: 12,
+  },
+  healthTeamStatsContainer: {
+    marginTop: 12,
+  },
+  healthTeamStatCard: {
+    flex: 1,
+    padding: 16,
+    backgroundColor: '#ECFDF5',
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#10B981',
+  },
+  fullWidthStatCard: {
+    flex: undefined,
+    width: '100%',
+  },
+  healthTeamStatValue: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#065F46',
+    marginBottom: 4,
+  },
+  healthTeamStatLabel: {
+    fontSize: 12,
+    color: '#047857',
+    textAlign: 'center',
+    fontWeight: '600',
+  },
+  leaveHealthTeamButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#EF4444',
+    backgroundColor: AppColors.surface,
+    marginTop: 16,
+  },
+  leaveHealthTeamButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#EF4444',
   },
 });

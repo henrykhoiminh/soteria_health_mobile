@@ -5,6 +5,7 @@ import JourneyFocusModal from '@/components/JourneyFocusModal';
 import PainProgressChart from '@/components/PainProgressChart';
 import RecommendedRoutineModal from '@/components/RecommendedRoutineModal';
 import UsernameSetupModal from '@/components/UsernameSetupModal';
+import UserRoleBadge from '@/components/UserRoleBadge';
 import { AppColors } from '@/constants/theme';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { calculateJourneyDays } from '@/lib/utils/auth';
@@ -13,16 +14,21 @@ import { getPainCheckInHistory, getPainLevelInfo, getPainStatistics, getPainTren
 import { getFormattedFriendActivity } from '@/lib/utils/social';
 import { getAllAvatarStates } from '@/lib/utils/stats';
 import { getDisplayName } from '@/lib/utils/username';
-import { ActivityFeedItem, AvatarState, DailyProgress, PainCheckIn, PainStatistics, Routine, RoutineCategory, UserStats } from '@/types';
+import { searchUsers } from '@/lib/utils/social';
+import { sendHealthTeamInvitation, hasPendingInvitation } from '@/lib/utils/health-team';
+import { ActivityFeedItem, AvatarState, DailyProgress, PainCheckIn, PainStatistics, Routine, RoutineCategory, UserStats, UserSearchResult } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Image,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -44,6 +50,13 @@ export default function DashboardScreen() {
   const [selectedCategory, setSelectedCategory] = useState<RoutineCategory>('Mind');
   const [showCompletedRoutinesModal, setShowCompletedRoutinesModal] = useState(false);
   const [completedRoutines, setCompletedRoutines] = useState<Routine[]>([]);
+  const [showHealthTeamInviteModal, setShowHealthTeamInviteModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [invitedUsers, setInvitedUsers] = useState<Set<string>>(new Set());
+
+  const isHealthTeam = profile?.role === 'health_team' || profile?.role === 'admin';
 
   useEffect(() => {
     loadDashboardData();
@@ -159,6 +172,56 @@ export default function DashboardScreen() {
     router.push(`/routines/${routineId}`);
   };
 
+  const handleSearchUsers = async (query: string) => {
+    setSearchQuery(query);
+    if (query.length < 2) {
+      setSearchResults([]);
+      return;
+    }
+
+    try {
+      setSearching(true);
+      const results = await searchUsers(query, user!.id);
+      setSearchResults(results);
+    } catch (error) {
+      console.error('Error searching users:', error);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const handleInviteToHealthTeam = async (inviteeId: string, userName: string) => {
+    try {
+      const hasPending = await hasPendingInvitation(inviteeId);
+      if (hasPending) {
+        Alert.alert('Already Invited', `${userName} already has a pending Health Team invitation.`);
+        return;
+      }
+
+      Alert.alert(
+        'Invite to Health Team',
+        `Invite ${userName} to join the Soteria Health Team?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Send Invitation',
+            onPress: async () => {
+              try {
+                await sendHealthTeamInvitation(inviteeId);
+                setInvitedUsers(prev => new Set(prev).add(inviteeId));
+                Alert.alert('Success', `Health Team invitation sent to ${userName}!`);
+              } catch (error: any) {
+                Alert.alert('Error', error.message || 'Failed to send invitation');
+              }
+            },
+          },
+        ]
+      );
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to check invitation status');
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -205,24 +268,146 @@ export default function DashboardScreen() {
         onClose={() => setShowCompletedRoutinesModal(false)}
         onSelectRoutine={handleSelectCompletedRoutine}
       />
+
+      {/* Health Team Invite Modal */}
+      <Modal
+        visible={showHealthTeamInviteModal}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowHealthTeamInviteModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.inviteModalContent}>
+            {/* Modal Header */}
+            <View style={styles.inviteModalHeader}>
+              <Text style={styles.inviteModalTitle}>Invite to Health Team</Text>
+              <TouchableOpacity onPress={() => setShowHealthTeamInviteModal(false)}>
+                <Ionicons name="close" size={28} color={AppColors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Search Input */}
+            <View style={styles.inviteSearchContainer}>
+              <Ionicons name="search" size={20} color={AppColors.textSecondary} />
+              <TextInput
+                style={styles.inviteSearchInput}
+                placeholder="Search users by name..."
+                placeholderTextColor={AppColors.textPlaceholder}
+                value={searchQuery}
+                onChangeText={handleSearchUsers}
+                autoCapitalize="words"
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => handleSearchUsers('')}>
+                  <Ionicons name="close-circle" size={20} color={AppColors.textSecondary} />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* Search Results */}
+            <ScrollView style={styles.inviteResultsContainer}>
+              {searching && (
+                <View style={styles.inviteLoadingContainer}>
+                  <ActivityIndicator size="small" color={AppColors.primary} />
+                  <Text style={styles.inviteLoadingText}>Searching...</Text>
+                </View>
+              )}
+
+              {!searching && searchQuery.length >= 2 && searchResults.length === 0 && (
+                <View style={styles.inviteEmptyState}>
+                  <Ionicons name="search-outline" size={48} color={AppColors.textTertiary} />
+                  <Text style={styles.inviteEmptyText}>No users found</Text>
+                </View>
+              )}
+
+              {!searching && searchQuery.length < 2 && (
+                <View style={styles.inviteEmptyState}>
+                  <Ionicons name="people-outline" size={48} color={AppColors.textTertiary} />
+                  <Text style={styles.inviteEmptyText}>Search for users to invite</Text>
+                  <Text style={styles.inviteEmptySubtext}>
+                    Type at least 2 characters to start searching
+                  </Text>
+                </View>
+              )}
+
+              {searchResults.map((user) => (
+                <View key={user.id} style={styles.inviteUserCard}>
+                  <View style={styles.inviteUserAvatar}>
+                    <Ionicons name="person" size={24} color={AppColors.textSecondary} />
+                  </View>
+                  <View style={styles.inviteUserInfo}>
+                    <Text style={styles.inviteUserName}>{getDisplayName(user)}</Text>
+                    {user.full_name && user.username && (
+                      <Text style={styles.inviteUserRealName}>{user.full_name}</Text>
+                    )}
+                    <Text style={styles.inviteUserMeta}>
+                      {user.journey_focus} • {user.fitness_level}
+                    </Text>
+                  </View>
+                  {user.role === 'health_team' || user.role === 'admin' ? (
+                    <TouchableOpacity
+                      style={styles.alreadyMemberBadge}
+                      onPress={() => {
+                        Alert.alert(
+                          'Already a Member',
+                          `${getDisplayName(user)} is already a member of the Soteria Health Team.`,
+                          [{ text: 'OK' }]
+                        );
+                      }}
+                    >
+                      <Ionicons name="shield-checkmark" size={14} color="#10B981" />
+                      <Text style={styles.alreadyMemberText}>Member</Text>
+                    </TouchableOpacity>
+                  ) : invitedUsers.has(user.id) ? (
+                    <View style={styles.invitedBadge}>
+                      <Ionicons name="checkmark-circle" size={14} color="#10B981" />
+                      <Text style={styles.invitedText}>Invited</Text>
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      style={styles.inviteUserButton}
+                      onPress={() => handleInviteToHealthTeam(user.id, getDisplayName(user))}
+                    >
+                      <Ionicons name="shield-checkmark" size={18} color="#FFFFFF" />
+                      <Text style={styles.inviteUserButtonText}>Invite</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
       <ScrollView style={styles.container}>
       <View style={styles.header}>
-        {/* Avatar and Journey Badge Row */}
+        {/* Avatar and Badges Row */}
         <View style={styles.avatarRow}>
-          <View style={styles.avatar}>
-            {profile?.profile_picture_url ? (
-              <Image
-                source={{ uri: profile.profile_picture_url }}
-                style={styles.avatarImage}
-              />
-            ) : (
-              <Text style={styles.avatarText}>
-                {profile?.full_name?.charAt(0).toUpperCase() || 'U'}
-              </Text>
+          <View style={styles.avatarContainer}>
+            <View style={[
+              styles.avatar,
+              (profile?.role === 'health_team' || profile?.role === 'admin') && styles.avatarHealthTeam
+            ]}>
+              {profile?.profile_picture_url ? (
+                <Image
+                  source={{ uri: profile.profile_picture_url }}
+                  style={styles.avatarImage}
+                />
+              ) : (
+                <Text style={styles.avatarText}>
+                  {profile?.full_name?.charAt(0).toUpperCase() || 'U'}
+                </Text>
+              )}
+            </View>
+            {/* Health Team Shield Badge */}
+            {(profile?.role === 'health_team' || profile?.role === 'admin') && (
+              <View style={styles.shieldBadge}>
+                <Ionicons name="shield-checkmark" size={16} color="#FFFFFF" />
+              </View>
             )}
           </View>
 
-          {/* Journey Badge next to avatar */}
+          {/* Journey Badge */}
           {profile?.journey_focus && (
             <TouchableOpacity
               onPress={() => setShowJourneyFocusModal(true)}
@@ -239,7 +424,8 @@ export default function DashboardScreen() {
         </View>
 
         <Text style={styles.greeting}>
-          Hello, {profile?.full_name || 'there'}!
+          {profile?.role === 'health_team' || profile?.role === 'admin' ? 'Welcome back, ' : 'Hello, '}
+          {profile?.full_name || 'there'}
         </Text>
         <Text style={styles.subtitle}>Check out your personalized routines below.</Text>
       </View>
@@ -388,6 +574,17 @@ export default function DashboardScreen() {
         </View>
       )}
 
+      {/* Health Team Invite Button (Bottom) */}
+      {isHealthTeam && (
+        <TouchableOpacity
+          style={styles.healthTeamInviteButton}
+          onPress={() => setShowHealthTeamInviteModal(true)}
+        >
+          <Ionicons name="shield-checkmark" size={24} color="#FFFFFF" />
+          <Text style={styles.healthTeamInviteButtonText}>Invite to Health Team</Text>
+        </TouchableOpacity>
+      )}
+
     </ScrollView>
     </>
   );
@@ -493,6 +690,9 @@ const styles = StyleSheet.create({
     gap: 12,
     marginBottom: 16,
   },
+  avatarContainer: {
+    position: 'relative',
+  },
   avatar: {
     width: 56,
     height: 56,
@@ -501,6 +701,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
+  },
+  avatarHealthTeam: {
+    borderWidth: 3,
+    borderColor: '#10B981',
+  },
+  shieldBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#10B981',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: AppColors.surface,
   },
   avatarImage: {
     width: '100%',
@@ -784,5 +1001,188 @@ const styles = StyleSheet.create({
     width: 1,
     height: 30,
     backgroundColor: AppColors.border,
+  },
+  // Health Team Invite Button (Bottom)
+  healthTeamInviteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#10B981',
+    marginHorizontal: 24,
+    marginTop: 24,
+    marginBottom: 32,
+    paddingVertical: 16,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  healthTeamInviteButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  // Health Team Invite Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  inviteModalContent: {
+    backgroundColor: AppColors.surface,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    height: '85%',
+    paddingTop: 20,
+  },
+  inviteModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: AppColors.border,
+  },
+  inviteModalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: AppColors.textPrimary,
+  },
+  inviteSearchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: AppColors.background,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginHorizontal: 24,
+    marginTop: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: AppColors.border,
+  },
+  inviteSearchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: AppColors.textPrimary,
+  },
+  inviteResultsContainer: {
+    flex: 1,
+    paddingHorizontal: 24,
+  },
+  inviteLoadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    paddingVertical: 32,
+  },
+  inviteLoadingText: {
+    fontSize: 14,
+    color: AppColors.textSecondary,
+  },
+  inviteEmptyState: {
+    alignItems: 'center',
+    paddingVertical: 48,
+  },
+  inviteEmptyText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: AppColors.textSecondary,
+    marginTop: 16,
+  },
+  inviteEmptySubtext: {
+    fontSize: 14,
+    color: AppColors.textTertiary,
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  inviteUserCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: AppColors.background,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: AppColors.border,
+  },
+  inviteUserAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: AppColors.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  inviteUserInfo: {
+    flex: 1,
+  },
+  inviteUserName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: AppColors.textPrimary,
+    marginBottom: 2,
+  },
+  inviteUserRealName: {
+    fontSize: 14,
+    color: AppColors.textSecondary,
+    marginBottom: 4,
+  },
+  inviteUserMeta: {
+    fontSize: 12,
+    color: AppColors.textTertiary,
+  },
+  inviteUserButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#10B981',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  inviteUserButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  alreadyMemberBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#10B981',
+  },
+  alreadyMemberText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#10B981',
+  },
+  invitedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#10B981',
+  },
+  invitedText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#10B981',
   },
 });

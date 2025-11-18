@@ -36,6 +36,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import DraggableExerciseList from '@/components/DraggableExerciseList';
 
 type BuilderStep = 'journey' | 'exercises' | 'metadata' | 'review';
 
@@ -49,8 +51,10 @@ export default function RoutineBuilderScreen() {
   const [availableExercises, setAvailableExercises] = useState<Exercise[]>([]);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingRoutineId, setEditingRoutineId] = useState<string | null>(null);
+  const [isEditingOfficialRoutine, setIsEditingOfficialRoutine] = useState(false);
   const [isHealthTeam, setIsHealthTeam] = useState(false);
-  const [createAsOfficial, setCreateAsOfficial] = useState(false);
+  const [showPublishModal, setShowPublishModal] = useState(false);
+  const [selectedRoutineType, setSelectedRoutineType] = useState<'official' | 'community' | null>(null);
 
   // Builder state
   const [routineData, setRoutineData] = useState<RoutineBuilderData>({
@@ -101,9 +105,15 @@ export default function RoutineBuilderScreen() {
         return;
       }
 
-      // Verify user owns this routine
-      if (!routine.is_custom || routine.created_by !== user.id) {
-        Alert.alert('Error', 'You can only edit your own custom routines');
+      // Check if user can edit this routine
+      const canEditCustom = routine.is_custom && routine.created_by === user.id;
+      const canEditOfficial = routine.author_type === 'official' && await isHealthTeamMember(user.id);
+
+      if (!canEditCustom && !canEditOfficial) {
+        Alert.alert(
+          'Cannot Edit',
+          'You can only edit your own custom routines, or official routines if you are a Health Team member.'
+        );
         router.replace('/(tabs)/routines');
         return;
       }
@@ -132,6 +142,7 @@ export default function RoutineBuilderScreen() {
 
       setIsEditMode(true);
       setEditingRoutineId(routineId);
+      setIsEditingOfficialRoutine(routine.author_type === 'official');
       setCurrentStep('journey');
     } catch (error) {
       console.error('Error loading routine for editing:', error);
@@ -168,6 +179,31 @@ export default function RoutineBuilderScreen() {
     );
   };
 
+  const handleExit = () => {
+    Alert.alert(
+      'Exit Editor?',
+      isEditMode
+        ? 'Your changes will not be saved. Are you sure you want to exit?'
+        : 'Your progress will be lost. Are you sure you want to exit?',
+      [
+        { text: 'Keep Editing', style: 'cancel' },
+        {
+          text: 'Exit',
+          style: 'destructive',
+          onPress: () => {
+            if (isEditMode && editingRoutineId) {
+              // Return to the routine detail page
+              router.replace(`/routines/${editingRoutineId}`);
+            } else {
+              // Return to routines tab
+              router.replace('/(tabs)/routines');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handlePublish = async () => {
     if (!user) {
       Alert.alert('Error', 'You must be logged in to publish a routine');
@@ -179,6 +215,19 @@ export default function RoutineBuilderScreen() {
       Alert.alert('Validation Error', validation.errors.join('\n'));
       return;
     }
+
+    // For health_team users creating new routines, show modal to choose type
+    if (isHealthTeam && !isEditMode) {
+      setShowPublishModal(true);
+      return;
+    }
+
+    // For everyone else, proceed with publishing
+    await publishRoutine(false);
+  };
+
+  const publishRoutine = async (createAsOfficial: boolean) => {
+    if (!user) return;
 
     try {
       setLoading(true);
@@ -237,6 +286,8 @@ export default function RoutineBuilderScreen() {
       Alert.alert('Error', `Failed to ${isEditMode ? 'update' : 'publish'} routine. Please try again.`);
     } finally {
       setLoading(false);
+      setShowPublishModal(false);
+      setSelectedRoutineType(null);
     }
   };
 
@@ -267,6 +318,7 @@ export default function RoutineBuilderScreen() {
               setRoutineData({ ...routineData, journeyFocus });
               setCurrentStep('exercises');
             }}
+            isEditMode={isEditMode}
           />
         );
       case 'exercises':
@@ -279,6 +331,7 @@ export default function RoutineBuilderScreen() {
             }
             onNext={() => setCurrentStep('metadata')}
             onBack={() => setCurrentStep('journey')}
+            isEditMode={isEditMode}
           />
         );
       case 'metadata':
@@ -288,6 +341,7 @@ export default function RoutineBuilderScreen() {
             onUpdate={(data) => setRoutineData({ ...routineData, ...data })}
             onNext={() => setCurrentStep('review')}
             onBack={() => setCurrentStep('exercises')}
+            isEditMode={isEditMode}
           />
         );
       case 'review':
@@ -304,56 +358,118 @@ export default function RoutineBuilderScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <GestureHandlerRootView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>
-          {isEditMode ? 'Edit Routine' : 'Routine Builder'}
-        </Text>
-        <TouchableOpacity onPress={handleReset}>
-          <Ionicons name="refresh" size={24} color={AppColors.primary} />
+        <TouchableOpacity onPress={handleExit} style={styles.headerButton}>
+          <Ionicons name="close" size={28} color={AppColors.textSecondary} />
         </TouchableOpacity>
-      </View>
-
-      {/* Health Team Banner */}
-      {isHealthTeam && !isEditMode && (
-        <View style={styles.healthTeamBanner}>
-          <View style={styles.healthTeamBannerContent}>
-            <Ionicons name="shield-checkmark" size={24} color="#10B981" />
-            <View style={styles.healthTeamBannerText}>
-              <Text style={styles.healthTeamBannerTitle}>Soteria Health Team</Text>
-              <Text style={styles.healthTeamBannerSubtitle}>
-                {createAsOfficial
-                  ? "Creating official Soteria routine"
-                  : "Creating community routine"}
-              </Text>
-            </View>
-          </View>
-          <TouchableOpacity
-            style={styles.healthTeamToggle}
-            onPress={() => setCreateAsOfficial(!createAsOfficial)}
-          >
-            <Ionicons
-              name={createAsOfficial ? "toggle" : "toggle-outline"}
-              size={32}
-              color={createAsOfficial ? "#10B981" : AppColors.textSecondary}
-            />
+        <Text style={styles.title}>
+          {isEditMode
+            ? isEditingOfficialRoutine
+              ? 'Edit Official Routine'
+              : 'Edit Routine'
+            : 'Routine Builder'}
+        </Text>
+        {!isEditMode && (
+          <TouchableOpacity onPress={handleReset} style={styles.headerButton}>
+            <Ionicons name="refresh" size={24} color={AppColors.primary} />
           </TouchableOpacity>
-        </View>
-      )}
+        )}
+        {isEditMode && <View style={styles.headerButton} />}
+      </View>
 
       {renderProgressBar()}
 
-      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
-        {loading && currentStep === 'exercises' ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={AppColors.primary} />
-            <Text style={styles.loadingText}>Loading exercises...</Text>
+      <View style={styles.contentWrapper}>
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={styles.contentContainer}
+          showsVerticalScrollIndicator={false}
+        >
+          {loading && currentStep === 'exercises' ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={AppColors.primary} />
+              <Text style={styles.loadingText}>Loading exercises...</Text>
+            </View>
+          ) : (
+            renderContent()
+          )}
+        </ScrollView>
+      </View>
+
+      {/* Routine Type Selection Modal */}
+      <Modal
+        visible={showPublishModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowPublishModal(false)}
+      >
+        <View style={styles.publishModalOverlay}>
+          <View style={styles.publishModalContent}>
+            <View style={styles.publishModalHeader}>
+              <Ionicons name="shield-checkmark" size={32} color="#10B981" />
+              <Text style={styles.publishModalTitle}>Choose Routine Type</Text>
+              <Text style={styles.publishModalSubtitle}>
+                How would you like to publish this routine?
+              </Text>
+            </View>
+
+            <View style={styles.publishModalOptions}>
+              <TouchableOpacity
+                style={styles.publishModalOption}
+                onPress={() => {
+                  setSelectedRoutineType('official');
+                  publishRoutine(true);
+                }}
+                disabled={loading}
+              >
+                <View style={styles.publishModalOptionIcon}>
+                  <Ionicons name="shield-checkmark" size={36} color="#10B981" />
+                </View>
+                <View style={styles.publishModalOptionContent}>
+                  <Text style={styles.publishModalOptionTitle}>Official Soteria Routine</Text>
+                  <Text style={styles.publishModalOptionDescription}>
+                    Will be published to Discover as official content. Visible to all users as curated by Soteria Health Team.
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={24} color="#10B981" />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.publishModalOption}
+                onPress={() => {
+                  setSelectedRoutineType('community');
+                  publishRoutine(false);
+                }}
+                disabled={loading}
+              >
+                <View style={styles.publishModalOptionIcon}>
+                  <Ionicons name="people" size={36} color={AppColors.primary} />
+                </View>
+                <View style={styles.publishModalOptionContent}>
+                  <Text style={styles.publishModalOptionTitle}>Personal Community Routine</Text>
+                  <Text style={styles.publishModalOptionDescription}>
+                    Will be saved to your personal routines. You can share it with friends or keep it private.
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={24} color={AppColors.primary} />
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              style={styles.publishModalCancelButton}
+              onPress={() => {
+                setShowPublishModal(false);
+                setSelectedRoutineType(null);
+              }}
+              disabled={loading}
+            >
+              <Text style={styles.publishModalCancelText}>Cancel</Text>
+            </TouchableOpacity>
           </View>
-        ) : (
-          renderContent()
-        )}
-      </ScrollView>
-    </View>
+        </View>
+      </Modal>
+    </GestureHandlerRootView>
   );
 }
 
@@ -361,9 +477,11 @@ export default function RoutineBuilderScreen() {
 function JourneyFocusStep({
   selected,
   onSelect,
+  isEditMode,
 }: {
   selected: JourneyFocusOption;
   onSelect: (focus: JourneyFocusOption) => void;
+  isEditMode?: boolean;
 }) {
   const options: { value: JourneyFocusOption; label: string; description: string; icon: string }[] = [
     {
@@ -388,9 +506,13 @@ function JourneyFocusStep({
 
   return (
     <View style={styles.stepContainer}>
-      <Text style={styles.stepTitle}>What's your journey focus?</Text>
+      <Text style={styles.stepTitle}>
+        {isEditMode ? 'Update Journey Focus' : "What's your journey focus?"}
+      </Text>
       <Text style={styles.stepSubtitle}>
-        This helps us categorize your routine for other users
+        {isEditMode
+          ? `Current focus: ${selected}. Choose a new focus or tap Continue.`
+          : 'This helps us categorize your routine for other users'}
       </Text>
 
       <View style={styles.optionsContainer}>
@@ -403,23 +525,38 @@ function JourneyFocusStep({
             ]}
             onPress={() => onSelect(option.value)}
           >
-            <View style={styles.optionIcon}>
+            <View style={styles.optionHeader}>
               <Ionicons
                 name={option.icon as any}
-                size={32}
+                size={28}
                 color={selected === option.value ? AppColors.primary : AppColors.textSecondary}
               />
+              <Text style={[
+                styles.optionLabel,
+                selected === option.value && styles.optionLabelSelected,
+              ]}>
+                {option.label}
+              </Text>
+              {selected === option.value && isEditMode && (
+                <View style={styles.currentBadge}>
+                  <Text style={styles.currentBadgeText}>Current</Text>
+                </View>
+              )}
             </View>
-            <Text style={[
-              styles.optionLabel,
-              selected === option.value && styles.optionLabelSelected,
-            ]}>
-              {option.label}
-            </Text>
             <Text style={styles.optionDescription}>{option.description}</Text>
           </TouchableOpacity>
         ))}
       </View>
+
+      {isEditMode && (
+        <TouchableOpacity
+          style={styles.continueButton}
+          onPress={() => onSelect(selected)}
+        >
+          <Text style={styles.continueButtonText}>Continue with {selected}</Text>
+          <Ionicons name="arrow-forward" size={20} color={AppColors.textPrimary} />
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -431,17 +568,20 @@ function ExerciseSelectionStep({
   onUpdate,
   onNext,
   onBack,
+  isEditMode,
 }: {
   availableExercises: Exercise[];
   selectedExercises: RoutineBuilderExercise[];
   onUpdate: (exercises: RoutineBuilderExercise[]) => void;
   onNext: () => void;
   onBack: () => void;
+  isEditMode?: boolean;
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
   const [duration, setDuration] = useState('30');
+  const [editingExercise, setEditingExercise] = useState<RoutineBuilderExercise | null>(null);
 
   const filteredExercises = availableExercises.filter((exercise) =>
     exercise.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -473,6 +613,30 @@ function ExerciseSelectionStep({
     setDuration('30');
   };
 
+  const handleEditExercise = (exercise: RoutineBuilderExercise) => {
+    setEditingExercise(exercise);
+    setDuration(exercise.duration_seconds.toString());
+  };
+
+  const handleUpdateExercise = () => {
+    if (!editingExercise) return;
+
+    const durationSeconds = parseInt(duration, 10);
+    if (isNaN(durationSeconds) || durationSeconds <= 0) {
+      Alert.alert('Invalid Duration', 'Please enter a valid duration in seconds');
+      return;
+    }
+
+    const updatedExercises = selectedExercises.map(ex =>
+      ex.id === editingExercise.id
+        ? { ...ex, duration_seconds: durationSeconds }
+        : ex
+    );
+    onUpdate(updatedExercises);
+    setEditingExercise(null);
+    setDuration('30');
+  };
+
   const handleRemoveExercise = (id: string) => {
     onUpdate(selectedExercises.filter((ex) => ex.id !== id));
   };
@@ -481,9 +645,13 @@ function ExerciseSelectionStep({
 
   return (
     <View style={styles.stepContainer}>
-      <Text style={styles.stepTitle}>Add Exercises</Text>
+      <Text style={styles.stepTitle}>
+        {isEditMode ? 'Edit Exercises' : 'Add Exercises'}
+      </Text>
       <Text style={styles.stepSubtitle}>
-        Select exercises and set their duration
+        {isEditMode
+          ? 'Tap to edit duration or reorder exercises. Add or remove as needed.'
+          : 'Select exercises and set their duration'}
       </Text>
 
       <View style={styles.exerciseCount}>
@@ -493,24 +661,13 @@ function ExerciseSelectionStep({
       </View>
 
       {selectedExercises.length > 0 && (
-        <View style={styles.selectedExercisesContainer}>
-          {selectedExercises.map((exercise, index) => (
-            <View key={exercise.id} style={styles.selectedExerciseCard}>
-              <View style={styles.selectedExerciseHeader}>
-                <Text style={styles.selectedExerciseNumber}>{index + 1}</Text>
-                <View style={styles.selectedExerciseInfo}>
-                  <Text style={styles.selectedExerciseName}>{exercise.name}</Text>
-                  <Text style={styles.selectedExerciseDuration}>
-                    {exercise.duration_seconds}s
-                  </Text>
-                </View>
-                <TouchableOpacity onPress={() => handleRemoveExercise(exercise.id)}>
-                  <Ionicons name="close-circle" size={24} color={AppColors.body} />
-                </TouchableOpacity>
-              </View>
-            </View>
-          ))}
-        </View>
+        <DraggableExerciseList
+          exercises={selectedExercises}
+          onReorder={onUpdate}
+          onEdit={handleEditExercise}
+          onRemove={handleRemoveExercise}
+          isEditMode={isEditMode}
+        />
       )}
 
       <TouchableOpacity
@@ -598,6 +755,62 @@ function ExerciseSelectionStep({
         </View>
       </Modal>
 
+      {/* Edit Exercise Duration Modal */}
+      <Modal
+        visible={editingExercise !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setEditingExercise(null)}
+      >
+        <View style={styles.editDurationModalOverlay}>
+          <View style={styles.editDurationModalContent}>
+            <View style={styles.editDurationModalHeader}>
+              <Ionicons name="time-outline" size={28} color={AppColors.primary} />
+              <Text style={styles.editDurationModalTitle}>Edit Duration</Text>
+            </View>
+
+            {editingExercise && (
+              <>
+                <Text style={styles.editDurationExerciseName}>{editingExercise.name}</Text>
+                <Text style={styles.editDurationCurrentValue}>
+                  Current: {editingExercise.duration_seconds}s
+                </Text>
+
+                <View style={styles.durationInputContainer}>
+                  <Text style={styles.durationLabel}>New Duration (seconds)</Text>
+                  <TextInput
+                    style={styles.durationInput}
+                    value={duration}
+                    onChangeText={setDuration}
+                    keyboardType="number-pad"
+                    placeholder="30"
+                    autoFocus
+                  />
+                </View>
+
+                <View style={styles.editDurationModalActions}>
+                  <TouchableOpacity
+                    style={styles.editDurationCancelButton}
+                    onPress={() => {
+                      setEditingExercise(null);
+                      setDuration('30');
+                    }}
+                  >
+                    <Text style={styles.editDurationCancelText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.editDurationSaveButton}
+                    onPress={handleUpdateExercise}
+                  >
+                    <Text style={styles.editDurationSaveText}>Save</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
+
       <View style={styles.stepNavigation}>
         <TouchableOpacity style={styles.backButton} onPress={onBack}>
           <Ionicons name="arrow-back" size={20} color={AppColors.textSecondary} />
@@ -622,11 +835,13 @@ function MetadataStep({
   onUpdate,
   onNext,
   onBack,
+  isEditMode,
 }: {
   data: RoutineBuilderData;
   onUpdate: (data: Partial<RoutineBuilderData>) => void;
   onNext: () => void;
   onBack: () => void;
+  isEditMode?: boolean;
 }) {
   const [showAdvancedTags, setShowAdvancedTags] = useState(false);
   const [bodyRegionFilter, setBodyRegionFilter] = useState<BodyRegion>('All');
@@ -1138,6 +1353,14 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: 'bold',
     color: AppColors.textPrimary,
+    flex: 1,
+    textAlign: 'center',
+  },
+  headerButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   progressContainer: {
     padding: 16,
@@ -1159,11 +1382,16 @@ const styles = StyleSheet.create({
     color: AppColors.textSecondary,
     textAlign: 'center',
   },
+  contentWrapper: {
+    flex: 1,
+    position: 'relative',
+  },
   content: {
     flex: 1,
   },
   contentContainer: {
     padding: 24,
+    paddingBottom: 100,
   },
   loadingContainer: {
     flex: 1,
@@ -1178,6 +1406,7 @@ const styles = StyleSheet.create({
   },
   stepContainer: {
     flex: 1,
+    position: 'relative',
   },
   stepTitle: {
     fontSize: 24,
@@ -1204,14 +1433,17 @@ const styles = StyleSheet.create({
     borderColor: AppColors.primary,
     backgroundColor: AppColors.surfaceSecondary,
   },
-  optionIcon: {
-    marginBottom: 12,
+  optionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 8,
   },
   optionLabel: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '600',
     color: AppColors.textPrimary,
-    marginBottom: 8,
+    flex: 1,
   },
   optionLabelSelected: {
     color: AppColors.primary,
@@ -1220,6 +1452,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: AppColors.textSecondary,
     lineHeight: 20,
+    paddingLeft: 40,
   },
   exerciseCount: {
     backgroundColor: AppColors.surface,
@@ -1567,10 +1800,23 @@ const styles = StyleSheet.create({
     color: AppColors.textSecondary,
   },
   stepNavigation: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 32,
     gap: 16,
+    padding: 16,
+    paddingBottom: 32,
+    backgroundColor: AppColors.background,
+    borderTopWidth: 1,
+    borderTopColor: AppColors.borderLight,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 8,
   },
   backButton: {
     flexDirection: 'row',
@@ -1778,36 +2024,185 @@ const styles = StyleSheet.create({
     color: AppColors.primary,
     fontWeight: '600',
   },
-  healthTeamBanner: {
-    backgroundColor: '#ECFDF5',
-    borderBottomWidth: 2,
-    borderBottomColor: '#10B981',
-    paddingHorizontal: 24,
-    paddingVertical: 16,
+  publishModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  publishModalContent: {
+    backgroundColor: AppColors.surface,
+    borderRadius: 20,
+    width: '100%',
+    maxWidth: 500,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  publishModalHeader: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  publishModalTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: AppColors.textPrimary,
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  publishModalSubtitle: {
+    fontSize: 15,
+    color: AppColors.textSecondary,
+    textAlign: 'center',
+  },
+  publishModalOptions: {
+    gap: 16,
+    marginBottom: 24,
+  },
+  publishModalOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    backgroundColor: AppColors.background,
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 2,
+    borderColor: AppColors.border,
+    gap: 16,
   },
-  healthTeamBannerContent: {
+  publishModalOptionIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: AppColors.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  publishModalOptionContent: {
+    flex: 1,
+  },
+  publishModalOptionTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: AppColors.textPrimary,
+    marginBottom: 6,
+  },
+  publishModalOptionDescription: {
+    fontSize: 14,
+    color: AppColors.textSecondary,
+    lineHeight: 20,
+  },
+  publishModalCancelButton: {
+    paddingVertical: 16,
+    alignItems: 'center',
+    borderRadius: 12,
+    backgroundColor: AppColors.background,
+  },
+  publishModalCancelText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: AppColors.textSecondary,
+  },
+  currentBadge: {
+    backgroundColor: AppColors.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    marginLeft: 'auto',
+  },
+  currentBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: AppColors.textPrimary,
+  },
+  continueButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 16,
+    backgroundColor: AppColors.primary,
+    borderRadius: 12,
+    marginTop: 16,
+  },
+  continueButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: AppColors.textPrimary,
+  },
+  editDurationModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  editDurationModalContent: {
+    backgroundColor: AppColors.surface,
+    borderRadius: 20,
+    width: '100%',
+    maxWidth: 400,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  editDurationModalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    flex: 1,
+    marginBottom: 20,
   },
-  healthTeamBannerText: {
-    flex: 1,
-  },
-  healthTeamBannerTitle: {
-    fontSize: 16,
+  editDurationModalTitle: {
+    fontSize: 20,
     fontWeight: '700',
-    color: '#065F46',
-    marginBottom: 2,
+    color: AppColors.textPrimary,
   },
-  healthTeamBannerSubtitle: {
-    fontSize: 13,
-    color: '#047857',
+  editDurationExerciseName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: AppColors.textPrimary,
+    marginBottom: 8,
   },
-  healthTeamToggle: {
-    padding: 4,
+  editDurationCurrentValue: {
+    fontSize: 14,
+    color: AppColors.textSecondary,
+    marginBottom: 20,
+  },
+  editDurationModalActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 20,
+  },
+  editDurationCancelButton: {
+    flex: 1,
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderRadius: 12,
+    backgroundColor: AppColors.background,
+    borderWidth: 1,
+    borderColor: AppColors.border,
+  },
+  editDurationCancelText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: AppColors.textSecondary,
+  },
+  editDurationSaveButton: {
+    flex: 1,
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderRadius: 12,
+    backgroundColor: AppColors.primary,
+  },
+  editDurationSaveText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: AppColors.textPrimary,
   },
 });

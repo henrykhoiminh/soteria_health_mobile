@@ -19,6 +19,10 @@ import {
   declineCircleInvitation,
 } from '@/lib/utils/social';
 import {
+  sendHealthTeamInvitation,
+  hasPendingInvitation,
+} from '@/lib/utils/health-team';
+import {
   FriendWithProfile,
   FriendRequest,
   UserSearchResult,
@@ -143,6 +147,7 @@ export default function SocialScreen() {
 // =====================================================
 
 function FriendsTab({ userId, onRefresh }: { userId: string; onRefresh: () => void }) {
+  const { profile } = useAuth();
   const [friends, setFriends] = useState<FriendWithProfile[]>([]);
   const [pendingRequests, setPendingRequests] = useState<FriendRequest[]>([]);
   const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
@@ -150,6 +155,9 @@ function FriendsTab({ userId, onRefresh }: { userId: string; onRefresh: () => vo
   const [loading, setLoading] = useState(true);
   const [searching, setSearching] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [invitedUsers, setInvitedUsers] = useState<Set<string>>(new Set());
+
+  const isHealthTeam = profile?.role === 'health_team' || profile?.role === 'admin';
 
   useEffect(() => {
     loadFriends();
@@ -246,6 +254,39 @@ function FriendsTab({ userId, onRefresh }: { userId: string; onRefresh: () => vo
     );
   };
 
+  const handleInviteToHealthTeam = async (inviteeId: string, userName: string) => {
+    try {
+      // Check if already invited
+      const hasPending = await hasPendingInvitation(inviteeId);
+      if (hasPending) {
+        Alert.alert('Already Invited', `${userName} already has a pending Health Team invitation.`);
+        return;
+      }
+
+      Alert.alert(
+        'Invite to Health Team',
+        `Invite ${userName} to join the Soteria Health Team? They will be able to create official routines and edit existing official content.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Send Invitation',
+            onPress: async () => {
+              try {
+                await sendHealthTeamInvitation(inviteeId);
+                setInvitedUsers(prev => new Set(prev).add(inviteeId));
+                Alert.alert('Success', `Health Team invitation sent to ${userName}!`);
+              } catch (error: any) {
+                Alert.alert('Error', error.message || 'Failed to send invitation');
+              }
+            },
+          },
+        ]
+      );
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to check invitation status');
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -320,20 +361,38 @@ function FriendsTab({ userId, onRefresh }: { userId: string; onRefresh: () => vo
                     {user.journey_focus} • {user.fitness_level}
                   </Text>
                 </View>
-                {!user.friendship_status && (
-                  <TouchableOpacity
-                    style={styles.addButton}
-                    onPress={() => handleSendRequest(user.id)}
-                  >
-                    <Ionicons name="person-add" size={20} color={AppColors.primary} />
-                  </TouchableOpacity>
-                )}
-                {user.friendship_status === 'pending' && (
-                  <Text style={styles.pendingText}>Pending</Text>
-                )}
-                {user.friendship_status === 'accepted' && (
-                  <Ionicons name="checkmark-circle" size={24} color={AppColors.success} />
-                )}
+                <View style={styles.userActions}>
+                  {/* Health Team Invite Button (only for health_team/admin viewing non-health_team users) */}
+                  {isHealthTeam && user.role === 'user' && !invitedUsers.has(user.id) && (
+                    <TouchableOpacity
+                      style={styles.healthTeamInviteButton}
+                      onPress={() => handleInviteToHealthTeam(user.id, getDisplayName(user))}
+                    >
+                      <Ionicons name="shield-checkmark" size={16} color="#10B981" />
+                    </TouchableOpacity>
+                  )}
+                  {invitedUsers.has(user.id) && (
+                    <View style={styles.invitedBadge}>
+                      <Ionicons name="shield-checkmark" size={14} color="#10B981" />
+                      <Text style={styles.invitedText}>Invited</Text>
+                    </View>
+                  )}
+                  {/* Friend Request Button */}
+                  {!user.friendship_status && (
+                    <TouchableOpacity
+                      style={styles.addButton}
+                      onPress={() => handleSendRequest(user.id)}
+                    >
+                      <Ionicons name="person-add" size={20} color={AppColors.primary} />
+                    </TouchableOpacity>
+                  )}
+                  {user.friendship_status === 'pending' && (
+                    <Text style={styles.pendingText}>Pending</Text>
+                  )}
+                  {user.friendship_status === 'accepted' && (
+                    <Ionicons name="checkmark-circle" size={24} color={AppColors.success} />
+                  )}
+                </View>
               </View>
             ))}
           </View>
@@ -1284,5 +1343,36 @@ const styles = StyleSheet.create({
     color: AppColors.textSecondary,
     textAlign: 'center',
     marginTop: 100,
+  },
+  userActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  healthTeamInviteButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#ECFDF5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#10B981',
+  },
+  invitedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#10B981',
+  },
+  invitedText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#10B981',
   },
 });

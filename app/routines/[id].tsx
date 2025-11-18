@@ -2,6 +2,7 @@ import { useAuth } from '@/lib/contexts/AuthContext';
 import { AppColors } from '@/constants/theme';
 import { getRoutineById } from '@/lib/utils/dashboard';
 import { deleteCustomRoutine } from '@/lib/utils/routine-builder';
+import { isHealthTeamMember } from '@/lib/utils/routine-builder';
 import { Routine } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -23,10 +24,18 @@ export default function RoutineDetailScreen() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [routine, setRoutine] = useState<Routine | null>(null);
+  const [isHealthTeam, setIsHealthTeam] = useState(false);
 
   useEffect(() => {
     loadRoutine();
-  }, [id]);
+    checkHealthTeamStatus();
+  }, [id, user]);
+
+  const checkHealthTeamStatus = async () => {
+    if (!user) return;
+    const healthTeamStatus = await isHealthTeamMember(user.id);
+    setIsHealthTeam(healthTeamStatus);
+  };
 
   const loadRoutine = async () => {
     if (!id) return;
@@ -88,6 +97,9 @@ export default function RoutineDetailScreen() {
   };
 
   const isCustomRoutine = routine?.is_custom && routine?.created_by === user?.id;
+  const isOfficialRoutine = routine?.author_type === 'official';
+  const canEditOfficial = isHealthTeam && isOfficialRoutine;
+  const canEdit = isCustomRoutine || canEditOfficial;
 
   if (loading) {
     return (
@@ -118,14 +130,16 @@ export default function RoutineDetailScreen() {
             <Ionicons name="arrow-back" size={24} color={AppColors.textPrimary} />
           </TouchableOpacity>
           <View style={styles.headerRight}>
-            {isCustomRoutine && (
+            {canEdit && (
               <View style={styles.actionButtons}>
                 <TouchableOpacity style={styles.actionButton} onPress={handleEditRoutine}>
-                  <Ionicons name="create-outline" size={24} color={AppColors.primary} />
+                  <Ionicons name="create-outline" size={24} color={canEditOfficial ? '#10B981' : AppColors.primary} />
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.actionButton} onPress={handleDeleteRoutine}>
-                  <Ionicons name="trash-outline" size={24} color={AppColors.body} />
-                </TouchableOpacity>
+                {isCustomRoutine && (
+                  <TouchableOpacity style={styles.actionButton} onPress={handleDeleteRoutine}>
+                    <Ionicons name="trash-outline" size={24} color={AppColors.body} />
+                  </TouchableOpacity>
+                )}
               </View>
             )}
             <View style={[styles.categoryBadge, { backgroundColor: getCategoryColor(routine.category) }]}>
