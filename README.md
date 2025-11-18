@@ -73,29 +73,62 @@ This is the mobile companion app to the Soteria Health web application, built wi
 
 ### Routine Builder
 - Create custom routines from scratch
-- Multi-step wizard interface:
-  - Journey Focus selection (Injury Prevention, Recovery, or Both)
-  - Exercise selection from existing exercise library
-  - Configure duration for each exercise (in seconds)
-  - Add up to 30 exercises per routine
-  - Set routine name, description, category, and difficulty
-  - **Advanced Tags (Optional)** - For future AI-powered search:
-    - Add general tags with "type & add" interface (max 5 tags per routine)
-    - Each tag can be up to 30 characters
-    - Tags displayed as removable purple chips
-    - Duplicate tag prevention with validation
-    - Select targeted body parts via dropdown multi-select with region filters (All, Upper Body, Lower Body)
-    - Selected body parts displayed as removable chips
-  - **Review & Publish** - Comprehensive overview before publishing:
+- **Multi-step wizard interface:**
+  - **Step 1: Journey Focus** selection (Injury Prevention, Recovery, or Both)
+    - Compact inline layout with icon and label on same line
+    - Shows "Current" badge when editing existing routine
+  - **Step 2: Exercise Selection** from existing exercise library
+    - Search and browse available exercises
+    - Configure duration for each exercise (in seconds)
+    - Add up to 30 exercises per routine (X/30 counter)
+    - **Exercise Management:**
+      - Default mode: Clock icon to edit duration, trash icon to delete
+      - Reorder mode: Activated by "Reorder Exercises" button
+      - Up/down arrow buttons for simple reordering
+      - No swipe gestures (removed to prevent scroll conflicts)
+    - "Add Exercise" button at bottom
+  - **Step 3: Metadata** - Set routine details
+    - Name, description, category, and difficulty
+    - **Advanced Tags (Optional)** - For future AI-powered search:
+      - Add general tags with "type & add" interface (max 5 tags per routine)
+      - Each tag can be up to 30 characters
+      - Tags displayed as removable purple chips
+      - Duplicate tag prevention with validation
+      - Select targeted body parts via dropdown multi-select with region filters (All, Upper Body, Lower Body)
+      - Selected body parts displayed as removable chips
+  - **Step 4: Review & Publish** - Comprehensive overview before publishing:
     - Routine Overview section shows name, description, category, difficulty, journey, duration
     - Tags displayed as purple chips (if added)
     - Body parts displayed as amber chips (if added)
     - Complete exercise list with durations
-- Exercise counter shows progress (X/30 exercises)
+    - Update button for editing, Publish button for new routines
+
+- **Exit Functionality:**
+  - X button in header to exit at any time
+  - Confirmation dialog before exiting
+  - Returns to routine detail page (when editing) or routines tab (when creating)
+
+- **Health Team Features:**
+  - Health team members can create **Official Soteria Routines**
+  - Modal to choose between Official and Personal Community routines
+  - Edit any official routine (full edit access)
+  - **Delete official routines:**
+    - Alert dialog on edit with Delete/Edit/Cancel options
+    - Confirmation dialog before permanent deletion
+    - RLS policy allows health_team/admin to delete official routines
+  - Official routines marked with `author_type: 'official'`
+  - Badge display throughout app
+
+- **Navigation:**
+  - Fixed navigation buttons removed (caused scroll conflicts)
+  - Navigation buttons now part of normal flow at bottom of each step
+  - Proper spacing with border separator
+  - Back and Next/Update/Publish buttons
+
 - Published routines integrate seamlessly with existing routine execution
 - Custom routines marked with `is_custom: true` flag
 - Tracked by creator with `created_by` user ID
-- Edit existing custom routines
+- Edit existing custom routines with full update support
 
 ### Profile Management
 - View and edit profile information:
@@ -119,6 +152,54 @@ This is the mobile companion app to the Soteria Health web application, built wi
     - Redirects to onboarding for new journey setup
     - Secure function with proper RLS bypass
 - Sign out functionality
+
+### Health Team System
+- **Role Hierarchy:**
+  - `user` (default) - Regular users, can create personal custom routines
+  - `health_team` - Wellness creators, can create and edit official Soteria routines
+  - `admin` - Full administrative access, can manage health team members
+
+- **Health Team Member Capabilities:**
+  - Create **Official Soteria Routines** (published to Discover)
+  - Edit ANY official routine (full edit access)
+  - Delete official routines (with confirmation dialogs)
+  - View Health Team badge throughout app
+  - Access to Health Team stats (routines created, completions, saves)
+
+- **Invitation System:**
+  - Admins can invite users to join the health team
+  - Invitation card UI with accept/decline options
+  - Pending invitations notification badge
+  - Benefits display: create official routines, edit existing ones, shape wellness journey
+  - Activity logging for health team joins
+
+- **Health Team Management:**
+  - View all health team members (admins only)
+  - Leave health team (demote to regular user)
+  - Prevents last admin from leaving
+  - Cancel pending invitations
+  - Stats tracking per health team member
+
+- **Database Functions:**
+  - `send_health_team_invitation()` - Send invitation to user
+  - `accept_health_team_invitation()` - Promote user to health_team role
+  - `decline_health_team_invitation()` - Decline invitation
+  - `get_my_pending_health_team_invitations()` - Fetch user's pending invitations
+  - `get_health_team_stats()` - Get member's official routine stats
+  - `leave_health_team()` - Demote user back to regular role
+
+- **UI Components:**
+  - `HealthTeamInvitationCard.tsx` - Invitation card with accept/decline
+  - Health Team badge displays on profiles and routine cards
+  - Official routine indicators throughout app
+  - Delete confirmation dialogs with warnings
+
+- **Migrations:**
+  - Migration 17: Role system and health_team_invitations table
+  - Migration 18: Invitation functions and RLS policies
+  - Migration 19: Stats tracking functions
+  - Migration 20: Leave health team functionality
+  - Migration 21: Delete policy for official routines
 
 ### Social Features
 - **Friends System**
@@ -361,6 +442,21 @@ sql/add_pain_checkins_table.sql
 
 # 16. FEATURE: Reset Journey Function (Hard Reset)
 sql/add_hard_reset_function.sql
+
+# 17. FEATURE: Health Team System
+sql/migrations/add_health_team_system.sql
+
+# 18. FEATURE: Health Team Invitations
+sql/migrations/add_health_team_invitations.sql
+
+# 19. FEATURE: Health Team Stats
+sql/migrations/add_health_team_stats.sql
+
+# 20. FEATURE: Leave Health Team Function
+sql/migrations/add_leave_health_team_function.sql
+
+# 21. POLICY: Health Team Delete Official Routines
+sql/migrations/add_health_team_delete_policy.sql
 ```
 
 **⚠️ CRITICAL: RLS Infinite Recursion Fix**
