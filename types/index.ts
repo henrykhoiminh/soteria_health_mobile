@@ -26,11 +26,34 @@ export type RoutineCategory = 'Mind' | 'Body' | 'Soul'
 export type RoutineDifficulty = 'Beginner' | 'Intermediate' | 'Advanced'
 export type RoutineAuthorType = 'official' | 'community'
 
+// Exercise in routine (simple version)
 export interface Exercise {
   name: string
   instructions: string
   duration_seconds: number
   demo_image_url?: string
+}
+
+// Exercise Library Item (full database model)
+export interface ExerciseLibraryItem {
+  id: string
+  name: string
+  description: string
+  instructions: string
+  category: RoutineCategory
+  difficulty: RoutineDifficulty
+  default_duration_seconds: number
+  body_parts?: string[]
+  tags?: string[]
+  demo_image_url?: string
+  demo_video_url?: string
+  created_by?: string
+  is_official: boolean
+  is_public: boolean
+  requires_equipment: boolean
+  usage_count: number
+  created_at: string
+  updated_at: string
 }
 
 export interface Routine {
@@ -162,10 +185,9 @@ export interface RoutineBuilderData {
   difficulty: RoutineDifficulty
   journeyFocus: JourneyFocusOption
   exercises: RoutineBuilderExercise[]
-  // Optional tag fields for AI functionality
-  tags?: string[]
+  // Optional fields for AI-powered search
   body_parts?: string[]
-  benefits?: string[] // Array of benefit strings (max 8, each 5-100 chars)
+  benefits?: string[] // Array of benefit strings (max 4, each 5-100 chars)
 }
 
 // Journey Goals Types

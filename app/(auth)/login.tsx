@@ -1,5 +1,5 @@
-import { getUserProfile, signIn } from '@/lib/utils/auth';
 import { AppColors } from '@/constants/theme';
+import { getUserProfile, signIn } from '@/lib/utils/auth';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 350,
     marginBottom: 0,
-    marginTop: -40,
+    marginTop: 24,
     alignSelf: 'center',
   },
   subtitle: {

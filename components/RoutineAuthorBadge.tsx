@@ -46,6 +46,7 @@ export default function RoutineAuthorBadge({
             <Image
               source={SOTERIA_LOGO}
               style={styles.avatar}
+              resizeMode="contain"
             />
           )}
           <Text style={styles.usernameText}>

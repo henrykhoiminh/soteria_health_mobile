@@ -39,14 +39,19 @@ import {
 } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import DraggableExerciseList from '@/components/DraggableExerciseList';
+import ExerciseLibrary from '@/components/ExerciseLibrary';
+import ExerciseEditorModal from '@/components/ExerciseEditorModal';
+import type { ExerciseLibraryItem } from '@/types';
 
 type BuilderStep = 'journey' | 'exercises' | 'metadata' | 'review';
+type BuildMode = 'select' | 'routine' | 'exercise';
 
 export default function RoutineBuilderScreen() {
   const { user, profile } = useAuth();
   const router = useRouter();
   const { editId } = useLocalSearchParams<{ editId?: string }>();
 
+  const [buildMode, setBuildMode] = useState<BuildMode>('select');
   const [currentStep, setCurrentStep] = useState<BuilderStep>('journey');
   const [loading, setLoading] = useState(false);
   const [availableExercises, setAvailableExercises] = useState<Exercise[]>([]);
@@ -57,6 +62,11 @@ export default function RoutineBuilderScreen() {
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [selectedRoutineType, setSelectedRoutineType] = useState<'official' | 'community' | null>(null);
 
+  // Exercise library state
+  const [exerciseEditorVisible, setExerciseEditorVisible] = useState(false);
+  const [selectedExercise, setSelectedExercise] = useState<ExerciseLibraryItem | null>(null);
+  const [exerciseRefreshKey, setExerciseRefreshKey] = useState(0);
+
   // Builder state
   const [routineData, setRoutineData] = useState<RoutineBuilderData>({
     name: '',
@@ -65,7 +75,6 @@ export default function RoutineBuilderScreen() {
     difficulty: 'Beginner',
     journeyFocus: 'Injury Prevention',
     exercises: [],
-    tags: [],
     body_parts: [],
     benefits: [],
   });
@@ -82,6 +91,16 @@ export default function RoutineBuilderScreen() {
     if (!user) return;
     const healthTeamStatus = await isHealthTeamMember(user.id);
     setIsHealthTeam(healthTeamStatus);
+
+    // Only skip mode selection for non-health team users or when editing
+    if (!healthTeamStatus) {
+      // Regular users go straight to routine builder
+      setBuildMode('routine');
+    } else if (editId) {
+      // Health team editing a routine goes to routine builder
+      setBuildMode('routine');
+    }
+    // Health team users not editing stay on mode selection ('select')
   };
 
   const loadExercises = async () => {
@@ -138,7 +157,6 @@ export default function RoutineBuilderScreen() {
         difficulty: routine.difficulty,
         journeyFocus,
         exercises,
-        tags: routine.tags || [],
         body_parts: routine.body_parts || [],
         benefits: routine.benefits || [],
       });
@@ -197,8 +215,7 @@ export default function RoutineBuilderScreen() {
               difficulty: 'Beginner',
               journeyFocus: 'Injury Prevention',
               exercises: [],
-              tags: [],
-              body_parts: [],
+                        body_parts: [],
               benefits: [],
             });
             setCurrentStep('journey');
@@ -290,6 +307,22 @@ export default function RoutineBuilderScreen() {
     );
   };
 
+  // Exercise library handlers
+  const handleAddExercise = () => {
+    setSelectedExercise(null);
+    setExerciseEditorVisible(true);
+  };
+
+  const handleEditExercise = (exercise: ExerciseLibraryItem) => {
+    setSelectedExercise(exercise);
+    setExerciseEditorVisible(true);
+  };
+
+  const handleExerciseSaved = () => {
+    setExerciseRefreshKey(prev => prev + 1); // Refresh the exercise library
+    setSelectedExercise(null);
+  };
+
   const handlePublish = async () => {
     if (!user) {
       Alert.alert('Error', 'You must be logged in to publish a routine');
@@ -358,8 +391,7 @@ export default function RoutineBuilderScreen() {
                   difficulty: 'Beginner',
                   journeyFocus: 'Injury Prevention',
                   exercises: [],
-                  tags: [],
-                  body_parts: [],
+                                body_parts: [],
                   benefits: [],
                 });
                 setCurrentStep('journey');
@@ -443,6 +475,106 @@ export default function RoutineBuilderScreen() {
         );
     }
   };
+
+  // Mode selection screen for health team
+  if (buildMode === 'select' && isHealthTeam && !editId) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <View style={styles.headerButton} />
+          <Text style={styles.title}>Build</Text>
+          <View style={styles.headerButton} />
+        </View>
+
+        <View style={styles.modeSelectionContainer}>
+          <Text style={styles.modeSelectionTitle}>What would you like to build?</Text>
+          <Text style={styles.modeSelectionSubtitle}>
+            Create new exercises for the library or build complete routines
+          </Text>
+
+          <TouchableOpacity
+            style={styles.modeCard}
+            onPress={() => setBuildMode('exercise')}
+          >
+            <View style={styles.modeIconContainer}>
+              <Ionicons name="fitness" size={48} color={AppColors.primary} />
+            </View>
+            <View style={styles.modeContent}>
+              <Text style={styles.modeTitle}>Exercise Library</Text>
+              <Text style={styles.modeDescription}>
+                Create and manage individual exercises that can be used in routines
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color={AppColors.textSecondary} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.modeCard}
+            onPress={() => setBuildMode('routine')}
+          >
+            <View style={styles.modeIconContainer}>
+              <Ionicons name="list" size={48} color={AppColors.primary} />
+            </View>
+            <View style={styles.modeContent}>
+              <Text style={styles.modeTitle}>Routine Builder</Text>
+              <Text style={styles.modeDescription}>
+                Build complete routines by combining exercises together
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color={AppColors.textSecondary} />
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  // Exercise library management for health team
+  if (buildMode === 'exercise' && isHealthTeam) {
+    return (
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => setBuildMode('select')}
+            style={styles.headerButton}
+          >
+            <Ionicons name="arrow-back" size={28} color={AppColors.textSecondary} />
+          </TouchableOpacity>
+          <Text style={styles.title}>Exercise Library</Text>
+          <TouchableOpacity
+            onPress={handleAddExercise}
+            style={styles.headerButton}
+          >
+            <Ionicons name="add-circle" size={28} color={AppColors.primary} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Exercise Library */}
+        <View style={styles.exerciseLibraryContainer}>
+          <ExerciseLibrary
+            key={exerciseRefreshKey}
+            onEditExercise={handleEditExercise}
+            allowSelection={false}
+            allowEditing={true}
+            showOfficialOnly={false}
+          />
+        </View>
+
+        {/* Exercise Editor Modal */}
+        <ExerciseEditorModal
+          visible={exerciseEditorVisible}
+          onClose={() => {
+            setExerciseEditorVisible(false);
+            setSelectedExercise(null);
+          }}
+          onSave={handleExerciseSaved}
+          exercise={selectedExercise}
+          userId={user!.id}
+          isHealthTeam={isHealthTeam}
+        />
+      </View>
+    );
+  }
 
   return (
     <GestureHandlerRootView style={styles.container}>
@@ -664,23 +796,24 @@ function ExerciseSelectionStep({
   onBack: () => void;
   isEditMode?: boolean;
 }) {
-  const [searchQuery, setSearchQuery] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
-  const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
+  const [selectedLibraryExercise, setSelectedLibraryExercise] = useState<ExerciseLibraryItem | null>(null);
   const [duration, setDuration] = useState('30');
   const [editingExercise, setEditingExercise] = useState<RoutineBuilderExercise | null>(null);
 
-  const filteredExercises = availableExercises.filter((exercise) =>
-    exercise.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const handleAddExercise = () => {
-    if (!selectedExercise) return;
-
+  const handleSelectExerciseFromLibrary = (exercise: ExerciseLibraryItem) => {
     if (selectedExercises.length >= 30) {
       Alert.alert('Limit Reached', 'Maximum 30 exercises allowed per routine');
       return;
     }
+
+    // Set the selected exercise and default duration
+    setSelectedLibraryExercise(exercise);
+    setDuration(exercise.default_duration_seconds.toString());
+  };
+
+  const handleAddExercise = () => {
+    if (!selectedLibraryExercise) return;
 
     const durationSeconds = parseInt(duration, 10);
     if (isNaN(durationSeconds) || durationSeconds <= 0) {
@@ -689,14 +822,16 @@ function ExerciseSelectionStep({
     }
 
     const newExercise: RoutineBuilderExercise = {
-      ...selectedExercise,
+      name: selectedLibraryExercise.name,
+      instructions: selectedLibraryExercise.instructions,
       duration_seconds: durationSeconds,
+      demo_image_url: selectedLibraryExercise.demo_image_url,
       id: `${Date.now()}-${Math.random()}`,
     };
 
     onUpdate([...selectedExercises, newExercise]);
     setModalVisible(false);
-    setSelectedExercise(null);
+    setSelectedLibraryExercise(null);
     setDuration('30');
   };
 
@@ -770,74 +905,69 @@ function ExerciseSelectionStep({
         visible={modalVisible}
         animationType="slide"
         presentationStyle="pageSheet"
-        onRequestClose={() => setModalVisible(false)}
+        onRequestClose={() => {
+          setModalVisible(false);
+          setSelectedLibraryExercise(null);
+        }}
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={() => setModalVisible(false)}>
+            <TouchableOpacity
+              onPress={() => {
+                setModalVisible(false);
+                setSelectedLibraryExercise(null);
+              }}
+            >
               <Ionicons name="close" size={28} color={AppColors.textPrimary} />
             </TouchableOpacity>
-            <Text style={styles.modalTitle}>Select Exercise</Text>
+            <Text style={styles.modalTitle}>
+              {selectedLibraryExercise ? 'Set Duration' : 'Select Exercise'}
+            </Text>
             <View style={{ width: 28 }} />
           </View>
 
-          <View style={styles.searchContainer}>
-            <Ionicons name="search" size={20} color={AppColors.textSecondary} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search exercises..."
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholderTextColor={AppColors.textTertiary}
-            />
-          </View>
-
-          {selectedExercise ? (
+          {selectedLibraryExercise ? (
             <View style={styles.exerciseConfigContainer}>
               <View style={styles.exerciseConfigHeader}>
-                <TouchableOpacity onPress={() => setSelectedExercise(null)}>
+                <TouchableOpacity onPress={() => setSelectedLibraryExercise(null)}>
                   <Ionicons name="arrow-back" size={24} color={AppColors.textPrimary} />
                 </TouchableOpacity>
                 <Text style={styles.exerciseConfigTitle}>Set Duration</Text>
                 <View style={{ width: 24 }} />
               </View>
 
-              <Text style={styles.exerciseConfigName}>{selectedExercise.name}</Text>
+              <Text style={styles.exerciseConfigName}>{selectedLibraryExercise.name}</Text>
               <Text style={styles.exerciseConfigInstructions}>
-                {selectedExercise.instructions}
+                {selectedLibraryExercise.instructions}
               </Text>
 
               <View style={styles.durationInputContainer}>
                 <Text style={styles.durationLabel}>Duration (seconds)</Text>
+                <Text style={styles.fieldHint}>
+                  Default: {selectedLibraryExercise.default_duration_seconds}s
+                </Text>
                 <TextInput
                   style={styles.durationInput}
                   value={duration}
                   onChangeText={setDuration}
                   keyboardType="number-pad"
-                  placeholder="30"
+                  placeholder={selectedLibraryExercise.default_duration_seconds.toString()}
                 />
               </View>
 
               <TouchableOpacity style={styles.confirmButton} onPress={handleAddExercise}>
-                <Text style={styles.confirmButtonText}>Add Exercise</Text>
+                <Text style={styles.confirmButtonText}>Add to Routine</Text>
               </TouchableOpacity>
             </View>
           ) : (
-            <ScrollView style={styles.exerciseList}>
-              {filteredExercises.map((exercise, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={styles.exerciseListItem}
-                  onPress={() => setSelectedExercise(exercise)}
-                >
-                  <Text style={styles.exerciseListItemName}>{exercise.name}</Text>
-                  <Text style={styles.exerciseListItemInstructions} numberOfLines={2}>
-                    {exercise.instructions}
-                  </Text>
-                  <Ionicons name="chevron-forward" size={20} color={AppColors.textTertiary} />
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+            <View style={styles.exerciseLibraryModalContainer}>
+              <ExerciseLibrary
+                onSelectExercise={handleSelectExerciseFromLibrary}
+                allowSelection={true}
+                allowEditing={false}
+                showOfficialOnly={true}
+              />
+            </View>
           )}
         </View>
       </Modal>
@@ -930,41 +1060,12 @@ function MetadataStep({
   onBack: () => void;
   isEditMode?: boolean;
 }) {
-  const [showAdvancedTags, setShowAdvancedTags] = useState(false);
   const [bodyRegionFilter, setBodyRegionFilter] = useState<BodyRegion>('All');
-  const [bodyRegionModalVisible, setBodyRegionModalVisible] = useState(false);
   const [bodyPartsModalVisible, setBodyPartsModalVisible] = useState(false);
-  const [currentTagInput, setCurrentTagInput] = useState('');
   const [currentBenefitInput, setCurrentBenefitInput] = useState('');
   const canProceed = data.name.trim().length > 0 && data.description.trim().length > 0;
 
-  const MAX_TAGS = 5;
   const MAX_BENEFITS = 4;
-
-  const handleAddTag = () => {
-    const trimmedTag = currentTagInput.trim();
-
-    // Validation
-    if (!trimmedTag) return;
-    if (data.tags && data.tags.length >= MAX_TAGS) {
-      Alert.alert('Maximum Tags Reached', `You can only add up to ${MAX_TAGS} tags per routine.`);
-      return;
-    }
-    if (data.tags && data.tags.includes(trimmedTag)) {
-      Alert.alert('Duplicate Tag', 'This tag has already been added.');
-      return;
-    }
-
-    // Add tag
-    const currentTags = data.tags || [];
-    onUpdate({ tags: [...currentTags, trimmedTag] });
-    setCurrentTagInput('');
-  };
-
-  const handleRemoveTag = (tagToRemove: string) => {
-    const currentTags = data.tags || [];
-    onUpdate({ tags: currentTags.filter(tag => tag !== tagToRemove) });
-  };
 
   const handleAddBenefit = () => {
     const trimmedBenefit = currentBenefitInput.trim();
@@ -1055,25 +1156,28 @@ function MetadataStep({
 
         <Text style={styles.fieldLabel}>Category</Text>
         <View style={styles.segmentedControl}>
-          {(['Mind', 'Body', 'Soul'] as RoutineCategory[]).map((category) => (
-            <TouchableOpacity
-              key={category}
-              style={[
-                styles.segmentButton,
-                data.category === category && styles.segmentButtonActive,
-              ]}
-              onPress={() => onUpdate({ category })}
-            >
-              <Text
+          {(['Mind', 'Body', 'Soul'] as RoutineCategory[]).map((category) => {
+            const categoryColor = category === 'Mind' ? AppColors.mind : category === 'Body' ? AppColors.body : AppColors.soul;
+            return (
+              <TouchableOpacity
+                key={category}
                 style={[
-                  styles.segmentButtonText,
-                  data.category === category && styles.segmentButtonTextActive,
+                  styles.segmentButton,
+                  data.category === category && { backgroundColor: categoryColor },
                 ]}
+                onPress={() => onUpdate({ category })}
               >
-                {category}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                <Text
+                  style={[
+                    styles.segmentButtonText,
+                    data.category === category && styles.segmentButtonTextActive,
+                  ]}
+                >
+                  {category}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         <Text style={styles.fieldLabel}>Difficulty</Text>
@@ -1099,92 +1203,13 @@ function MetadataStep({
           ))}
         </View>
 
-        {/* Advanced Tags Section (Optional) */}
-        <TouchableOpacity
-          style={styles.advancedTagsToggle}
-          onPress={() => setShowAdvancedTags(!showAdvancedTags)}
-        >
-          <View style={styles.advancedTagsToggleContent}>
-            <Text style={styles.advancedTagsToggleLabel}>Advanced Tags (Optional)</Text>
-            <Text style={styles.advancedTagsToggleSubtitle}>For future AI-powered search</Text>
-          </View>
-          <Ionicons
-            name={showAdvancedTags ? 'chevron-up' : 'chevron-down'}
-            size={20}
-            color={AppColors.textSecondary}
-          />
-        </TouchableOpacity>
-
-        {showAdvancedTags && (
-          <View style={styles.advancedTagsContainer}>
-            <Text style={styles.fieldLabel}>Tags (Max {MAX_TAGS})</Text>
-            <Text style={styles.fieldHint}>
-              {data.tags && data.tags.length >= MAX_TAGS
-                ? `Maximum of ${MAX_TAGS} tags reached`
-                : 'e.g., Desk Work, Upper Body, Stretching'}
-            </Text>
-
-            {/* Tag Input with Add Button */}
-            <View style={styles.tagInputContainer}>
-              <TextInput
-                style={styles.tagTextInput}
-                value={currentTagInput}
-                onChangeText={setCurrentTagInput}
-                placeholder="Type a tag..."
-                placeholderTextColor={AppColors.textTertiary}
-                maxLength={30}
-                editable={!data.tags || data.tags.length < MAX_TAGS}
-                onSubmitEditing={handleAddTag}
-                returnKeyType="done"
-              />
-              <TouchableOpacity
-                style={[
-                  styles.addTagButton,
-                  (!currentTagInput.trim() || (data.tags && data.tags.length >= MAX_TAGS)) &&
-                    styles.addTagButtonDisabled,
-                ]}
-                onPress={handleAddTag}
-                disabled={!currentTagInput.trim() || (data.tags && data.tags.length >= MAX_TAGS)}
-              >
-                <Ionicons
-                  name="add-circle"
-                  size={32}
-                  color={
-                    !currentTagInput.trim() || (data.tags && data.tags.length >= MAX_TAGS)
-                      ? AppColors.border
-                      : AppColors.primary
-                  }
-                />
-              </TouchableOpacity>
-            </View>
-
-            {/* Display Selected Tags as Chips */}
-            {data.tags && data.tags.length > 0 && (
-              <View style={styles.selectedTagsContainer}>
-                {data.tags.map((tag) => (
-                  <View key={tag} style={styles.selectedTagChip}>
-                    <Text style={styles.selectedTagText}>{tag}</Text>
-                    <TouchableOpacity onPress={() => handleRemoveTag(tag)}>
-                      <Ionicons name="close-circle" size={18} color={AppColors.primary} />
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </View>
-            )}
-
-            <Text style={styles.fieldLabel}>Body Parts (Optional)</Text>
+        {/* Body Parts Section (only for Body category) */}
+        {data.category === 'Body' && (
+          <>
+            <Text style={styles.fieldLabel}>Body Parts</Text>
             <Text style={styles.fieldHint}>Select body parts targeted by this routine</Text>
 
-            {/* Body Region Filter Dropdown */}
-            <TouchableOpacity
-              style={styles.dropdownButton}
-              onPress={() => setBodyRegionModalVisible(true)}
-            >
-              <Text style={styles.dropdownText}>{bodyRegionFilter}</Text>
-              <Ionicons name="chevron-down" size={20} color={AppColors.textSecondary} />
-            </TouchableOpacity>
-
-            {/* Body Parts Multi-Select Dropdown */}
+            {/* Body Parts Dropdown */}
             <TouchableOpacity
               style={styles.dropdownButton}
               onPress={() => setBodyPartsModalVisible(true)}
@@ -1210,105 +1235,65 @@ function MetadataStep({
                 ))}
               </View>
             )}
+          </>
+        )}
 
-            {/* Benefits Section */}
-            <View style={styles.benefitsSeparator} />
-            <Text style={styles.fieldLabel}>Benefits (Max {MAX_BENEFITS})</Text>
-            <Text style={styles.fieldHint}>
-              {data.benefits && data.benefits.length >= MAX_BENEFITS
-                ? `Maximum of ${MAX_BENEFITS} benefits reached`
-                : 'e.g., Reduces stress, Improves flexibility, Increases energy'}
-            </Text>
+        {/* Benefits Section */}
+        <Text style={styles.fieldLabel}>Benefits (Max {MAX_BENEFITS})</Text>
+        <Text style={styles.fieldHint}>
+          {data.benefits && data.benefits.length >= MAX_BENEFITS
+            ? `Maximum of ${MAX_BENEFITS} benefits reached`
+            : 'e.g., Reduces stress, Improves flexibility, Increases energy'}
+        </Text>
 
-            {/* Benefit Input with Add Button */}
-            <View style={styles.tagInputContainer}>
-              <TextInput
-                style={styles.tagTextInput}
-                value={currentBenefitInput}
-                onChangeText={setCurrentBenefitInput}
-                placeholder="Type a benefit..."
-                placeholderTextColor={AppColors.textTertiary}
-                maxLength={100}
-                editable={!data.benefits || data.benefits.length < MAX_BENEFITS}
-                onSubmitEditing={handleAddBenefit}
-                returnKeyType="done"
-              />
-              <TouchableOpacity
-                style={[
-                  styles.addTagButton,
-                  (!currentBenefitInput.trim() || (data.benefits && data.benefits.length >= MAX_BENEFITS)) &&
-                    styles.addTagButtonDisabled,
-                ]}
-                onPress={handleAddBenefit}
-                disabled={!currentBenefitInput.trim() || (data.benefits && data.benefits.length >= MAX_BENEFITS)}
-              >
-                <Ionicons
-                  name="add-circle"
-                  size={32}
-                  color={
-                    !currentBenefitInput.trim() || (data.benefits && data.benefits.length >= MAX_BENEFITS)
-                      ? AppColors.border
-                      : AppColors.primary
-                  }
-                />
-              </TouchableOpacity>
-            </View>
+        {/* Benefit Input with Add Button */}
+        <View style={styles.tagInputContainer}>
+          <TextInput
+            style={styles.tagTextInput}
+            value={currentBenefitInput}
+            onChangeText={setCurrentBenefitInput}
+            placeholder="Type a benefit..."
+            placeholderTextColor={AppColors.textTertiary}
+            maxLength={100}
+            editable={!data.benefits || data.benefits.length < MAX_BENEFITS}
+            onSubmitEditing={handleAddBenefit}
+            returnKeyType="done"
+          />
+          <TouchableOpacity
+            style={[
+              styles.addTagButton,
+              (!currentBenefitInput.trim() || (data.benefits && data.benefits.length >= MAX_BENEFITS)) &&
+                styles.addTagButtonDisabled,
+            ]}
+            onPress={handleAddBenefit}
+            disabled={!currentBenefitInput.trim() || (data.benefits && data.benefits.length >= MAX_BENEFITS)}
+          >
+            <Ionicons
+              name="add-circle"
+              size={32}
+              color={
+                !currentBenefitInput.trim() || (data.benefits && data.benefits.length >= MAX_BENEFITS)
+                  ? AppColors.border
+                  : AppColors.primary
+              }
+            />
+          </TouchableOpacity>
+        </View>
 
-            {/* Display Selected Benefits as Chips (same pattern as tags) */}
-            {data.benefits && data.benefits.length > 0 && (
-              <View style={styles.selectedTagsContainer}>
-                {data.benefits.map((benefit, index) => (
-                  <View key={`${benefit}-${index}`} style={styles.selectedTagChip}>
-                    <Text style={styles.selectedTagText}>{benefit}</Text>
-                    <TouchableOpacity onPress={() => handleRemoveBenefit(benefit)}>
-                      <Ionicons name="close-circle" size={18} color={AppColors.primary} />
-                    </TouchableOpacity>
-                  </View>
-                ))}
+        {/* Display Selected Benefits as Chips (same pattern as tags) */}
+        {data.benefits && data.benefits.length > 0 && (
+          <View style={styles.selectedTagsContainer}>
+            {data.benefits.map((benefit, index) => (
+              <View key={`${benefit}-${index}`} style={styles.selectedTagChip}>
+                <Text style={styles.selectedTagText}>{benefit}</Text>
+                <TouchableOpacity onPress={() => handleRemoveBenefit(benefit)}>
+                  <Ionicons name="close-circle" size={18} color={AppColors.primary} />
+                </TouchableOpacity>
               </View>
-            )}
+            ))}
           </View>
         )}
       </View>
-
-      {/* Body Region Filter Modal */}
-      <Modal
-        visible={bodyRegionModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setBodyRegionModalVisible(false)}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setBodyRegionModalVisible(false)}
-        >
-          <View style={styles.modalContent}>
-            {(['All', 'Upper Body', 'Lower Body'] as BodyRegion[]).map((region) => (
-              <TouchableOpacity
-                key={region}
-                style={styles.modalOption}
-                onPress={() => {
-                  setBodyRegionFilter(region);
-                  setBodyRegionModalVisible(false);
-                }}
-              >
-                <Text
-                  style={[
-                    styles.modalOptionText,
-                    bodyRegionFilter === region && styles.modalOptionTextActive,
-                  ]}
-                >
-                  {region}
-                </Text>
-                {bodyRegionFilter === region && (
-                  <Ionicons name="checkmark" size={20} color={AppColors.primary} />
-                )}
-              </TouchableOpacity>
-            ))}
-          </View>
-        </TouchableOpacity>
-      </Modal>
 
       {/* Body Parts Multi-Select Modal */}
       <Modal
@@ -1329,6 +1314,30 @@ function MetadataStep({
                 <Ionicons name="close" size={24} color={AppColors.textSecondary} />
               </TouchableOpacity>
             </View>
+
+            {/* Body Region Filter */}
+            <View style={styles.filterContainer}>
+              {(['All', 'Upper Body', 'Lower Body'] as BodyRegion[]).map((region) => (
+                <TouchableOpacity
+                  key={region}
+                  style={[
+                    styles.filterButton,
+                    bodyRegionFilter === region && styles.filterButtonActive,
+                  ]}
+                  onPress={() => setBodyRegionFilter(region)}
+                >
+                  <Text
+                    style={[
+                      styles.filterButtonText,
+                      bodyRegionFilter === region && styles.filterButtonTextActive,
+                    ]}
+                  >
+                    {region}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
             <ScrollView style={styles.modalScrollView}>
               {getFilteredBodyParts().map((bodyPart) => (
                 <TouchableOpacity
@@ -1427,20 +1436,6 @@ function ReviewStep({
             <Text style={styles.reviewValue}>~{totalDuration} min</Text>
           </View>
 
-          {/* Display Tags if present */}
-          {data.tags && data.tags.length > 0 && (
-            <View style={styles.reviewRow}>
-              <Text style={styles.reviewLabel}>Tags:</Text>
-              <View style={styles.reviewTagsContainer}>
-                {data.tags.map((tag) => (
-                  <View key={tag} style={styles.reviewTagChip}>
-                    <Text style={styles.reviewTagText}>{tag}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          )}
-
           {/* Display Body Parts if present */}
           {data.body_parts && data.body_parts.length > 0 && (
             <View style={styles.reviewRow}>
@@ -1536,6 +1531,84 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: AppColors.background,
+  },
+  // Mode selection styles
+  modeSelectionContainer: {
+    flex: 1,
+    padding: 24,
+    paddingTop: 40,
+  },
+  modeSelectionTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: AppColors.textPrimary,
+    marginBottom: 8,
+  },
+  modeSelectionSubtitle: {
+    fontSize: 16,
+    color: AppColors.textSecondary,
+    marginBottom: 32,
+    lineHeight: 24,
+  },
+  modeCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: AppColors.surface,
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: AppColors.borderLight,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  modeIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: AppColors.primary + '20',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  modeContent: {
+    flex: 1,
+  },
+  modeTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: AppColors.textPrimary,
+    marginBottom: 4,
+  },
+  modeDescription: {
+    fontSize: 14,
+    color: AppColors.textSecondary,
+    lineHeight: 20,
+  },
+  placeholder: {
+    fontSize: 18,
+    color: AppColors.textSecondary,
+    textAlign: 'center',
+    marginTop: 100,
+  },
+  modeBackButton: {
+    padding: 16,
+    alignItems: 'center',
+  },
+  modeBackButtonText: {
+    fontSize: 16,
+    color: AppColors.primary,
+    fontWeight: '600',
+  },
+  exerciseLibraryContainer: {
+    flex: 1,
+    padding: 16,
+  },
+  exerciseLibraryModalContainer: {
+    flex: 1,
   },
   header: {
     flexDirection: 'row',
@@ -1741,6 +1814,32 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: AppColors.textPrimary,
+  },
+  filterContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    padding: 16,
+    paddingBottom: 8,
+  },
+  filterButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: AppColors.surface,
+    borderWidth: 1,
+    borderColor: AppColors.borderLight,
+  },
+  filterButtonActive: {
+    backgroundColor: AppColors.primary,
+    borderColor: AppColors.primary,
+  },
+  filterButtonText: {
+    fontSize: 14,
+    color: AppColors.textSecondary,
+  },
+  filterButtonTextActive: {
+    color: AppColors.textPrimary,
+    fontWeight: '600',
   },
   searchContainer: {
     flexDirection: 'row',
