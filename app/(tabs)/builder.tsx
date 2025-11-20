@@ -59,6 +59,7 @@ export default function RoutineBuilderScreen() {
   const [editingRoutineId, setEditingRoutineId] = useState<string | null>(null);
   const [isEditingOfficialRoutine, setIsEditingOfficialRoutine] = useState(false);
   const [isHealthTeam, setIsHealthTeam] = useState(false);
+  const [checkingHealthTeam, setCheckingHealthTeam] = useState(true); // Loading state for health team check
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [selectedRoutineType, setSelectedRoutineType] = useState<'official' | 'community' | null>(null);
 
@@ -88,7 +89,11 @@ export default function RoutineBuilderScreen() {
   }, [editId]);
 
   const checkHealthTeamStatus = async () => {
-    if (!user) return;
+    if (!user) {
+      setCheckingHealthTeam(false);
+      return;
+    }
+
     const healthTeamStatus = await isHealthTeamMember(user.id);
     setIsHealthTeam(healthTeamStatus);
 
@@ -101,6 +106,8 @@ export default function RoutineBuilderScreen() {
       setBuildMode('routine');
     }
     // Health team users not editing stay on mode selection ('select')
+
+    setCheckingHealthTeam(false);
   };
 
   const loadExercises = async () => {
@@ -475,6 +482,22 @@ export default function RoutineBuilderScreen() {
         );
     }
   };
+
+  // Show loading while checking health team status
+  if (checkingHealthTeam) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <View style={styles.headerButton} />
+          <Text style={styles.title}>Build</Text>
+          <View style={styles.headerButton} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={AppColors.primary} />
+        </View>
+      </View>
+    );
+  }
 
   // Mode selection screen for health team
   if (buildMode === 'select' && isHealthTeam && !editId) {
