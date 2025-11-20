@@ -67,6 +67,7 @@ export default function RoutineBuilderScreen() {
     exercises: [],
     tags: [],
     body_parts: [],
+    benefits: [],
   });
 
   useEffect(() => {
@@ -139,6 +140,7 @@ export default function RoutineBuilderScreen() {
         exercises,
         tags: routine.tags || [],
         body_parts: routine.body_parts || [],
+        benefits: routine.benefits || [],
       });
 
       setIsEditMode(true);
@@ -197,6 +199,7 @@ export default function RoutineBuilderScreen() {
               exercises: [],
               tags: [],
               body_parts: [],
+              benefits: [],
             });
             setCurrentStep('journey');
           },
@@ -357,6 +360,7 @@ export default function RoutineBuilderScreen() {
                   exercises: [],
                   tags: [],
                   body_parts: [],
+                  benefits: [],
                 });
                 setCurrentStep('journey');
               },
@@ -931,9 +935,11 @@ function MetadataStep({
   const [bodyRegionModalVisible, setBodyRegionModalVisible] = useState(false);
   const [bodyPartsModalVisible, setBodyPartsModalVisible] = useState(false);
   const [currentTagInput, setCurrentTagInput] = useState('');
+  const [currentBenefitInput, setCurrentBenefitInput] = useState('');
   const canProceed = data.name.trim().length > 0 && data.description.trim().length > 0;
 
   const MAX_TAGS = 5;
+  const MAX_BENEFITS = 4;
 
   const handleAddTag = () => {
     const trimmedTag = currentTagInput.trim();
@@ -958,6 +964,43 @@ function MetadataStep({
   const handleRemoveTag = (tagToRemove: string) => {
     const currentTags = data.tags || [];
     onUpdate({ tags: currentTags.filter(tag => tag !== tagToRemove) });
+  };
+
+  const handleAddBenefit = () => {
+    const trimmedBenefit = currentBenefitInput.trim();
+
+    // Validation
+    if (!trimmedBenefit) return;
+
+    if (trimmedBenefit.length < 5) {
+      Alert.alert('Invalid Benefit', 'Benefit must be at least 5 characters long.');
+      return;
+    }
+
+    if (trimmedBenefit.length > 100) {
+      Alert.alert('Invalid Benefit', 'Benefit must be less than 100 characters.');
+      return;
+    }
+
+    if (data.benefits && data.benefits.length >= MAX_BENEFITS) {
+      Alert.alert('Maximum Benefits Reached', `You can only add up to ${MAX_BENEFITS} benefits per routine.`);
+      return;
+    }
+
+    if (data.benefits && data.benefits.includes(trimmedBenefit)) {
+      Alert.alert('Duplicate Benefit', 'This benefit has already been added.');
+      return;
+    }
+
+    // Add benefit
+    const currentBenefits = data.benefits || [];
+    onUpdate({ benefits: [...currentBenefits, trimmedBenefit] });
+    setCurrentBenefitInput('');
+  };
+
+  const handleRemoveBenefit = (benefitToRemove: string) => {
+    const currentBenefits = data.benefits || [];
+    onUpdate({ benefits: currentBenefits.filter(benefit => benefit !== benefitToRemove) });
   };
 
   const toggleBodyPart = (bodyPart: string) => {
@@ -1167,6 +1210,63 @@ function MetadataStep({
                 ))}
               </View>
             )}
+
+            {/* Benefits Section */}
+            <View style={styles.benefitsSeparator} />
+            <Text style={styles.fieldLabel}>Benefits (Max {MAX_BENEFITS})</Text>
+            <Text style={styles.fieldHint}>
+              {data.benefits && data.benefits.length >= MAX_BENEFITS
+                ? `Maximum of ${MAX_BENEFITS} benefits reached`
+                : 'e.g., Reduces stress, Improves flexibility, Increases energy'}
+            </Text>
+
+            {/* Benefit Input with Add Button */}
+            <View style={styles.tagInputContainer}>
+              <TextInput
+                style={styles.tagTextInput}
+                value={currentBenefitInput}
+                onChangeText={setCurrentBenefitInput}
+                placeholder="Type a benefit..."
+                placeholderTextColor={AppColors.textTertiary}
+                maxLength={100}
+                editable={!data.benefits || data.benefits.length < MAX_BENEFITS}
+                onSubmitEditing={handleAddBenefit}
+                returnKeyType="done"
+              />
+              <TouchableOpacity
+                style={[
+                  styles.addTagButton,
+                  (!currentBenefitInput.trim() || (data.benefits && data.benefits.length >= MAX_BENEFITS)) &&
+                    styles.addTagButtonDisabled,
+                ]}
+                onPress={handleAddBenefit}
+                disabled={!currentBenefitInput.trim() || (data.benefits && data.benefits.length >= MAX_BENEFITS)}
+              >
+                <Ionicons
+                  name="add-circle"
+                  size={32}
+                  color={
+                    !currentBenefitInput.trim() || (data.benefits && data.benefits.length >= MAX_BENEFITS)
+                      ? AppColors.border
+                      : AppColors.primary
+                  }
+                />
+              </TouchableOpacity>
+            </View>
+
+            {/* Display Selected Benefits as Chips (same pattern as tags) */}
+            {data.benefits && data.benefits.length > 0 && (
+              <View style={styles.selectedTagsContainer}>
+                {data.benefits.map((benefit, index) => (
+                  <View key={`${benefit}-${index}`} style={styles.selectedTagChip}>
+                    <Text style={styles.selectedTagText}>{benefit}</Text>
+                    <TouchableOpacity onPress={() => handleRemoveBenefit(benefit)}>
+                      <Ionicons name="close-circle" size={18} color={AppColors.primary} />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            )}
           </View>
         )}
       </View>
@@ -1349,6 +1449,21 @@ function ReviewStep({
                 {data.body_parts.map((bodyPart) => (
                   <View key={bodyPart} style={styles.reviewBodyPartChip}>
                     <Text style={styles.reviewBodyPartText}>{bodyPart}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+
+          {/* Display Benefits if present */}
+          {data.benefits && data.benefits.length > 0 && (
+            <View style={styles.reviewRow}>
+              <Text style={styles.reviewLabel}>Benefits:</Text>
+              <View style={styles.reviewTagsContainer}>
+                {data.benefits.map((benefit, index) => (
+                  <View key={`${benefit}-${index}`} style={styles.reviewBenefitChip}>
+                    <Ionicons name="checkmark-circle" size={14} color="#10B981" />
+                    <Text style={styles.reviewBenefitText}>{benefit}</Text>
                   </View>
                 ))}
               </View>
@@ -2275,5 +2390,26 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: AppColors.textPrimary,
+  },
+  benefitsSeparator: {
+    height: 1,
+    backgroundColor: AppColors.borderLight,
+    marginVertical: 16,
+  },
+  reviewBenefitChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+  },
+  reviewBenefitText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#047857',
   },
 });

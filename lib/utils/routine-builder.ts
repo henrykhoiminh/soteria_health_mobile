@@ -122,7 +122,7 @@ export async function publishCustomRoutine(
       is_public: shouldCreateOfficial ? true : undefined, // Official routines always public
       created_by: userId,
       completion_count: 0,
-      benefits: [], // Can be expanded later
+      benefits: routineData.benefits || [], // Array of benefit strings
       created_at: new Date().toISOString(),
       // Optional tag fields for AI functionality
       tags: routineData.tags || [],
@@ -203,6 +203,7 @@ export async function updateCustomRoutine(
       journey_focus: journeyFocusArray,
       duration_minutes: durationMinutes,
       exercises: exercises,
+      benefits: routineData.benefits || [], // Update benefits
       // Optional tag fields for AI functionality
       tags: routineData.tags || [],
       body_parts: routineData.body_parts || [],
@@ -264,6 +265,23 @@ export function validateRoutineData(routineData: RoutineBuilderData): {
       errors.push(`Exercise ${index + 1} duration cannot exceed 60 minutes`)
     }
   })
+
+  // Validate benefits if provided
+  if (routineData.benefits && routineData.benefits.length > 0) {
+    if (routineData.benefits.length > 4) {
+      errors.push('Maximum 4 benefits allowed')
+    }
+
+    routineData.benefits.forEach((benefit, index) => {
+      const trimmedBenefit = benefit.trim()
+      if (trimmedBenefit.length < 5) {
+        errors.push(`Benefit ${index + 1} must be at least 5 characters`)
+      }
+      if (trimmedBenefit.length > 100) {
+        errors.push(`Benefit ${index + 1} must be less than 100 characters`)
+      }
+    })
+  }
 
   return {
     isValid: errors.length === 0,

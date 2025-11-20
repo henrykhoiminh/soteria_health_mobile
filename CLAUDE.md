@@ -46,6 +46,7 @@ app/(tabs)/
 ├── index.tsx           # Dashboard - Today's progress, pain tracking, recommendations
 ├── routines.tsx        # Browse/search routines with filters
 ├── builder.tsx         # 4-step routine builder (Journey → Exercises → Metadata → Review)
+│                       # Metadata includes Advanced Tags: tags, body_parts, benefits
 └── profile.tsx         # User profile with settings and Reset Journey
 
 app/(auth)/
@@ -86,7 +87,32 @@ sql/migrations/
 
 ## Recent Major Changes (Latest Session)
 
-### 1. Routine Builder UX Overhaul
+### 1. Benefits System Implementation
+
+**Feature:** Added comprehensive benefits functionality to routines
+
+**Implementation:**
+- ✅ Added benefits field to `RoutineBuilderData` type (array of strings)
+- ✅ Benefits input in Advanced Tags section (Step 3: Metadata)
+- ✅ Max 4 benefits per routine (validation: 5-100 characters each)
+- ✅ Benefits displayed as gold chips (same styling as tags and body parts)
+- ✅ Benefits shown in routine detail page with green checkmark icons
+- ✅ Benefits shown in execution screen when paused (first 3 benefits)
+- ✅ Validation: non-empty, no duplicates, character limits
+- ✅ Consistent UI pattern across tags, body parts, and benefits
+
+**Key Files Changed:**
+- `types/index.ts` - Added `benefits?: string[]` to RoutineBuilderData (line 168)
+- `lib/utils/routine-builder.ts` - Save, update, and validation for benefits
+- `app/(tabs)/builder.tsx` - Benefits input in Advanced Tags section (Metadata step)
+- `app/routines/[id].tsx` - Benefits display already existed
+- `app/routines/[id]/execute.tsx` - Benefits display when paused
+
+**Database:**
+- `benefits` column already exists in `routines` table as `text[]`
+- No migration needed - column verified to exist
+
+### 2. Routine Builder UX Overhaul
 
 **Problem:** Navigation buttons were obstructing content, scroll gestures causing crashes
 
@@ -617,7 +643,7 @@ npx tsc --noEmit
 - Social features (friends, circles)
 - Health team invitation system
 
-### Session 16 (Latest - Routine Builder & Delete)
+### Session 16 (Routine Builder & Delete)
 - Fixed navigation button positioning (removed absolute positioning)
 - Removed swipe-to-delete gestures (causing crashes)
 - Simplified exercise card UI (tap-based interactions)
@@ -628,7 +654,18 @@ npx tsc --noEmit
 - Updated README.md with latest changes
 - Created this CLAUDE.md file
 
+### Session 17 (Latest - Benefits System)
+- Added comprehensive benefits functionality to routines
+- Benefits input in Advanced Tags section (Metadata step)
+- Max 4 benefits per routine (5-100 characters each)
+- Consistent gold chip styling (matches tags and body parts)
+- Benefits display on routine detail page (green checkmarks)
+- Benefits display on execution screen when paused (first 3)
+- Validation: non-empty, no duplicates, character limits
+- Database: verified `benefits` column exists as `text[]`
+- Updated README.md and CLAUDE.md with benefits documentation
+
 ---
 
-**Last Updated:** 2025-11-17
+**Last Updated:** 2025-11-19
 **Current Version:** Expo SDK 54, React Native 0.76+

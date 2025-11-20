@@ -68,7 +68,10 @@ This is the mobile companion app to the Soteria Health web application, built wi
   - Body: Red (#EF4444)
   - Soul: Amber (#F59E0B)
 - Detailed routine view with exercises and benefits
+  - Benefits section displays all benefits with green checkmark icons
+  - Helps users understand the value of each routine
 - Routine execution with timer and progress tracking
+  - Benefits displayed when paused (first 3 benefits shown)
 - Completion tracking with automatic profile refresh
 
 ### Routine Builder
@@ -89,17 +92,21 @@ This is the mobile companion app to the Soteria Health web application, built wi
     - "Add Exercise" button at bottom
   - **Step 3: Metadata** - Set routine details
     - Name, description, category, and difficulty
-    - **Advanced Tags (Optional)** - For future AI-powered search:
-      - Add general tags with "type & add" interface (max 5 tags per routine)
-      - Each tag can be up to 30 characters
-      - Tags displayed as removable purple chips
-      - Duplicate tag prevention with validation
-      - Select targeted body parts via dropdown multi-select with region filters (All, Upper Body, Lower Body)
-      - Selected body parts displayed as removable chips
+    - **Advanced Tags (Optional)** - For future AI-powered search and filtering:
+      - **Tags:** Add general tags with "type & add" interface (max 5 tags per routine, 30 characters each)
+      - **Body Parts:** Select targeted body parts via dropdown multi-select with region filters (All, Upper Body, Lower Body)
+      - **Benefits:** Add routine benefits (max 4 benefits, 5-100 characters each)
+        - Examples: "Reduces stress", "Improves flexibility", "Increases energy"
+        - Displayed as gold chips (same styling as tags and body parts)
+        - Validation: non-empty, minimum 5 characters, maximum 100 characters
+        - No duplicates allowed
+      - All advanced tags displayed as removable gold chips
+      - Duplicate prevention with validation
   - **Step 4: Review & Publish** - Comprehensive overview before publishing:
     - Routine Overview section shows name, description, category, difficulty, journey, duration
-    - Tags displayed as purple chips (if added)
-    - Body parts displayed as amber chips (if added)
+    - Tags displayed as gold chips (if added)
+    - Body parts displayed as gold chips (if added)
+    - Benefits displayed as green chips with checkmark icons (if added)
     - Complete exercise list with durations
     - Update button for editing, Publish button for new routines
 

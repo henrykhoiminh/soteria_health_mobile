@@ -165,6 +165,7 @@ export interface RoutineBuilderData {
   // Optional tag fields for AI functionality
   tags?: string[]
   body_parts?: string[]
+  benefits?: string[] // Array of benefit strings (max 8, each 5-100 chars)
 }
 
 // Journey Goals Types
