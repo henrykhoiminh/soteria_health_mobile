@@ -228,6 +228,93 @@ export async function deleteCustomRoutine(userId: string, routineId: string) {
 }
 
 /**
+ * Convert a custom routine to official (Health Team only)
+ * Preserves original creator attribution, updates type to official
+ */
+export async function convertToOfficial(
+  userId: string,
+  routineId: string,
+  routineData: RoutineBuilderData
+): Promise<void> {
+  // Verify user is Health Team member
+  const isHealthTeam = await isHealthTeamMember(userId)
+  if (!isHealthTeam) {
+    throw new Error('Only Health Team members can convert routines to official')
+  }
+
+  // Convert journey focus from "Both" to array format
+  let journeyFocusArray: JourneyFocus[]
+  if (routineData.journeyFocus === 'Both') {
+    journeyFocusArray = ['Injury Prevention', 'Recovery']
+  } else {
+    journeyFocusArray = [routineData.journeyFocus as JourneyFocus]
+  }
+
+  // Calculate total duration in minutes
+  const totalSeconds = routineData.exercises.reduce(
+    (sum, exercise) => sum + exercise.duration_seconds,
+    0
+  )
+  const durationMinutes = Math.ceil(totalSeconds / 60)
+
+  // Prepare exercises data (remove temporary IDs)
+  const exercises = routineData.exercises.map(({ id, ...exercise }) => exercise)
+
+  // Get the routine to preserve original creator
+  const { data: existingRoutine, error: fetchError } = await supabase
+    .from('routines')
+    .select('created_by, official_author')
+    .eq('id', routineId)
+    .single()
+
+  if (fetchError) throw fetchError
+
+  // Get official author name for display
+  const officialAuthor = await getUserFullName(existingRoutine.created_by)
+
+  // Update routine to official status while preserving original creator
+  const updateData = {
+    name: routineData.name,
+    description: routineData.description,
+    category: routineData.category,
+    difficulty: routineData.difficulty,
+    journey_focus: journeyFocusArray,
+    duration_minutes: durationMinutes,
+    exercises: exercises,
+    benefits: routineData.benefits || [],
+    tags: routineData.tags || [],
+    body_parts: routineData.body_parts || [],
+    // Conversion to official
+    is_custom: false,
+    author_type: 'official',
+    official_author: officialAuthor,
+    is_public: true, // Official routines are always public
+    // created_by stays the same (preserves original creator)
+  }
+
+  console.log('Converting routine to official:', routineId, updateData)
+
+  const { error, data, count } = await supabase
+    .from('routines')
+    .update(updateData)
+    .eq('id', routineId)
+    .select()
+
+  console.log('Conversion result:', { error, data, count })
+
+  if (error) {
+    console.error('Conversion error:', error)
+    throw error
+  }
+
+  if (!data || data.length === 0) {
+    throw new Error('Failed to convert routine - no rows updated. Check RLS policies.')
+  }
+
+  console.log('Successfully converted routine to official')
+}
+
+/**
  * Validate routine builder data before publishing
  */
 export function validateRoutineData(routineData: RoutineBuilderData): {

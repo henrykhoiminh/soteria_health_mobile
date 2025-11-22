@@ -8,6 +8,7 @@ import {
   updateCustomRoutine,
   validateRoutineData,
   isHealthTeamMember,
+  convertToOfficial as convertRoutineToOfficial,
 } from '@/lib/utils/routine-builder';
 import {
   Exercise,
@@ -348,30 +349,60 @@ export default function RoutineBuilderScreen() {
       return;
     }
 
-    // For everyone else, proceed with publishing
+    // For health_team users editing custom routines, show conversion modal
+    if (isHealthTeam && isEditMode && !isEditingOfficialRoutine) {
+      setShowPublishModal(true);
+      return;
+    }
+
+    // For everyone else, proceed with publishing/updating
     await publishRoutine(false);
   };
 
-  const publishRoutine = async (createAsOfficial: boolean) => {
+  const publishRoutine = async (createAsOfficial: boolean, shouldConvertToOfficial: boolean = false) => {
     if (!user) return;
 
     try {
       setLoading(true);
 
       if (isEditMode && editingRoutineId) {
-        // Update existing routine
-        await updateCustomRoutine(user.id, editingRoutineId, routineData);
+        // Check if we're converting to official
+        if (shouldConvertToOfficial) {
+          // Convert custom routine to official
+          await convertRoutineToOfficial(user.id, editingRoutineId, routineData);
 
-        Alert.alert(
-          'Success!',
-          'Your routine has been updated!',
-          [
-            {
-              text: 'View Routine',
-              onPress: () => router.replace(`/routines/${editingRoutineId}`),
-            },
-          ]
-        );
+          Alert.alert(
+            'Success!',
+            'This routine has been converted to an official Soteria Health routine!',
+            [
+              {
+                text: 'View Routine',
+                onPress: () => {
+                  // Navigate back to routines list first, then to the routine detail
+                  // This ensures a fresh load of the routine data
+                  router.replace('/(tabs)/routines');
+                  setTimeout(() => {
+                    router.push(`/routines/${editingRoutineId}`);
+                  }, 100);
+                },
+              },
+            ]
+          );
+        } else {
+          // Regular update of existing routine
+          await updateCustomRoutine(user.id, editingRoutineId, routineData);
+
+          Alert.alert(
+            'Success!',
+            'Your routine has been updated!',
+            [
+              {
+                text: 'View Routine',
+                onPress: () => router.replace(`/routines/${editingRoutineId}`),
+              },
+            ]
+          );
+        }
       } else {
         // Create new routine
         const routineId = await publishCustomRoutine(user.id, routineData, createAsOfficial);
@@ -398,7 +429,7 @@ export default function RoutineBuilderScreen() {
                   difficulty: 'Beginner',
                   journeyFocus: 'Injury Prevention',
                   exercises: [],
-                                body_parts: [],
+                  body_parts: [],
                   benefits: [],
                 });
                 setCurrentStep('journey');
@@ -654,9 +685,14 @@ export default function RoutineBuilderScreen() {
           <View style={styles.publishModalContent}>
             <View style={styles.publishModalHeader}>
               <Ionicons name="shield-checkmark" size={32} color="#10B981" />
-              <Text style={styles.publishModalTitle}>Choose Routine Type</Text>
+              <Text style={styles.publishModalTitle}>
+                {isEditMode ? 'Update Routine' : 'Choose Routine Type'}
+              </Text>
               <Text style={styles.publishModalSubtitle}>
-                How would you like to publish this routine?
+                {isEditMode
+                  ? 'Would you like to convert this to an official routine?'
+                  : 'How would you like to publish this routine?'
+                }
               </Text>
             </View>
 
@@ -665,7 +701,8 @@ export default function RoutineBuilderScreen() {
                 style={styles.publishModalOption}
                 onPress={() => {
                   setSelectedRoutineType('official');
-                  publishRoutine(true);
+                  // Pass true for shouldConvertToOfficial if we're editing a custom routine
+                  publishRoutine(true, isEditMode);
                 }}
                 disabled={loading}
               >
@@ -673,9 +710,14 @@ export default function RoutineBuilderScreen() {
                   <Ionicons name="shield-checkmark" size={36} color="#10B981" />
                 </View>
                 <View style={styles.publishModalOptionContent}>
-                  <Text style={styles.publishModalOptionTitle}>Official Soteria Routine</Text>
+                  <Text style={styles.publishModalOptionTitle}>
+                    {isEditMode ? 'Convert to Official' : 'Official Soteria Routine'}
+                  </Text>
                   <Text style={styles.publishModalOptionDescription}>
-                    Will be published to Discover as official content. Visible to all users as curated by Soteria Health Team.
+                    {isEditMode
+                      ? 'Convert this routine to official status. Will be visible to all users as curated by Soteria Health Team.'
+                      : 'Will be published to Discover as official content. Visible to all users as curated by Soteria Health Team.'
+                    }
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={24} color="#10B981" />
@@ -685,7 +727,8 @@ export default function RoutineBuilderScreen() {
                 style={styles.publishModalOption}
                 onPress={() => {
                   setSelectedRoutineType('community');
-                  publishRoutine(false);
+                  // Pass false for shouldConvertToOfficial - keep as community
+                  publishRoutine(false, false);
                 }}
                 disabled={loading}
               >
@@ -693,9 +736,14 @@ export default function RoutineBuilderScreen() {
                   <Ionicons name="people" size={36} color={AppColors.primary} />
                 </View>
                 <View style={styles.publishModalOptionContent}>
-                  <Text style={styles.publishModalOptionTitle}>Personal Community Routine</Text>
+                  <Text style={styles.publishModalOptionTitle}>
+                    {isEditMode ? 'Keep as Custom' : 'Personal Community Routine'}
+                  </Text>
                   <Text style={styles.publishModalOptionDescription}>
-                    Will be saved to your personal routines. You can share it with friends or keep it private.
+                    {isEditMode
+                      ? 'Update as a custom routine. Will remain in your personal routines.'
+                      : 'Will be saved to your personal routines. You can share it with friends or keep it private.'
+                    }
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={24} color={AppColors.primary} />

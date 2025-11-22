@@ -186,6 +186,7 @@ export interface RoutineBuilderData {
   journeyFocus: JourneyFocusOption
   exercises: RoutineBuilderExercise[]
   // Optional fields for AI-powered search
+  tags?: string[]
   body_parts?: string[]
   benefits?: string[] // Array of benefit strings (max 4, each 5-100 chars)
 }

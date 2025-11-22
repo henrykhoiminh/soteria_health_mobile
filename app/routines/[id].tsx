@@ -223,7 +223,7 @@ export default function RoutineDetailScreen() {
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      {/* Start Button */}
+      {/* Footer with Start Button */}
       <View style={styles.footer}>
         <TouchableOpacity
           style={styles.startButton}
