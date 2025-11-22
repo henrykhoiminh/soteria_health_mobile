@@ -76,8 +76,13 @@ export default function SignupScreen() {
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
     >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.content}>
           <Text style={styles.title}>Create Your Account</Text>
           <Text style={styles.subtitle}>
@@ -182,11 +187,11 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
   },
   content: {
-    flex: 1,
-    padding: 24,
-    justifyContent: 'center',
+    paddingVertical: 24,
   },
   title: {
     fontSize: 32,

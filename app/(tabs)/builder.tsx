@@ -577,8 +577,12 @@ export default function RoutineBuilderScreen() {
           <ExerciseLibrary
             key={exerciseRefreshKey}
             onEditExercise={handleEditExercise}
+            onDeleteExercise={(exerciseId) => {
+              setExerciseRefreshKey(prev => prev + 1);
+            }}
             allowSelection={false}
             allowEditing={true}
+            allowDeleting={true}
             showOfficialOnly={false}
           />
         </View>

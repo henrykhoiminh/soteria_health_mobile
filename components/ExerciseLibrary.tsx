@@ -14,28 +14,33 @@ import {
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
+  Alert,
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import type { ExerciseLibraryItem, RoutineCategory, RoutineDifficulty } from '../types'
-import { getExercises } from '../lib/utils/exercises'
+import { getExercises, deleteExercise } from '../lib/utils/exercises'
 import { AppColors } from '../constants/theme'
 
 interface ExerciseLibraryProps {
   onSelectExercise?: (exercise: ExerciseLibraryItem) => void
   onEditExercise?: (exercise: ExerciseLibraryItem) => void
+  onDeleteExercise?: (exerciseId: string) => void
   category?: RoutineCategory
   showOfficialOnly?: boolean
   allowSelection?: boolean
   allowEditing?: boolean
+  allowDeleting?: boolean
 }
 
 export default function ExerciseLibrary({
   onSelectExercise,
   onEditExercise,
+  onDeleteExercise,
   category,
   showOfficialOnly = false,
   allowSelection = true,
   allowEditing = false,
+  allowDeleting = false,
 }: ExerciseLibraryProps) {
   const [exercises, setExercises] = useState<ExerciseLibraryItem[]>([])
   const [filteredExercises, setFilteredExercises] = useState<ExerciseLibraryItem[]>([])
@@ -82,6 +87,38 @@ export default function ExerciseLibrary({
     setLoading(false)
   }
 
+  const handleDeleteExercise = (exercise: ExerciseLibraryItem) => {
+    Alert.alert(
+      'Delete Exercise?',
+      `Are you sure you want to delete "${exercise.name}"? This action cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            const { success, error } = await deleteExercise(exercise.id)
+
+            if (error || !success) {
+              Alert.alert('Error', error?.message || 'Failed to delete exercise. Check permissions.')
+              return
+            }
+
+            // Reload exercises to reflect deletion
+            await loadExercises()
+
+            // Call parent callback if provided
+            if (onDeleteExercise) {
+              onDeleteExercise(exercise.id)
+            }
+
+            Alert.alert('Success', 'Exercise deleted successfully')
+          },
+        },
+      ]
+    )
+  }
+
   const categories: (RoutineCategory | undefined)[] = [undefined, 'Body', 'Mind', 'Soul']
   const difficulties: (RoutineDifficulty | undefined)[] = [
     undefined,
@@ -103,13 +140,25 @@ export default function ExerciseLibrary({
             {item.description}
           </Text>
         </View>
-        {allowEditing && onEditExercise && (
-          <TouchableOpacity
-            style={styles.editButton}
-            onPress={() => onEditExercise(item)}
-          >
-            <Ionicons name="create-outline" size={24} color={AppColors.primary} />
-          </TouchableOpacity>
+        {(allowEditing || allowDeleting) && (
+          <View style={styles.actionButtons}>
+            {allowEditing && onEditExercise && (
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => onEditExercise(item)}
+              >
+                <Ionicons name="create-outline" size={24} color={AppColors.primary} />
+              </TouchableOpacity>
+            )}
+            {allowDeleting && (
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => handleDeleteExercise(item)}
+              >
+                <Ionicons name="trash-outline" size={24} color={AppColors.destructive} />
+              </TouchableOpacity>
+            )}
+          </View>
         )}
       </View>
 
@@ -338,7 +387,12 @@ const styles = StyleSheet.create({
     color: AppColors.textSecondary,
     lineHeight: 20,
   },
-  editButton: {
+  actionButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  actionButton: {
     padding: 4,
   },
   exerciseMeta: {
