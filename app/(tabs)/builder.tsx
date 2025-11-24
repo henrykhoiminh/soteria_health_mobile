@@ -44,7 +44,7 @@ import ExerciseLibrary from '@/components/ExerciseLibrary';
 import ExerciseEditorModal from '@/components/ExerciseEditorModal';
 import type { ExerciseLibraryItem } from '@/types';
 
-type BuilderStep = 'journey' | 'exercises' | 'metadata' | 'review';
+type BuilderStep = 'exercises' | 'details' | 'review';
 type BuildMode = 'select' | 'routine' | 'exercise';
 
 export default function RoutineBuilderScreen() {
@@ -53,7 +53,7 @@ export default function RoutineBuilderScreen() {
   const { editId } = useLocalSearchParams<{ editId?: string }>();
 
   const [buildMode, setBuildMode] = useState<BuildMode>('select');
-  const [currentStep, setCurrentStep] = useState<BuilderStep>('journey');
+  const [currentStep, setCurrentStep] = useState<BuilderStep>('exercises');
   const [loading, setLoading] = useState(false);
   const [availableExercises, setAvailableExercises] = useState<Exercise[]>([]);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -75,7 +75,7 @@ export default function RoutineBuilderScreen() {
     description: '',
     category: 'Mind',
     difficulty: 'Beginner',
-    journeyFocus: 'Injury Prevention',
+    journeyFocus: 'Both', // Default to Both (allows multi-select in UI)
     exercises: [],
     body_parts: [],
     benefits: [],
@@ -186,7 +186,7 @@ export default function RoutineBuilderScreen() {
             },
             {
               text: 'Edit Routine',
-              onPress: () => setCurrentStep('journey'),
+              onPress: () => setCurrentStep('exercises'),
             },
             {
               text: 'Cancel',
@@ -196,7 +196,7 @@ export default function RoutineBuilderScreen() {
           ]
         );
       } else {
-        setCurrentStep('journey');
+        setCurrentStep('exercises');
       }
     } catch (error) {
       console.error('Error loading routine for editing:', error);
@@ -221,12 +221,12 @@ export default function RoutineBuilderScreen() {
               description: '',
               category: 'Mind',
               difficulty: 'Beginner',
-              journeyFocus: 'Injury Prevention',
+              journeyFocus: 'Both',
               exercises: [],
-                        body_parts: [],
+              body_parts: [],
               benefits: [],
             });
-            setCurrentStep('journey');
+            setCurrentStep('exercises');
           },
         },
       ]
@@ -386,6 +386,28 @@ export default function RoutineBuilderScreen() {
                   }, 100);
                 },
               },
+              {
+                text: 'Browse Routines',
+                onPress: () => router.replace('/(tabs)/routines'),
+              },
+              {
+                text: 'Edit Another',
+                onPress: () => {
+                  setRoutineData({
+                    name: '',
+                    description: '',
+                    category: 'Mind',
+                    difficulty: 'Beginner',
+                    journeyFocus: 'Both',
+                    exercises: [],
+                    body_parts: [],
+                    benefits: [],
+                  });
+                  setCurrentStep('exercises');
+                  setIsEditMode(false);
+                  setEditingRoutineId(null);
+                },
+              },
             ]
           );
         } else {
@@ -399,6 +421,28 @@ export default function RoutineBuilderScreen() {
               {
                 text: 'View Routine',
                 onPress: () => router.replace(`/routines/${editingRoutineId}`),
+              },
+              {
+                text: 'Browse Routines',
+                onPress: () => router.replace('/(tabs)/routines'),
+              },
+              {
+                text: 'Edit Another',
+                onPress: () => {
+                  setRoutineData({
+                    name: '',
+                    description: '',
+                    category: 'Mind',
+                    difficulty: 'Beginner',
+                    journeyFocus: 'Both',
+                    exercises: [],
+                    body_parts: [],
+                    benefits: [],
+                  });
+                  setCurrentStep('exercises');
+                  setIsEditMode(false);
+                  setEditingRoutineId(null);
+                },
               },
             ]
           );
@@ -420,6 +464,10 @@ export default function RoutineBuilderScreen() {
               onPress: () => router.push(`/routines/${routineId}`),
             },
             {
+              text: 'Browse Routines',
+              onPress: () => router.replace('/(tabs)/routines'),
+            },
+            {
               text: 'Create Another',
               onPress: () => {
                 setRoutineData({
@@ -427,12 +475,12 @@ export default function RoutineBuilderScreen() {
                   description: '',
                   category: 'Mind',
                   difficulty: 'Beginner',
-                  journeyFocus: 'Injury Prevention',
+                  journeyFocus: 'Both',
                   exercises: [],
                   body_parts: [],
                   benefits: [],
                 });
-                setCurrentStep('journey');
+                setCurrentStep('exercises');
               },
             },
           ]
@@ -449,7 +497,7 @@ export default function RoutineBuilderScreen() {
   };
 
   const renderProgressBar = () => {
-    const steps: BuilderStep[] = ['journey', 'exercises', 'metadata', 'review'];
+    const steps: BuilderStep[] = ['exercises', 'details', 'review'];
     const currentIndex = steps.indexOf(currentStep);
     const progress = ((currentIndex + 1) / steps.length) * 100;
 
@@ -467,17 +515,6 @@ export default function RoutineBuilderScreen() {
 
   const renderContent = () => {
     switch (currentStep) {
-      case 'journey':
-        return (
-          <JourneyFocusStep
-            selected={routineData.journeyFocus}
-            onSelect={(journeyFocus) => {
-              setRoutineData({ ...routineData, journeyFocus });
-              setCurrentStep('exercises');
-            }}
-            isEditMode={isEditMode}
-          />
-        );
       case 'exercises':
         return (
           <ExerciseSelectionStep
@@ -486,14 +523,13 @@ export default function RoutineBuilderScreen() {
             onUpdate={(exercises) =>
               setRoutineData({ ...routineData, exercises })
             }
-            onNext={() => setCurrentStep('metadata')}
-            onBack={() => setCurrentStep('journey')}
+            onNext={() => setCurrentStep('details')}
             isEditMode={isEditMode}
           />
         );
-      case 'metadata':
+      case 'details':
         return (
-          <MetadataStep
+          <DetailsStep
             data={routineData}
             onUpdate={(data) => setRoutineData({ ...routineData, ...data })}
             onNext={() => setCurrentStep('review')}
@@ -506,7 +542,7 @@ export default function RoutineBuilderScreen() {
           <ReviewStep
             data={routineData}
             onPublish={handlePublish}
-            onBack={() => setCurrentStep('metadata')}
+            onBack={() => setCurrentStep('details')}
             loading={loading}
             isEditMode={isEditMode}
           />
@@ -767,108 +803,18 @@ export default function RoutineBuilderScreen() {
   );
 }
 
-// Step 1: Journey Focus Selection
-function JourneyFocusStep({
-  selected,
-  onSelect,
-  isEditMode,
-}: {
-  selected: JourneyFocusOption;
-  onSelect: (focus: JourneyFocusOption) => void;
-  isEditMode?: boolean;
-}) {
-  const options: { value: JourneyFocusOption; label: string; description: string; icon: string }[] = [
-    {
-      value: 'Injury Prevention',
-      label: 'Injury Prevention',
-      description: 'Build strength and prevent injuries before they happen',
-      icon: 'shield-checkmark',
-    },
-    {
-      value: 'Recovery',
-      label: 'Recovery',
-      description: 'Heal and rehabilitate from existing injuries',
-      icon: 'heart',
-    },
-    {
-      value: 'Both',
-      label: 'Both',
-      description: 'Comprehensive routine for prevention and recovery',
-      icon: 'fitness',
-    },
-  ];
-
-  return (
-    <View style={styles.stepContainer}>
-      <Text style={styles.stepTitle}>
-        {isEditMode ? 'Update Journey Focus' : "What's your journey focus?"}
-      </Text>
-      <Text style={styles.stepSubtitle}>
-        {isEditMode
-          ? `Current focus: ${selected}. Choose a new focus or tap Continue.`
-          : 'This helps us categorize your routine for other users'}
-      </Text>
-
-      <View style={styles.optionsContainer}>
-        {options.map((option) => (
-          <TouchableOpacity
-            key={option.value}
-            style={[
-              styles.optionCard,
-              selected === option.value && styles.optionCardSelected,
-            ]}
-            onPress={() => onSelect(option.value)}
-          >
-            <View style={styles.optionHeader}>
-              <Ionicons
-                name={option.icon as any}
-                size={28}
-                color={selected === option.value ? AppColors.primary : AppColors.textSecondary}
-              />
-              <Text style={[
-                styles.optionLabel,
-                selected === option.value && styles.optionLabelSelected,
-              ]}>
-                {option.label}
-              </Text>
-              {selected === option.value && isEditMode && (
-                <View style={styles.currentBadge}>
-                  <Text style={styles.currentBadgeText}>Current</Text>
-                </View>
-              )}
-            </View>
-            <Text style={styles.optionDescription}>{option.description}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {isEditMode && (
-        <TouchableOpacity
-          style={styles.continueButton}
-          onPress={() => onSelect(selected)}
-        >
-          <Text style={styles.continueButtonText}>Continue with {selected}</Text>
-          <Ionicons name="arrow-forward" size={20} color={AppColors.textPrimary} />
-        </TouchableOpacity>
-      )}
-    </View>
-  );
-}
-
-// Step 2: Exercise Selection
+// Step 1: Exercise Selection
 function ExerciseSelectionStep({
   availableExercises,
   selectedExercises,
   onUpdate,
   onNext,
-  onBack,
   isEditMode,
 }: {
   availableExercises: Exercise[];
   selectedExercises: RoutineBuilderExercise[];
   onUpdate: (exercises: RoutineBuilderExercise[]) => void;
   onNext: () => void;
-  onBack: () => void;
   isEditMode?: boolean;
 }) {
   const [modalVisible, setModalVisible] = useState(false);
@@ -942,13 +888,9 @@ function ExerciseSelectionStep({
 
   return (
     <View style={styles.stepContainer}>
-      <Text style={styles.stepTitle}>
-        {isEditMode ? 'Edit Exercises' : 'Add Exercises'}
-      </Text>
+      <Text style={styles.stepTitle}>Add Exercises</Text>
       <Text style={styles.stepSubtitle}>
-        {isEditMode
-          ? 'Tap to edit duration or reorder exercises. Add or remove as needed.'
-          : 'Select exercises and set their duration'}
+        Select exercises and customize their duration
       </Text>
 
       <View style={styles.exerciseCount}>
@@ -1104,12 +1046,8 @@ function ExerciseSelectionStep({
       </Modal>
 
       <View style={styles.stepNavigation}>
-        <TouchableOpacity style={styles.backButton} onPress={onBack}>
-          <Ionicons name="arrow-back" size={20} color={AppColors.textSecondary} />
-          <Text style={styles.backButtonText}>Back</Text>
-        </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.nextButton, !canProceed && styles.nextButtonDisabled]}
+          style={[styles.nextButton, !canProceed && styles.nextButtonDisabled, { flex: 1 }]}
           onPress={onNext}
           disabled={!canProceed}
         >
@@ -1121,8 +1059,8 @@ function ExerciseSelectionStep({
   );
 }
 
-// Step 3: Metadata
-function MetadataStep({
+// Step 2: Routine Details (formerly Metadata)
+function DetailsStep({
   data,
   onUpdate,
   onNext,
@@ -1249,6 +1187,50 @@ function MetadataStep({
                   ]}
                 >
                   {category}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        <Text style={styles.fieldLabel}>Journey Focus</Text>
+        <View style={styles.segmentedControl}>
+          {(['Injury Prevention', 'Recovery'] as const).map((focus) => {
+            // Determine if this option is selected
+            const isSelected =
+              data.journeyFocus === focus ||
+              (data.journeyFocus === 'Both' && (focus === 'Injury Prevention' || focus === 'Recovery'));
+
+            return (
+              <TouchableOpacity
+                key={focus}
+                style={[
+                  styles.segmentButton,
+                  isSelected && styles.segmentButtonActive,
+                ]}
+                onPress={() => {
+                  // Toggle logic
+                  if (data.journeyFocus === 'Both') {
+                    // If both are selected, unselect one (leave the other selected)
+                    const newFocus = focus === 'Injury Prevention' ? 'Recovery' : 'Injury Prevention';
+                    onUpdate({ journeyFocus: newFocus });
+                  } else if (data.journeyFocus === focus) {
+                    // If clicking the only selected one, select the other
+                    const newFocus = focus === 'Injury Prevention' ? 'Recovery' : 'Injury Prevention';
+                    onUpdate({ journeyFocus: newFocus });
+                  } else {
+                    // If one is selected and clicking the other, select both
+                    onUpdate({ journeyFocus: 'Both' });
+                  }
+                }}
+              >
+                <Text
+                  style={[
+                    styles.segmentButtonText,
+                    isSelected && styles.segmentButtonTextActive,
+                  ]}
+                >
+                  {focus}
                 </Text>
               </TouchableOpacity>
             );
