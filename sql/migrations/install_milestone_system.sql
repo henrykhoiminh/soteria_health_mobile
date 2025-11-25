@@ -143,9 +143,9 @@ INSERT INTO milestone_definitions (id, category, name, description, icon_name, i
 
 -- CATEGORY BALANCE MILESTONES
 INSERT INTO milestone_definitions (id, category, name, description, icon_name, icon_color, threshold, threshold_type, rarity, order_index) VALUES
-  ('balance_mind_first', 'balance', 'Mindful Beginning', 'Complete your first Mind routine', 'brain', '#3B82F6', 1, 'count', 'common', 1),
+  ('balance_mind_first', 'balance', 'Mindful Beginning', 'Complete your first Mind routine', 'bulb-outline', '#3B82F6', 1, 'count', 'common', 1),
   ('balance_body_first', 'balance', 'Physical Start', 'Complete your first Body routine', 'body', '#EF4444', 1, 'count', 'common', 2),
-  ('balance_soul_first', 'balance', 'Spiritual Awakening', 'Complete your first Soul routine', 'heart', '#F59E0B', 1, 'count', 'common', 3),
+  ('balance_soul_first', 'balance', 'Spiritual Awakening', 'Complete your first Soul routine', 'flame', '#F59E0B', 1, 'count', 'common', 3),
   ('balance_all_categories', 'balance', 'Balanced Beginner', 'Complete at least one routine in each category', 'shuffle', '#10B981', 3, 'count', 'rare', 4),
   ('balance_perfect', 'balance', 'Perfect Harmony', 'Achieve perfect balance (33/33/33) over 30+ routines', 'infinite', '#8B5CF6', 30, 'count', 'epic', 5);
 

@@ -31,11 +31,11 @@ export default function CompletedRoutinesModal({
   const getCategoryIcon = (category: RoutineCategory) => {
     switch (category) {
       case 'Mind':
-        return 'fitness' as const;
+        return 'bulb-outline' as const;
       case 'Body':
         return 'body' as const;
       case 'Soul':
-        return 'heart' as const;
+        return 'flame' as const;
     }
   };
 

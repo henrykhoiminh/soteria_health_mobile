@@ -21,7 +21,7 @@ export default function Avatar({ category, lightState, onPress }: AvatarProps) {
         return {
           color: '#3B82F6',
           lightColor: '#3B82F650',
-          icon: 'fitness' as const,
+          icon: 'bulb-outline' as const,
           label: 'Mind',
         };
       case 'Body':
@@ -35,7 +35,7 @@ export default function Avatar({ category, lightState, onPress }: AvatarProps) {
         return {
           color: '#F59E0B',
           lightColor: '#F59E0B50',
-          icon: 'heart' as const,
+          icon: 'flame' as const,
           label: 'Soul',
         };
     }
