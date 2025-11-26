@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppColors } from '@/constants/theme';
 import { RoutineBuilderExercise } from '@/types';
+import { formatDuration } from '@/lib/utils/time';
 import * as Haptics from 'expo-haptics';
 
 interface DraggableExerciseListProps {
@@ -103,7 +104,7 @@ function ExerciseCard({
         <View style={styles.exerciseInfo}>
           <Text style={styles.exerciseName}>{exercise.name}</Text>
           <Text style={styles.exerciseDuration}>
-            {exercise.duration_seconds}s
+            {formatDuration(exercise.duration_seconds)}
           </Text>
         </View>
 

@@ -3,6 +3,7 @@ import { AppColors } from '@/constants/theme';
 import { completeRoutine, getRoutineById, getTodayProgress } from '@/lib/utils/dashboard';
 import { completeCircleRoutine } from '@/lib/utils/social';
 import { getAvatarLightState } from '@/lib/utils/stats';
+import { formatTime } from '@/lib/utils/time';
 import { AvatarLightState, Exercise, Routine, RoutineCategory } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -17,13 +18,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-
-// Helper function to format seconds to MM:SS
-const formatTime = (seconds: number): string => {
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = seconds % 60;
-  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-};
 
 // Helper function to get category icon
 const getCategoryIcon = (category: RoutineCategory) => {

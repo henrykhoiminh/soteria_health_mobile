@@ -3,6 +3,7 @@ import { AppColors } from '@/constants/theme';
 import { getRoutineById } from '@/lib/utils/dashboard';
 import { deleteCustomRoutine } from '@/lib/utils/routine-builder';
 import { isHealthTeamMember } from '@/lib/utils/routine-builder';
+import { formatDuration } from '@/lib/utils/time';
 import { Routine } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -213,7 +214,7 @@ export default function RoutineDetailScreen() {
               <View style={styles.exerciseDuration}>
                 <Ionicons name="timer-outline" size={16} color={AppColors.primary} />
                 <Text style={styles.exerciseDurationText}>
-                  {exercise.duration_seconds}s
+                  {formatDuration(exercise.duration_seconds)}
                 </Text>
               </View>
             </View>

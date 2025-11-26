@@ -11,6 +11,12 @@ import {
   convertToOfficial as convertRoutineToOfficial,
 } from '@/lib/utils/routine-builder';
 import {
+  formatDuration,
+  parseMinutesSeconds,
+  secondsToMinutesSeconds,
+  validateDuration,
+} from '@/lib/utils/time';
+import {
   Exercise,
   JourneyFocusOption,
   Routine,
@@ -24,10 +30,11 @@ import {
 } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -819,8 +826,45 @@ function ExerciseSelectionStep({
 }) {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedLibraryExercise, setSelectedLibraryExercise] = useState<ExerciseLibraryItem | null>(null);
-  const [duration, setDuration] = useState('30');
+  const [durationMinutes, setDurationMinutes] = useState('0');
+  const [durationSeconds, setDurationSeconds] = useState('30');
   const [editingExercise, setEditingExercise] = useState<RoutineBuilderExercise | null>(null);
+  const [secondsError, setSecondsError] = useState(false);
+  const [instructionsExpanded, setInstructionsExpanded] = useState(true);
+  const shakeAnimation = useRef(new Animated.Value(0)).current;
+
+  const triggerShake = () => {
+    setSecondsError(true);
+    Animated.sequence([
+      Animated.timing(shakeAnimation, { toValue: 10, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnimation, { toValue: -10, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnimation, { toValue: 10, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnimation, { toValue: -10, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnimation, { toValue: 0, duration: 50, useNativeDriver: true }),
+    ]).start();
+    // Clear error after 2 seconds
+    setTimeout(() => setSecondsError(false), 2000);
+  };
+
+  const handleSecondsChange = (text: string) => {
+    // Allow empty or valid numbers
+    if (text === '') {
+      setDurationSeconds('');
+      setSecondsError(false);
+      return;
+    }
+    const num = parseInt(text, 10);
+    if (isNaN(num)) return;
+
+    if (num > 59) {
+      // Keep only the first digit and show error
+      setDurationSeconds(text.charAt(0));
+      triggerShake();
+    } else {
+      setDurationSeconds(text);
+      setSecondsError(false);
+    }
+  };
 
   const handleSelectExerciseFromLibrary = (exercise: ExerciseLibraryItem) => {
     if (selectedExercises.length >= 30) {
@@ -828,24 +872,28 @@ function ExerciseSelectionStep({
       return;
     }
 
-    // Set the selected exercise and default duration
+    // Set the selected exercise and default duration (converted to min:sec)
     setSelectedLibraryExercise(exercise);
-    setDuration(exercise.default_duration_seconds.toString());
+    const { minutes, seconds } = secondsToMinutesSeconds(exercise.default_duration_seconds);
+    setDurationMinutes(minutes.toString());
+    setDurationSeconds(seconds.toString());
+    setInstructionsExpanded(true); // Reset instructions to expanded when selecting new exercise
   };
 
   const handleAddExercise = () => {
     if (!selectedLibraryExercise) return;
 
-    const durationSeconds = parseInt(duration, 10);
-    if (isNaN(durationSeconds) || durationSeconds <= 0) {
-      Alert.alert('Invalid Duration', 'Please enter a valid duration in seconds');
+    const totalSeconds = parseMinutesSeconds(durationMinutes, durationSeconds);
+    const validationError = validateDuration(totalSeconds);
+    if (validationError) {
+      Alert.alert('Invalid Duration', validationError);
       return;
     }
 
     const newExercise: RoutineBuilderExercise = {
       name: selectedLibraryExercise.name,
       instructions: selectedLibraryExercise.instructions,
-      duration_seconds: durationSeconds,
+      duration_seconds: totalSeconds,
       demo_image_url: selectedLibraryExercise.demo_image_url,
       id: `${Date.now()}-${Math.random()}`,
     };
@@ -853,31 +901,36 @@ function ExerciseSelectionStep({
     onUpdate([...selectedExercises, newExercise]);
     setModalVisible(false);
     setSelectedLibraryExercise(null);
-    setDuration('30');
+    setDurationMinutes('0');
+    setDurationSeconds('30');
   };
 
   const handleEditExercise = (exercise: RoutineBuilderExercise) => {
     setEditingExercise(exercise);
-    setDuration(exercise.duration_seconds.toString());
+    const { minutes, seconds } = secondsToMinutesSeconds(exercise.duration_seconds);
+    setDurationMinutes(minutes.toString());
+    setDurationSeconds(seconds.toString());
   };
 
   const handleUpdateExercise = () => {
     if (!editingExercise) return;
 
-    const durationSeconds = parseInt(duration, 10);
-    if (isNaN(durationSeconds) || durationSeconds <= 0) {
-      Alert.alert('Invalid Duration', 'Please enter a valid duration in seconds');
+    const totalSeconds = parseMinutesSeconds(durationMinutes, durationSeconds);
+    const validationError = validateDuration(totalSeconds);
+    if (validationError) {
+      Alert.alert('Invalid Duration', validationError);
       return;
     }
 
     const updatedExercises = selectedExercises.map(ex =>
       ex.id === editingExercise.id
-        ? { ...ex, duration_seconds: durationSeconds }
+        ? { ...ex, duration_seconds: totalSeconds }
         : ex
     );
     onUpdate(updatedExercises);
     setEditingExercise(null);
-    setDuration('30');
+    setDurationMinutes('0');
+    setDurationSeconds('30');
   };
 
   const handleRemoveExercise = (id: string) => {
@@ -944,38 +997,94 @@ function ExerciseSelectionStep({
           </View>
 
           {selectedLibraryExercise ? (
-            <View style={styles.exerciseConfigContainer}>
-              <View style={styles.exerciseConfigHeader}>
-                <TouchableOpacity onPress={() => setSelectedLibraryExercise(null)}>
-                  <Ionicons name="arrow-back" size={24} color={AppColors.textPrimary} />
+            <KeyboardAvoidingView
+              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+              style={styles.exerciseConfigContainer}
+              keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
+            >
+              <ScrollView
+                contentContainerStyle={styles.exerciseConfigScrollContent}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+              >
+                <View style={styles.exerciseConfigHeader}>
+                  <TouchableOpacity onPress={() => setSelectedLibraryExercise(null)}>
+                    <Ionicons name="arrow-back" size={24} color={AppColors.textPrimary} />
+                  </TouchableOpacity>
+                  <Text style={styles.exerciseConfigTitle}>Set Duration</Text>
+                  <View style={{ width: 24 }} />
+                </View>
+
+                <Text style={styles.exerciseConfigName}>{selectedLibraryExercise.name}</Text>
+
+                {/* Collapsible Instructions */}
+                <TouchableOpacity
+                  style={styles.instructionsToggle}
+                  onPress={() => setInstructionsExpanded(!instructionsExpanded)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.instructionsToggleLabel}>Instructions</Text>
+                  <Ionicons
+                    name={instructionsExpanded ? 'chevron-up' : 'chevron-down'}
+                    size={20}
+                    color={AppColors.textSecondary}
+                  />
                 </TouchableOpacity>
-                <Text style={styles.exerciseConfigTitle}>Set Duration</Text>
-                <View style={{ width: 24 }} />
-              </View>
+                {instructionsExpanded && (
+                  <Text style={styles.exerciseConfigInstructions}>
+                    {selectedLibraryExercise.instructions}
+                  </Text>
+                )}
 
-              <Text style={styles.exerciseConfigName}>{selectedLibraryExercise.name}</Text>
-              <Text style={styles.exerciseConfigInstructions}>
-                {selectedLibraryExercise.instructions}
-              </Text>
+                <View style={styles.durationInputContainer}>
+                  <Text style={styles.durationLabel}>Duration</Text>
+                  <Text style={styles.fieldHint}>
+                    Default: {formatDuration(selectedLibraryExercise.default_duration_seconds)}
+                  </Text>
+                  <View style={styles.durationInputRow}>
+                    <View style={styles.durationInputGroup}>
+                      <TextInput
+                        style={styles.durationInputSmall}
+                        value={durationMinutes}
+                        onChangeText={setDurationMinutes}
+                        onFocus={() => setInstructionsExpanded(false)}
+                        keyboardType="number-pad"
+                        placeholder="0"
+                        maxLength={2}
+                      />
+                      <Text style={styles.durationUnitLabel}>min</Text>
+                    </View>
+                    <Animated.View
+                      style={[
+                        styles.durationInputGroup,
+                        { transform: [{ translateX: shakeAnimation }] }
+                      ]}
+                    >
+                      <TextInput
+                        style={[
+                          styles.durationInputSmall,
+                          secondsError && styles.durationInputError
+                        ]}
+                        value={durationSeconds}
+                        onChangeText={handleSecondsChange}
+                        onFocus={() => setInstructionsExpanded(false)}
+                        keyboardType="number-pad"
+                        placeholder="30"
+                        maxLength={2}
+                      />
+                      <Text style={styles.durationUnitLabel}>sec</Text>
+                    </Animated.View>
+                  </View>
+                  {secondsError && (
+                    <Text style={styles.durationErrorText}>Seconds must be 0-59</Text>
+                  )}
+                </View>
 
-              <View style={styles.durationInputContainer}>
-                <Text style={styles.durationLabel}>Duration (seconds)</Text>
-                <Text style={styles.fieldHint}>
-                  Default: {selectedLibraryExercise.default_duration_seconds}s
-                </Text>
-                <TextInput
-                  style={styles.durationInput}
-                  value={duration}
-                  onChangeText={setDuration}
-                  keyboardType="number-pad"
-                  placeholder={selectedLibraryExercise.default_duration_seconds.toString()}
-                />
-              </View>
-
-              <TouchableOpacity style={styles.confirmButton} onPress={handleAddExercise}>
-                <Text style={styles.confirmButtonText}>Add to Routine</Text>
-              </TouchableOpacity>
-            </View>
+                <TouchableOpacity style={styles.confirmButton} onPress={handleAddExercise}>
+                  <Text style={styles.confirmButtonText}>Add to Routine</Text>
+                </TouchableOpacity>
+              </ScrollView>
+            </KeyboardAvoidingView>
           ) : (
             <View style={styles.exerciseLibraryModalContainer}>
               <ExerciseLibrary
@@ -1007,19 +1116,47 @@ function ExerciseSelectionStep({
               <>
                 <Text style={styles.editDurationExerciseName}>{editingExercise.name}</Text>
                 <Text style={styles.editDurationCurrentValue}>
-                  Current: {editingExercise.duration_seconds}s
+                  Current: {formatDuration(editingExercise.duration_seconds)}
                 </Text>
 
                 <View style={styles.durationInputContainer}>
-                  <Text style={styles.durationLabel}>New Duration (seconds)</Text>
-                  <TextInput
-                    style={styles.durationInput}
-                    value={duration}
-                    onChangeText={setDuration}
-                    keyboardType="number-pad"
-                    placeholder="30"
-                    autoFocus
-                  />
+                  <Text style={styles.durationLabel}>New Duration</Text>
+                  <View style={styles.durationInputRow}>
+                    <View style={styles.durationInputGroup}>
+                      <TextInput
+                        style={styles.durationInputSmall}
+                        value={durationMinutes}
+                        onChangeText={setDurationMinutes}
+                        keyboardType="number-pad"
+                        placeholder="0"
+                        maxLength={2}
+                        autoFocus
+                      />
+                      <Text style={styles.durationUnitLabel}>min</Text>
+                    </View>
+                    <Animated.View
+                      style={[
+                        styles.durationInputGroup,
+                        { transform: [{ translateX: shakeAnimation }] }
+                      ]}
+                    >
+                      <TextInput
+                        style={[
+                          styles.durationInputSmall,
+                          secondsError && styles.durationInputError
+                        ]}
+                        value={durationSeconds}
+                        onChangeText={handleSecondsChange}
+                        keyboardType="number-pad"
+                        placeholder="30"
+                        maxLength={2}
+                      />
+                      <Text style={styles.durationUnitLabel}>sec</Text>
+                    </Animated.View>
+                  </View>
+                  {secondsError && (
+                    <Text style={styles.durationErrorText}>Seconds must be 0-59</Text>
+                  )}
                 </View>
 
                 <View style={styles.editDurationModalActions}>
@@ -1027,7 +1164,8 @@ function ExerciseSelectionStep({
                     style={styles.editDurationCancelButton}
                     onPress={() => {
                       setEditingExercise(null);
-                      setDuration('30');
+                      setDurationMinutes('0');
+                      setDurationSeconds('30');
                     }}
                   >
                     <Text style={styles.editDurationCancelText}>Cancel</Text>
@@ -1533,7 +1671,7 @@ function ReviewStep({
               <View style={styles.reviewExerciseInfo}>
                 <Text style={styles.reviewExerciseName}>{exercise.name}</Text>
                 <Text style={styles.reviewExerciseDuration}>
-                  {exercise.duration_seconds}s
+                  {formatDuration(exercise.duration_seconds)}
                 </Text>
               </View>
             </View>
@@ -1666,6 +1804,8 @@ const styles = StyleSheet.create({
   },
   exerciseLibraryModalContainer: {
     flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 16,
   },
   header: {
     flexDirection: 'row',
@@ -1917,7 +2057,25 @@ const styles = StyleSheet.create({
   },
   exerciseConfigContainer: {
     flex: 1,
+  },
+  exerciseConfigScrollContent: {
     padding: 24,
+    paddingBottom: 40,
+  },
+  instructionsToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: AppColors.surfaceSecondary,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  instructionsToggleLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: AppColors.textSecondary,
   },
   exerciseConfigHeader: {
     flexDirection: 'row',
@@ -1940,7 +2098,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: AppColors.textSecondary,
     lineHeight: 24,
-    marginBottom: 32,
+    marginBottom: 16,
+    backgroundColor: AppColors.surfaceSecondary,
+    padding: 16,
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: AppColors.primary,
   },
   durationInputContainer: {
     marginBottom: 32,
@@ -1959,6 +2122,42 @@ const styles = StyleSheet.create({
     padding: 16,
     fontSize: 18,
     color: AppColors.textPrimary,
+  },
+  durationInputRow: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  durationInputGroup: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  durationInputSmall: {
+    flex: 1,
+    backgroundColor: AppColors.inputBackground,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: AppColors.border,
+    padding: 16,
+    fontSize: 18,
+    color: AppColors.textPrimary,
+    textAlign: 'center',
+  },
+  durationUnitLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: AppColors.textSecondary,
+    minWidth: 30,
+  },
+  durationInputError: {
+    borderColor: AppColors.destructive,
+    borderWidth: 2,
+  },
+  durationErrorText: {
+    fontSize: 12,
+    color: AppColors.destructive,
+    marginTop: 4,
   },
   confirmButton: {
     backgroundColor: AppColors.primary,
