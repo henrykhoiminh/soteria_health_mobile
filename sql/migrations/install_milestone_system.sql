@@ -410,7 +410,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- Get milestones that have been achieved but user hasn't seen celebration yet
 
 CREATE OR REPLACE FUNCTION get_uncelebrated_milestones(target_user_id UUID)
-RETURNS TABLE(
+RETURNS TABLE(''
   milestone_id TEXT,
   name TEXT,
   description TEXT,
