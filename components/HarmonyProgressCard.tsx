@@ -27,12 +27,6 @@ export default function HarmonyProgressCard({ harmonyStatus }: HarmonyProgressCa
         <Text style={[styles.title, isInHarmony && styles.titleHarmony]}>
           {isInHarmony ? 'In Harmony' : 'Path to Harmony'}
         </Text>
-        {isInHarmony && (
-          <View style={styles.unlockedBadge}>
-            <Ionicons name="lock-open" size={14} color="#10B981" />
-            <Text style={styles.unlockedText}>Advanced Unlocked</Text>
-          </View>
-        )}
       </View>
 
       {/* Calibration Notice */}
@@ -115,20 +109,6 @@ const styles = StyleSheet.create({
   },
   titleHarmony: {
     color: AppColors.primary,
-  },
-  unlockedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#ECFDF5',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  unlockedText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#10B981',
   },
   calibrationNotice: {
     flexDirection: 'row',

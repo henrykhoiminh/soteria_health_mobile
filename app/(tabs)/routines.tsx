@@ -9,6 +9,7 @@ import {
   Modal,
   TextInput,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import { AppColors } from '@/constants/theme';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -50,10 +51,24 @@ type TabType = 'discover' | 'my-routines';
 export default function RoutinesScreen() {
   const { user } = useAuth();
   const params = useLocalSearchParams<{ category?: string }>();
-  const router = useRouter();
+  const [harmonyStatus, setHarmonyStatus] = useState<HarmonyStatus | null>(null);
 
   // If navigating with a category filter, show discover tab
   const [activeTab, setActiveTab] = useState<TabType>(params.category ? 'discover' : 'discover');
+
+  // Load harmony status once at the top level
+  useEffect(() => {
+    const loadHarmonyStatus = async () => {
+      if (!user) return;
+      try {
+        const status = await checkHarmonyRequirements(user.id);
+        setHarmonyStatus(status);
+      } catch (error) {
+        console.error('Error loading harmony status:', error);
+      }
+    };
+    loadHarmonyStatus();
+  }, [user]);
 
   return (
     <View style={styles.container}>
@@ -95,8 +110,8 @@ export default function RoutinesScreen() {
       </View>
 
       {/* Tab Content */}
-      {activeTab === 'discover' && user && <DiscoverTab userId={user.id} initialCategory={params.category as RoutineCategory | undefined} />}
-      {activeTab === 'my-routines' && user && <MyRoutinesTab userId={user.id} />}
+      {activeTab === 'discover' && user && <DiscoverTab userId={user.id} initialCategory={params.category as RoutineCategory | undefined} isInHarmony={harmonyStatus?.isInHarmony || false} />}
+      {activeTab === 'my-routines' && user && <MyRoutinesTab userId={user.id} isInHarmony={harmonyStatus?.isInHarmony || false} />}
     </View>
   );
 }
@@ -105,7 +120,7 @@ export default function RoutinesScreen() {
 // DISCOVER TAB
 // =====================================================
 
-function DiscoverTab({ userId, initialCategory }: { userId: string; initialCategory?: RoutineCategory }) {
+function DiscoverTab({ userId, initialCategory, isInHarmony }: { userId: string; initialCategory?: RoutineCategory; isInHarmony: boolean }) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -116,20 +131,6 @@ function DiscoverTab({ userId, initialCategory }: { userId: string; initialCateg
     initialCategory ? { category: initialCategory } : {}
   );
   const [showFilterModal, setShowFilterModal] = useState(false);
-  const [harmonyStatus, setHarmonyStatus] = useState<HarmonyStatus | null>(null);
-
-  // Load harmony status
-  useEffect(() => {
-    const loadHarmonyStatus = async () => {
-      try {
-        const status = await checkHarmonyRequirements(userId);
-        setHarmonyStatus(status);
-      } catch (error) {
-        console.error('Error loading harmony status:', error);
-      }
-    };
-    loadHarmonyStatus();
-  }, [userId]);
 
   // Update filters when initialCategory changes (e.g., navigating from dashboard)
   useEffect(() => {
@@ -287,7 +288,7 @@ function DiscoverTab({ userId, initialCategory }: { userId: string; initialCateg
           )}
           {filters.isAdvanced && (
             <View style={[styles.filterChip, styles.advancedFilterChip]}>
-              <Ionicons name="diamond" size={14} color="#F59E0B" />
+              <Ionicons name="sparkles" size={14} color="#F59E0B" />
               <Text style={styles.advancedFilterText}>Advanced</Text>
               <TouchableOpacity onPress={() => setFilters({ ...filters, isAdvanced: undefined })}>
                 <Ionicons name="close-circle" size={16} color="#F59E0B" />
@@ -321,7 +322,7 @@ function DiscoverTab({ userId, initialCategory }: { userId: string; initialCateg
               routine={routine}
               onPress={() => router.push(`/routines/${routine.id}`)}
               onSaveToggle={() => handleSaveToggle(routine)}
-              isInHarmony={harmonyStatus?.isInHarmony || false}
+              isInHarmony={isInHarmony}
             />
           ))
         )}
@@ -345,7 +346,7 @@ function DiscoverTab({ userId, initialCategory }: { userId: string; initialCateg
 // MY ROUTINES TAB
 // =====================================================
 
-function MyRoutinesTab({ userId }: { userId: string }) {
+function MyRoutinesTab({ userId, isInHarmony }: { userId: string; isInHarmony: boolean }) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -423,6 +424,7 @@ function MyRoutinesTab({ userId }: { userId: string }) {
               routine={routine}
               onPress={() => router.push(`/routines/${routine.id}`)}
               compact
+              isInHarmony={isInHarmony}
             />
           ))}
         </View>
@@ -445,6 +447,7 @@ function MyRoutinesTab({ userId }: { userId: string }) {
               routine={routine}
               onPress={() => router.push(`/routines/${routine.id}`)}
               onSaveToggle={() => handleUnsave(routine.id)}
+              isInHarmony={isInHarmony}
             />
           ))
         )}
@@ -479,6 +482,7 @@ function MyRoutinesTab({ userId }: { userId: string }) {
               onPress={() => router.push(`/routines/${routine.id}`)}
               isOwner
               onTogglePublic={() => handleTogglePublic(routine.id, routine.is_public || false)}
+              isInHarmony={isInHarmony}
             />
           ))
         )}
@@ -512,6 +516,18 @@ function RoutineCard({
 }: RoutineCardProps) {
   const isLocked = routine.is_advanced && !isInHarmony;
 
+  const handlePress = () => {
+    if (isLocked) {
+      Alert.alert(
+        'Harmony Required',
+        'This is an Advanced routine that requires Harmony to access. Achieve Harmony by completing balanced routines (Mind, Body, and Soul) for 7 consecutive days.',
+        [{ text: 'OK', style: 'default' }]
+      );
+      return;
+    }
+    onPress();
+  };
+
   return (
     <TouchableOpacity
       style={[
@@ -519,13 +535,15 @@ function RoutineCard({
         compact && styles.routineCardCompact,
         isLocked && styles.routineCardLocked,
       ]}
-      onPress={onPress}
+      onPress={handlePress}
       activeOpacity={0.7}
     >
       {/* Locked Overlay for Advanced Routines */}
       {isLocked && (
         <View style={styles.lockedOverlay}>
-          <Ionicons name="lock-closed" size={16} color="#F59E0B" />
+          <View style={styles.lockedIconContainer}>
+            <Ionicons name="lock-closed" size={32} color="#FFFFFF" />
+          </View>
         </View>
       )}
 
@@ -535,14 +553,6 @@ function RoutineCard({
         <Text style={[styles.routineName, isLocked && styles.routineNameLocked]} numberOfLines={1}>
           {routine.name}
         </Text>
-
-        {/* Advanced Badge */}
-        {routine.is_advanced && (
-          <View style={styles.badgeAdvanced}>
-            <Ionicons name="diamond" size={14} color="#F59E0B" />
-            <Text style={styles.badgeAdvancedText}>Advanced</Text>
-          </View>
-        )}
 
         {/* Other Badges */}
         {routine.badge_popular && (
@@ -866,7 +876,7 @@ function FilterModal({ visible, filters, onApply, onClose }: FilterModalProps) {
           >
             <View style={styles.advancedFilterContent}>
               <Ionicons
-                name="diamond"
+                name="sparkles"
                 size={20}
                 color={localFilters.isAdvanced ? '#FFFFFF' : '#F59E0B'}
               />
@@ -1354,21 +1364,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#F59E0B',
   },
-  // Advanced badge on routine cards
-  badgeAdvanced: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(245, 158, 11, 0.15)',
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    gap: 4,
-  },
-  badgeAdvancedText: {
-    color: '#F59E0B',
-    fontSize: 11,
-    fontWeight: '600',
-  },
   // Locked routine card styles
   routineCardLocked: {
     opacity: 0.85,
@@ -1376,12 +1371,25 @@ const styles = StyleSheet.create({
   },
   lockedOverlay: {
     position: 'absolute',
-    top: 10,
-    right: 10,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     zIndex: 1,
-    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
     borderRadius: 12,
-    padding: 6,
+  },
+  lockedIconContainer: {
+    backgroundColor: 'rgba(245, 158, 11, 0.85)',
+    borderRadius: 50,
+    padding: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   },
   routineNameLocked: {
     color: AppColors.textSecondary,

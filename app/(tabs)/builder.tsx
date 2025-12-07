@@ -1502,7 +1502,7 @@ function DetailsStep({
         {isHealthTeam && (
           <View style={styles.advancedToggleContainer}>
             <View style={styles.advancedToggleHeader}>
-              <Ionicons name="diamond" size={20} color="#F59E0B" />
+              <Ionicons name="sparkles" size={20} color="#F59E0B" />
               <Text style={styles.advancedToggleTitle}>Advanced Routine</Text>
             </View>
             <Text style={styles.advancedToggleDescription}>

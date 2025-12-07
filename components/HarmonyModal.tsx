@@ -158,7 +158,7 @@ export default function HarmonyModal({
 
               <View style={styles.benefitItem}>
                 <View style={styles.benefitIcon}>
-                  <Ionicons name="diamond-outline" size={20} color="#F59E0B" />
+                  <Ionicons name="sparkles-outline" size={20} color="#F59E0B" />
                 </View>
                 <View style={styles.benefitContent}>
                   <Text style={styles.benefitLabel}>Radiant Avatar State</Text>
