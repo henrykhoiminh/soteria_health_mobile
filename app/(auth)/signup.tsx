@@ -16,7 +16,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 export default function SignupScreen() {
-  const [fullName, setFullName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -26,7 +27,7 @@ export default function SignupScreen() {
   const router = useRouter();
 
   const handleSignup = async () => {
-    if (!fullName || !email || !password || !confirmPassword) {
+    if (!firstName || !lastName || !email || !password || !confirmPassword) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
@@ -43,7 +44,7 @@ export default function SignupScreen() {
 
     setLoading(true);
     try {
-      const { user } = await signUp(email, password, fullName);
+      const { user } = await signUp(email, password, firstName, lastName);
 
       // Check if email confirmation is required
       if (user && !user.email_confirmed_at) {
@@ -92,11 +93,22 @@ export default function SignupScreen() {
           <View style={styles.form}>
             <TextInput
               style={styles.input}
-              placeholder="Full Name"
+              placeholder="First Name"
               placeholderTextColor={AppColors.textPlaceholder}
-              value={fullName}
-              onChangeText={setFullName}
+              value={firstName}
+              onChangeText={setFirstName}
               editable={!loading}
+              autoCapitalize="words"
+            />
+
+            <TextInput
+              style={styles.input}
+              placeholder="Last Name"
+              placeholderTextColor={AppColors.textPlaceholder}
+              value={lastName}
+              onChangeText={setLastName}
+              editable={!loading}
+              autoCapitalize="words"
             />
 
             <TextInput

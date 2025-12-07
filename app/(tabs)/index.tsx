@@ -17,6 +17,7 @@ import { getAllAvatarStates } from '@/lib/utils/stats';
 import { getDisplayName } from '@/lib/utils/username';
 import { searchUsers } from '@/lib/utils/social';
 import { sendHealthTeamInvitation, hasPendingInvitation } from '@/lib/utils/health-team';
+import { getDashboardCache, clearDashboardCache } from '@/lib/utils/dashboard-cache';
 import { ActivityFeedItem, AvatarState, DailyProgress, HarmonyStatus, PainCheckIn, PainStatistics, Routine, RoutineCategory, UserStats, UserSearchResult } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -75,19 +76,39 @@ export default function DashboardScreen() {
   }, [user, profile]);
 
   // Refresh data when screen comes into focus (e.g., after completing a routine)
+  // Use silent refresh (no loading indicator) for better UX
   useFocusEffect(
     useCallback(() => {
       if (user) {
-        loadDashboardData();
+        loadDashboardData(false); // Silent refresh on focus
       }
     }, [user, profile])
   );
 
-  const loadDashboardData = async () => {
+  const loadDashboardData = async (showLoading = true) => {
     if (!user) return;
 
     try {
-      setLoading(true);
+      // Check if we have cached data from routine completion (for instant navigation)
+      const cachedData = getDashboardCache();
+      if (cachedData) {
+        setTodayProgress(cachedData.todayProgress);
+        setStats(cachedData.stats);
+        setFriendActivity(cachedData.friendActivity);
+        setAvatarStates(cachedData.avatarStates);
+        setPainStats(cachedData.painStats);
+        setPainHistory(cachedData.painHistory);
+        setHarmonyStatus(cachedData.harmonyStatus);
+        setLoading(false);
+        clearDashboardCache();
+        return;
+      }
+
+      // Only show loading indicator on initial load, not on focus refresh
+      if (showLoading) {
+        setLoading(true);
+      }
+
       const [progressData, statsData, activityData, avatarsData, painStatsData, painHistoryData, harmonyData] = await Promise.all([
         getTodayProgress(user.id),
         getUserStats(user.id),
@@ -227,7 +248,9 @@ export default function DashboardScreen() {
     }
   };
 
-  if (loading) {
+  // Only show full loading screen on initial load when there's no data yet
+  // This allows returning from routine completion to show existing data while refreshing
+  if (loading && !todayProgress && !stats) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={AppColors.primary} />
@@ -354,8 +377,10 @@ export default function DashboardScreen() {
                   </View>
                   <View style={styles.inviteUserInfo}>
                     <Text style={styles.inviteUserName}>{getDisplayName(user)}</Text>
-                    {user.full_name && user.username && (
-                      <Text style={styles.inviteUserRealName}>{user.full_name}</Text>
+                    {user.first_name && user.username && (
+                      <Text style={styles.inviteUserRealName}>
+                        {user.last_name ? `${user.first_name} ${user.last_name}` : user.first_name}
+                      </Text>
                     )}
                     <Text style={styles.inviteUserMeta}>
                       {user.journey_focus} • {user.fitness_level}
@@ -412,7 +437,7 @@ export default function DashboardScreen() {
                 />
               ) : (
                 <Text style={styles.avatarText}>
-                  {profile?.full_name?.charAt(0).toUpperCase() || 'U'}
+                  {profile?.first_name?.charAt(0).toUpperCase() || 'U'}
                 </Text>
               )}
             </View>
@@ -442,7 +467,7 @@ export default function DashboardScreen() {
 
         <Text style={styles.greeting}>
           {profile?.role === 'health_team' || profile?.role === 'admin' ? 'Welcome back, ' : 'Hello, '}
-          {profile?.full_name || 'there'}
+          {profile?.first_name || 'there'}
         </Text>
         <Text style={styles.subtitle}>Check out your personalized routines below.</Text>
       </View>

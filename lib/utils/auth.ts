@@ -2,13 +2,14 @@ import { supabase } from '../supabase/client'
 import { Profile } from '@/types'
 import { decode } from 'base64-arraybuffer'
 
-export async function signUp(email: string, password: string, fullName: string) {
+export async function signUp(email: string, password: string, firstName: string, lastName: string) {
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
       data: {
-        full_name: fullName,
+        first_name: firstName,
+        last_name: lastName,
       },
     },
   })

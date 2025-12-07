@@ -1,9 +1,13 @@
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { AppColors } from '@/constants/theme';
-import { completeRoutine, getRoutineById, getTodayProgress } from '@/lib/utils/dashboard';
-import { completeCircleRoutine } from '@/lib/utils/social';
-import { getAvatarLightState } from '@/lib/utils/stats';
+import { completeRoutine, getRoutineById, getTodayProgress, getUserStats } from '@/lib/utils/dashboard';
+import { completeCircleRoutine, getFormattedFriendActivity } from '@/lib/utils/social';
+import { getAvatarLightState, getAllAvatarStates } from '@/lib/utils/stats';
+import { getPainStatistics, getPainCheckInHistory } from '@/lib/utils/pain-checkin';
+import { checkHarmonyRequirements } from '@/lib/utils/harmony';
+import { setDashboardCache } from '@/lib/utils/dashboard-cache';
 import { formatTime } from '@/lib/utils/time';
+import { initAudio, playCountdownBeep } from '@/lib/utils/audio';
 import { AvatarLightState, Exercise, Routine, RoutineCategory } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -12,12 +16,19 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
+  Vibration,
   View,
 } from 'react-native';
+import LottieView from 'lottie-react-native';
+
+// Completion animation - add your Lottie JSON file to assets/animations/
+// Expected file: assets/animations/routine_complete.json
+const COMPLETION_ANIMATION = require('@/assets/animations/routine_complete.json');
 
 // Helper function to get category icon
 const getCategoryIcon = (category: RoutineCategory) => {
@@ -33,13 +44,13 @@ const getCategoryIcon = (category: RoutineCategory) => {
 
 // Helper function to get avatar glow colors based on light state
 const getAvatarGlowColor = (lightState: AvatarLightState, category: RoutineCategory): { borderColor: string; shadowColor: string; glowIntensity: number } => {
-  const categoryColors = {
+  const categoryColors: Record<string, string> = {
     'Mind': '#3B82F6',   // Blue
     'Body': '#EF4444',   // Red
     'Soul': '#F59E0B',   // Orange/Gold
   };
 
-  const baseColor = categoryColors[category];
+  const baseColor = categoryColors[category] || '#F59E0B';
 
   switch (lightState) {
     case 'Dormant':
@@ -70,10 +81,16 @@ export default function ExecuteRoutineScreen() {
   const [isComplete, setIsComplete] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
   const [avatarLightState, setAvatarLightState] = useState<AvatarLightState>('Awakening');
+  const [animationFinished, setAnimationFinished] = useState(false);
+  const [dashboardPreloaded, setDashboardPreloaded] = useState(false);
+  const [loadingSeconds, setLoadingSeconds] = useState(0);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const loadingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const animationRef = useRef<LottieView>(null);
 
   useEffect(() => {
+    initAudio(); // Initialize audio settings
     loadRoutine();
     return () => {
       if (timerRef.current) {
@@ -94,6 +111,11 @@ export default function ExecuteRoutineScreen() {
     if (!isPaused && timeRemaining > 0) {
       timerRef.current = setInterval(() => {
         setTimeRemaining((prev) => {
+          // Play countdown beeps at 3, 2, 1 seconds
+          if (prev === 4 || prev === 3 || prev === 2) {
+            playCountdownBeep();
+          }
+
           if (prev <= 1) {
             clearInterval(timerRef.current!);
             handleExerciseComplete();
@@ -114,6 +136,38 @@ export default function ExecuteRoutineScreen() {
       }
     };
   }, [isPaused, timeRemaining]);
+
+  // Fallback: if animation callback doesn't fire, mark as finished after 3 seconds
+  useEffect(() => {
+    if (isComplete && !animationFinished) {
+      const fallbackTimer = setTimeout(() => {
+        setAnimationFinished(true);
+      }, 3000); // 3 second fallback for animation callback
+
+      return () => clearTimeout(fallbackTimer);
+    }
+  }, [isComplete, animationFinished]);
+
+  // Loading timer - counts seconds while waiting for data to load
+  useEffect(() => {
+    if (isComplete && !dashboardPreloaded) {
+      // Start counting
+      setLoadingSeconds(0);
+      loadingTimerRef.current = setInterval(() => {
+        setLoadingSeconds((prev) => prev + 1);
+      }, 1000);
+
+      return () => {
+        if (loadingTimerRef.current) {
+          clearInterval(loadingTimerRef.current);
+        }
+      };
+    } else if (dashboardPreloaded && loadingTimerRef.current) {
+      // Stop counting when loaded
+      clearInterval(loadingTimerRef.current);
+      loadingTimerRef.current = null;
+    }
+  }, [isComplete, dashboardPreloaded]);
 
   const loadRoutine = async () => {
     if (!id || !user) return;
@@ -161,6 +215,17 @@ export default function ExecuteRoutineScreen() {
 
     setIsComplete(true);
 
+    // Trigger strong vibration pattern for completion (like an alarm)
+    // Pattern: vibrate 400ms, pause 200ms, vibrate 400ms, pause 200ms, vibrate 400ms
+    if (Platform.OS === 'android') {
+      Vibration.vibrate([0, 400, 200, 400, 200, 400]);
+    } else {
+      // iOS doesn't support patterns, so we do multiple vibrations
+      Vibration.vibrate(400);
+      setTimeout(() => Vibration.vibrate(400), 600);
+      setTimeout(() => Vibration.vibrate(400), 1200);
+    }
+
     try {
       // Complete routine for individual daily progress
       await completeRoutine(user.id, routine.id, routine.category);
@@ -175,25 +240,53 @@ export default function ExecuteRoutineScreen() {
         }
       }
 
-      Alert.alert(
-        'Congratulations!',
-        `You've completed ${routine.name}! Great work!`,
-        [
-          {
-            text: 'Done',
-            onPress: () => router.replace('/(tabs)'),
-          },
-        ]
-      );
+      // Preload dashboard data in the background while animation plays
+      preloadDashboardData();
     } catch (error) {
       console.error('Error completing routine:', error);
-      Alert.alert('Routine complete!', 'Great work!', [
-        {
-          text: 'Done',
-          onPress: () => router.replace('/(tabs)'),
-        },
-      ]);
+      // Still try to preload dashboard data
+      preloadDashboardData();
     }
+  };
+
+  const preloadDashboardData = async () => {
+    if (!user) {
+      setDashboardPreloaded(true);
+      return;
+    }
+
+    try {
+      // Fetch all dashboard data in parallel
+      const [progressData, statsData, activityData, avatarsData, painStatsData, painHistoryData, harmonyData] = await Promise.all([
+        getTodayProgress(user.id),
+        getUserStats(user.id),
+        getFormattedFriendActivity(user.id, 5),
+        getAllAvatarStates(user.id),
+        getPainStatistics(user.id, 100),
+        getPainCheckInHistory(user.id, 100),
+        checkHarmonyRequirements(user.id),
+      ]);
+
+      // Store in cache for dashboard to use
+      setDashboardCache({
+        todayProgress: progressData,
+        stats: statsData,
+        friendActivity: activityData,
+        avatarStates: avatarsData,
+        painStats: painStatsData,
+        painHistory: painHistoryData,
+        harmonyStatus: harmonyData,
+      });
+    } catch (error) {
+      console.error('Error preloading dashboard data:', error);
+    } finally {
+      setDashboardPreloaded(true);
+    }
+  };
+
+  const handleDonePress = () => {
+    // Navigate to dashboard - data should already be cached/preloaded
+    router.replace('/(tabs)');
   };
 
   const handleQuit = () => {
@@ -236,11 +329,41 @@ export default function ExecuteRoutineScreen() {
   }
 
   if (isComplete) {
+    // Done button is enabled when both animation is done AND dashboard data is preloaded
+    const canNavigate = animationFinished && dashboardPreloaded;
+
     return (
       <View style={styles.completeContainer}>
-        <Ionicons name="checkmark-circle" size={100} color={AppColors.success} />
+        {/* Lottie Animation - plays automatically */}
+        <LottieView
+          ref={animationRef}
+          source={COMPLETION_ANIMATION}
+          autoPlay
+          loop={false}
+          style={styles.completionAnimation}
+          onAnimationFinish={() => setAnimationFinished(true)}
+        />
         <Text style={styles.completeTitle}>Routine Complete!</Text>
         <Text style={styles.completeMessage}>Great work on completing {routine.name}</Text>
+
+        {/* Done Button - enabled after animation finishes AND dashboard is preloaded */}
+        <TouchableOpacity
+          style={[
+            styles.doneButton,
+            !canNavigate && styles.doneButtonLoading,
+          ]}
+          onPress={handleDonePress}
+          disabled={!canNavigate}
+        >
+          {canNavigate ? (
+            <Text style={styles.doneButtonText}>Done</Text>
+          ) : (
+            <View style={styles.doneButtonLoadingContent}>
+              <ActivityIndicator size="small" color={AppColors.textPrimary} />
+              <Text style={styles.doneButtonText}>{loadingSeconds}s</Text>
+            </View>
+          )}
+        </TouchableOpacity>
       </View>
     );
   }
@@ -415,6 +538,10 @@ const styles = StyleSheet.create({
     padding: 24,
     backgroundColor: AppColors.background,
   },
+  completionAnimation: {
+    width: 250,
+    height: 250,
+  },
   completeTitle: {
     fontSize: 28,
     fontWeight: 'bold',
@@ -426,6 +553,28 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: AppColors.textSecondary,
     textAlign: 'center',
+  },
+  doneButton: {
+    backgroundColor: AppColors.primary,
+    paddingHorizontal: 48,
+    paddingVertical: 16,
+    borderRadius: 12,
+    marginTop: 32,
+    minWidth: 160,
+    alignItems: 'center',
+  },
+  doneButtonLoading: {
+    backgroundColor: AppColors.border,
+  },
+  doneButtonText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: AppColors.textPrimary,
+  },
+  doneButtonLoadingContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   header: {
     flexDirection: 'row',

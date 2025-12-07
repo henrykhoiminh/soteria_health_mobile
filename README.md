@@ -71,7 +71,12 @@ This is the mobile companion app to the Soteria Health web application, built wi
   - Benefits section displays all benefits with green checkmark icons
   - Helps users understand the value of each routine
 - Routine execution with timer and progress tracking
+  - **Audio countdown beeps** at 3, 2, 1 seconds remaining (custom sound)
+  - **Completion vibration** - alarm-like vibration pattern when routine finishes
+  - **Lottie completion animation** - celebratory animation on routine complete
   - Benefits displayed when paused (first 3 benefits shown)
+  - **Dashboard preloading** - data loads during animation for instant navigation
+  - Loading timer shows fetch performance (seconds elapsed)
 - Completion tracking with automatic profile refresh
 
 ### Routine Builder
@@ -375,8 +380,12 @@ soteria-health-mobile/
 │   │       └── execute.tsx      # Routine execution with timer
 │   └── _layout.tsx              # Root layout with auth check
 ├── assets/
-│   └── images/
-│       └── soteria-logo.png     # App logo
+│   ├── images/
+│   │   └── soteria-logo.png     # App logo
+│   ├── sounds/
+│   │   └── count_down_beep.mp3  # Countdown timer beep sound
+│   └── animations/
+│       └── routine_complete.json # Lottie completion animation
 ├── components/                   # Reusable components
 │   ├── JourneyBadge.tsx         # Journey badge with icon and label
 │   ├── PainCheckInModal.tsx     # Multi-step pain check-in modal
@@ -390,7 +399,10 @@ soteria-health-mobile/
 │   │   └── client.ts           # Supabase client with AsyncStorage
 │   └── utils/                   # Utility functions
 │       ├── auth.ts             # Auth, profile, journey tracking & upload
+│       ├── audio.ts            # Audio playback for countdown beeps
 │       ├── dashboard.ts        # Dashboard data, balanced routines, search functions
+│       ├── dashboard-cache.ts  # In-memory cache for fluid navigation
+│       ├── harmony.ts          # Harmony status checking
 │       ├── pain-checkin.ts     # Pain check-in submission & retrieval
 │       └── routine-builder.ts  # Routine builder utilities & validation
 ├── sql/                          # Database migration files
@@ -417,6 +429,8 @@ npm install
 - `@react-native-async-storage/async-storage` - Persistent storage
 - `react-native-url-polyfill` - URL polyfill for React Native
 - `expo-image-picker` - Image selection and upload
+- `expo-av` - Audio playback for countdown beeps
+- `lottie-react-native` - Animations for routine completion
 - `base64-arraybuffer` - Base64 encoding for image uploads
 - `date-fns` - Date utilities
 - `@expo/vector-icons` - Icon library

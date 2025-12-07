@@ -116,9 +116,20 @@ export function formatUsername(username: string): string {
   return `@${username}`;
 }
 
-export function getDisplayName(profile: { full_name: string | null; username: string | null }): string {
+export function getDisplayName(profile: {
+  full_name?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  username: string | null
+}): string {
   if (profile.username) {
     return formatUsername(profile.username);
+  }
+  // Support both new first_name/last_name and legacy full_name
+  if (profile.first_name) {
+    return profile.last_name
+      ? `${profile.first_name} ${profile.last_name}`
+      : profile.first_name;
   }
   return profile.full_name || 'Unknown User';
 }

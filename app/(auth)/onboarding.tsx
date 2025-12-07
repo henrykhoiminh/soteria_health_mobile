@@ -178,11 +178,13 @@ export default function OnboardingScreen() {
         return;
       }
 
-      // Get full name from user metadata
-      const fullName = currentUser.user_metadata?.full_name || '';
+      // Get first and last name from user metadata
+      const firstName = currentUser.user_metadata?.first_name || '';
+      const lastName = currentUser.user_metadata?.last_name || '';
 
       const profileUpdates: any = {
-        full_name: fullName,
+        first_name: firstName,
+        last_name: lastName,
         journey_focus: journeyFocus,
         fitness_level: fitnessLevel,
         journey_started_at: new Date().toISOString(), // Set journey start date

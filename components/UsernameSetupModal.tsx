@@ -30,17 +30,21 @@ export default function UsernameSetupModal({ visible, onComplete }: UsernameSetu
   const [loadingSuggestions, setLoadingSuggestions] = useState(true);
 
   useEffect(() => {
-    if (visible && profile?.full_name) {
+    if (visible && profile?.first_name) {
       loadSuggestions();
     }
-  }, [visible, profile?.full_name]);
+  }, [visible, profile?.first_name]);
 
   const loadSuggestions = async () => {
-    if (!profile?.full_name) return;
+    if (!profile?.first_name) return;
 
     setLoadingSuggestions(true);
     try {
-      const suggestedUsernames = await getSuggestedUsernames(profile.full_name, 5);
+      // Combine first and last name for username suggestions
+      const fullName = profile.last_name
+        ? `${profile.first_name} ${profile.last_name}`
+        : profile.first_name;
+      const suggestedUsernames = await getSuggestedUsernames(fullName, 5);
       setSuggestions(suggestedUsernames);
     } catch (error) {
       console.error('Error loading suggestions:', error);

@@ -28,6 +28,8 @@ This file contains technical context, architectural decisions, and implementatio
   "@supabase/supabase-js": "^2.x",
   "expo-router": "~6.x",
   "expo-image-picker": "latest",
+  "expo-av": "~16.x",
+  "lottie-react-native": "^7.x",
   "@react-native-async-storage/async-storage": "latest",
   "@react-native-picker/picker": "latest",
   "@react-native-community/slider": "latest",
@@ -70,10 +72,19 @@ lib/
 ├── supabase/client.ts           # Supabase client config
 └── utils/
     ├── auth.ts                  # Auth, profile, upload
+    ├── audio.ts                 # Audio playback for countdown beeps
     ├── dashboard.ts             # Dashboard data, recommendations
+    ├── dashboard-cache.ts       # In-memory cache for fluid navigation
+    ├── harmony.ts               # Harmony status checking
     ├── pain-checkin.ts          # Pain check-in logic
     ├── routine-builder.ts       # Builder utilities & validation
     └── health-team.ts           # Health team functions
+
+assets/
+├── sounds/
+│   └── count_down_beep.mp3      # Countdown timer beep sound
+└── animations/
+    └── routine_complete.json    # Completion animation (Lottie)
 
 sql/migrations/
 ├── add_health_team_system.sql           # Role system
@@ -716,6 +727,50 @@ npx tsc --noEmit
   - Harmony/Advanced UI uses amber/gold color (#F59E0B)
   - Consistent locked state styling across app
   - Category colors: Mind (#3B82F6), Body (#EF4444), Soul (#F59E0B)
+
+### Session 19 (Latest - Routine Execution Enhancements)
+- **Audio Countdown Beeps:**
+  - Added expo-av for audio playback
+  - Created `lib/utils/audio.ts` with audio utilities
+  - Custom countdown beep sound plays at 3, 2, 1 seconds remaining
+  - Sound file: `assets/sounds/count_down_beep.mp3`
+
+- **Completion Vibration:**
+  - Added alarm-like vibration pattern on routine completion
+  - Uses React Native Vibration API (not expo-haptics for stronger feedback)
+  - Pattern: 400ms vibrate, 200ms pause × 3 times
+  - Platform-specific handling for iOS vs Android
+
+- **Lottie Completion Animation:**
+  - Added lottie-react-native for animations
+  - Placeholder animation: `assets/animations/routine_complete.json`
+  - Ready to replace with custom Duolingo-style animation
+  - 3-second fallback timer if onAnimationFinish callback doesn't fire
+
+- **Dashboard Preloading (Fluid Navigation):**
+  - Created `lib/utils/dashboard-cache.ts` for in-memory caching
+  - When routine completes, dashboard data is fetched in background
+  - Done button only enables after BOTH animation AND data are ready
+  - Dashboard checks cache first for instant navigation
+  - 30-second cache TTL to prevent stale data
+  - Loading timer shows seconds elapsed while fetching (for performance testing)
+
+- **Dashboard Loading Optimization:**
+  - `loadDashboardData(showLoading)` - optional loading indicator
+  - `useFocusEffect` uses silent refresh (no spinner on return)
+  - Full loading screen only shows on initial load (no data yet)
+
+- **Key Files Modified/Created:**
+  - `app/routines/[id]/execute.tsx` - Audio, vibration, animation, preloading
+  - `app/(tabs)/index.tsx` - Cache usage, silent refresh
+  - `lib/utils/audio.ts` - Audio playback utilities (NEW)
+  - `lib/utils/dashboard-cache.ts` - Dashboard data caching (NEW)
+  - `assets/sounds/count_down_beep.mp3` - Custom beep sound (NEW)
+  - `assets/animations/routine_complete.json` - Placeholder animation (NEW)
+
+- **Known Issue:**
+  - Avatar colors in execute screen not matching category (shows gold/yellow)
+  - Will be replaced with animation, low priority to fix
 
 ---
 

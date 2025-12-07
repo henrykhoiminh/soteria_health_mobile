@@ -6,7 +6,8 @@ export type UserRole = 'user' | 'health_team' | 'admin'
 
 export interface Profile {
   id: string
-  full_name: string | null
+  first_name: string | null
+  last_name: string | null
   username: string | null
   age: number | null
   fitness_level: FitnessLevel | null
@@ -416,7 +417,9 @@ export interface CircleInvitation {
 // Search Types
 export interface UserSearchResult {
   id: string
-  full_name: string | null
+  first_name: string | null
+  last_name: string | null
+  full_name?: string | null // Kept for backwards compatibility with database queries
   username: string | null
   profile_picture_url: string | null
   journey_focus: JourneyFocus | null

@@ -54,11 +54,13 @@ export default function FriendInviteModal({
       const filtered = friends.filter((friendship) => {
         const friend = friendship.friend_profile;
         const displayName = getDisplayName(friend).toLowerCase();
-        const fullName = friend.full_name?.toLowerCase() || '';
+        const firstName = friend.first_name?.toLowerCase() || '';
+        const lastName = friend.last_name?.toLowerCase() || '';
         const username = friend.username?.toLowerCase() || '';
 
         return displayName.includes(query) ||
-               fullName.includes(query) ||
+               firstName.includes(query) ||
+               lastName.includes(query) ||
                username.includes(query);
       });
       setFilteredFriends(filtered);
@@ -119,8 +121,10 @@ export default function FriendInviteModal({
         </View>
         <View style={styles.friendInfo}>
           <Text style={styles.friendName}>{getDisplayName(friend)}</Text>
-          {friend.full_name && friend.username && (
-            <Text style={styles.friendRealName}>{friend.full_name}</Text>
+          {friend.first_name && friend.username && (
+            <Text style={styles.friendRealName}>
+              {friend.last_name ? `${friend.first_name} ${friend.last_name}` : friend.first_name}
+            </Text>
           )}
           <Text style={styles.friendMeta}>
             {friend.journey_focus} • {friend.fitness_level}

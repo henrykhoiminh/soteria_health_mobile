@@ -152,9 +152,9 @@ export async function cancelHealthTeamInvitation(
 export async function getAllHealthTeamMembers(): Promise<any[]> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, full_name, username, profile_picture_url, role, created_at')
+    .select('id, first_name, last_name, username, profile_picture_url, role, created_at')
     .in('role', ['health_team', 'admin'])
-    .order('full_name');
+    .order('first_name');
 
   if (error) {
     console.error('Error fetching health team members:', error);

@@ -41,7 +41,8 @@ export default function ProfileScreen() {
   const { user, profile, refreshProfile, signOut } = useAuth();
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
-  const [editedFullName, setEditedFullName] = useState('');
+  const [editedFirstName, setEditedFirstName] = useState('');
+  const [editedLastName, setEditedLastName] = useState('');
   const [editedUsername, setEditedUsername] = useState('');
   const [usernameError, setUsernameError] = useState('');
   const [validatingUsername, setValidatingUsername] = useState(false);
@@ -147,7 +148,8 @@ export default function ProfileScreen() {
   };
 
   const handleEdit = () => {
-    setEditedFullName(profile?.full_name || '');
+    setEditedFirstName(profile?.first_name || '');
+    setEditedLastName(profile?.last_name || '');
     setEditedUsername(profile?.username || '');
     setUsernameError('');
     setEditedJourneyFocus(profile?.journey_focus || null);
@@ -179,7 +181,8 @@ export default function ProfileScreen() {
 
   const handleCancel = () => {
     setIsEditing(false);
-    setEditedFullName('');
+    setEditedFirstName('');
+    setEditedLastName('');
     setEditedUsername('');
     setUsernameError('');
     setEditedJourneyFocus(null);
@@ -210,7 +213,8 @@ export default function ProfileScreen() {
       setSaving(true);
 
       const updates: any = {
-        full_name: editedFullName.trim() || null,
+        first_name: editedFirstName.trim() || null,
+        last_name: editedLastName.trim() || null,
         username: editedUsername.trim() || null,
         journey_focus: editedJourneyFocus,
         fitness_level: editedFitnessLevel,
@@ -301,7 +305,7 @@ export default function ProfileScreen() {
               />
             ) : (
               <Text style={styles.avatarText}>
-                {profile?.full_name?.charAt(0).toUpperCase() || 'U'}
+                {profile?.first_name?.charAt(0).toUpperCase() || 'U'}
               </Text>
             )}
           </View>
@@ -318,15 +322,28 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
         {isEditing ? (
-          <TextInput
-            style={styles.nameInput}
-            value={editedFullName}
-            onChangeText={setEditedFullName}
-            placeholder="Full Name"
-            placeholderTextColor={AppColors.textTertiary}
-          />
+          <View style={styles.nameEditContainer}>
+            <TextInput
+              style={styles.nameInput}
+              value={editedFirstName}
+              onChangeText={setEditedFirstName}
+              placeholder="First Name"
+              placeholderTextColor={AppColors.textTertiary}
+            />
+            <TextInput
+              style={styles.nameInput}
+              value={editedLastName}
+              onChangeText={setEditedLastName}
+              placeholder="Last Name"
+              placeholderTextColor={AppColors.textTertiary}
+            />
+          </View>
         ) : (
-          <Text style={styles.name}>{profile?.full_name || 'User'}</Text>
+          <Text style={styles.name}>
+            {profile?.first_name && profile?.last_name
+              ? `${profile.first_name} ${profile.last_name}`
+              : profile?.first_name || 'User'}
+          </Text>
         )}
 
         {/* User Role Badge */}
@@ -838,16 +855,21 @@ const styles = StyleSheet.create({
     color: AppColors.primary,
     fontWeight: '500',
   },
-  nameInput: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: AppColors.textPrimary,
+  nameEditContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    justifyContent: 'center',
     marginBottom: 4,
+  },
+  nameInput: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: AppColors.textPrimary,
     borderBottomWidth: 1,
     borderBottomColor: AppColors.primary,
     paddingBottom: 4,
     textAlign: 'center',
-    minWidth: 200,
+    minWidth: 120,
   },
   infoRow: {
     flexDirection: 'row',
