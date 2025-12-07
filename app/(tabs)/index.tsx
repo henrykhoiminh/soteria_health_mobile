@@ -1,22 +1,23 @@
 import Avatar from '@/components/Avatar';
 import CompletedRoutinesModal from '@/components/CompletedRoutinesModal';
+import HarmonyModal from '@/components/HarmonyModal';
 import JourneyBadge from '@/components/JourneyBadge';
 import JourneyFocusModal from '@/components/JourneyFocusModal';
 import PainProgressChart from '@/components/PainProgressChart';
 import RecommendedRoutineModal from '@/components/RecommendedRoutineModal';
 import UsernameSetupModal from '@/components/UsernameSetupModal';
-import UserRoleBadge from '@/components/UserRoleBadge';
 import { AppColors } from '@/constants/theme';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { calculateJourneyDays } from '@/lib/utils/auth';
 import { getRoutinesByCategory, getTodayProgress, getUniqueCompletedRoutines, getUserStats } from '@/lib/utils/dashboard';
+import { checkHarmonyRequirements } from '@/lib/utils/harmony';
 import { getPainCheckInHistory, getPainLevelInfo, getPainStatistics, getPainTrendInfo } from '@/lib/utils/pain-checkin';
 import { getFormattedFriendActivity } from '@/lib/utils/social';
 import { getAllAvatarStates } from '@/lib/utils/stats';
 import { getDisplayName } from '@/lib/utils/username';
 import { searchUsers } from '@/lib/utils/social';
 import { sendHealthTeamInvitation, hasPendingInvitation } from '@/lib/utils/health-team';
-import { ActivityFeedItem, AvatarState, DailyProgress, PainCheckIn, PainStatistics, Routine, RoutineCategory, UserStats, UserSearchResult } from '@/types';
+import { ActivityFeedItem, AvatarState, DailyProgress, HarmonyStatus, PainCheckIn, PainStatistics, Routine, RoutineCategory, UserStats, UserSearchResult } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
@@ -55,6 +56,8 @@ export default function DashboardScreen() {
   const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [invitedUsers, setInvitedUsers] = useState<Set<string>>(new Set());
+  const [harmonyStatus, setHarmonyStatus] = useState<HarmonyStatus | null>(null);
+  const [showHarmonyModal, setShowHarmonyModal] = useState(false);
 
   const isHealthTeam = profile?.role === 'health_team' || profile?.role === 'admin';
 
@@ -85,13 +88,14 @@ export default function DashboardScreen() {
 
     try {
       setLoading(true);
-      const [progressData, statsData, activityData, avatarsData, painStatsData, painHistoryData] = await Promise.all([
+      const [progressData, statsData, activityData, avatarsData, painStatsData, painHistoryData, harmonyData] = await Promise.all([
         getTodayProgress(user.id),
         getUserStats(user.id),
         getFormattedFriendActivity(user.id, 5), // Get latest 5 activities
         getAllAvatarStates(user.id), // Load avatar states
         getPainStatistics(user.id, 100), // Get pain statistics for up to 100 days
         getPainCheckInHistory(user.id, 100), // Get last 100 days for chart
+        checkHarmonyRequirements(user.id), // Load harmony status
       ]);
 
       console.log('Today Progress:', progressData); // Debug log
@@ -101,6 +105,7 @@ export default function DashboardScreen() {
       setAvatarStates(avatarsData);
       setPainStats(painStatsData);
       setPainHistory(painHistoryData);
+      setHarmonyStatus(harmonyData);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     } finally {
@@ -269,6 +274,18 @@ export default function DashboardScreen() {
         onSelectRoutine={handleSelectCompletedRoutine}
       />
 
+      {/* Harmony Modal */}
+      {harmonyStatus && (
+        <HarmonyModal
+          visible={showHarmonyModal}
+          harmonyStatus={harmonyStatus}
+          onClose={() => setShowHarmonyModal(false)}
+          isHealthTeam={isHealthTeam}
+          userId={user?.id}
+          onHarmonyStatusChanged={loadDashboardData}
+        />
+      )}
+
       {/* Health Team Invite Modal */}
       <Modal
         visible={showHealthTeamInviteModal}
@@ -432,7 +449,25 @@ export default function DashboardScreen() {
 
       {/* Avatars Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Awaken Your Light</Text>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Awaken Your Light</Text>
+          {harmonyStatus && (
+            <TouchableOpacity
+              style={[
+                styles.harmonyButton,
+                harmonyStatus.isInHarmony && styles.harmonyButtonActive
+              ]}
+              onPress={() => setShowHarmonyModal(true)}
+            >
+              <Text style={[
+                styles.harmonyButtonText,
+                harmonyStatus.isInHarmony && styles.harmonyButtonTextActive
+              ]}>
+                Harmony
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
         <View style={styles.avatarsGrid}>
           {avatarStates.map((avatarState) => (
             <Avatar
@@ -882,6 +917,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: AppColors.primary,
     fontWeight: '600',
+  },
+  harmonyButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: AppColors.border,
+  },
+  harmonyButtonActive: {
+    backgroundColor: AppColors.primary,
+  },
+  harmonyButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: AppColors.textSecondary,
+  },
+  harmonyButtonTextActive: {
+    color: '#FFFFFF',
   },
   activityCard: {
     flexDirection: 'row',

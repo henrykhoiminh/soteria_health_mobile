@@ -1,6 +1,7 @@
 import { supabase } from '../supabase/client'
 import { UserStats, RoutineCategory, AvatarState, AvatarLightState } from '@/types'
 import { getLocalDateString, getLocalYesterdayString, getLocalDateWithOffset, timestampToLocalDateString } from './timezone'
+import { updateHarmonyStatus, calculate7DayRollingCounts, checkForDormantAvatars, getHoursUntilDormant } from './harmony'
 
 /**
  * Calculate per-category streak for a user
@@ -233,7 +234,7 @@ export async function calculateHarmonyStreak(
  * Update all enhanced stats for a user
  * Call this after every routine completion
  */
-export async function updateEnhancedStats(userId: string): Promise<UserStats | null> {
+export async function updateEnhancedStats(userId: string, completedCategory?: RoutineCategory): Promise<UserStats | null> {
   // Calculate per-category streaks
   const mindStreak = await calculateCategoryStreak(userId, 'Mind')
   const bodyStreak = await calculateCategoryStreak(userId, 'Body')
@@ -252,30 +253,46 @@ export async function updateEnhancedStats(userId: string): Promise<UserStats | n
   // Calculate harmony-based streak (consecutive days with all 3 categories)
   const harmonyStreak = await calculateHarmonyStreak(userId)
 
+  // Calculate 7-day rolling counts for harmony system
+  const counts7d = await calculate7DayRollingCounts(userId)
+
+  // Build update object
+  const updateData: Record<string, any> = {
+    // Harmony-based streaks (overall day streaks)
+    current_streak: harmonyStreak.currentStreak,
+    longest_streak: harmonyStreak.longestStreak,
+    // Per-category streaks
+    mind_current_streak: mindStreak.currentStreak,
+    body_current_streak: bodyStreak.currentStreak,
+    soul_current_streak: soulStreak.currentStreak,
+    mind_longest_streak: mindStreak.longestStreak,
+    body_longest_streak: bodyStreak.longestStreak,
+    soul_longest_streak: soulStreak.longestStreak,
+    // Unique routines
+    unique_mind_routines: uniqueMind,
+    unique_body_routines: uniqueBody,
+    unique_soul_routines: uniqueSoul,
+    // Last activity dates
+    last_mind_activity: lastMindActivity,
+    last_body_activity: lastBodyActivity,
+    last_soul_activity: lastSoulActivity,
+    // 7-day rolling counts for harmony
+    mind_routines_7d: counts7d.mind,
+    body_routines_7d: counts7d.body,
+    soul_routines_7d: counts7d.soul,
+    updated_at: new Date().toISOString(),
+  }
+
+  // Update the last routine timestamp for the completed category
+  if (completedCategory) {
+    const timestampField = `${completedCategory.toLowerCase()}_last_routine_at`
+    updateData[timestampField] = new Date().toISOString()
+  }
+
   // Update user_stats table
   const { data, error } = await supabase
     .from('user_stats')
-    .update({
-      // Harmony-based streaks (overall day streaks)
-      current_streak: harmonyStreak.currentStreak,
-      longest_streak: harmonyStreak.longestStreak,
-      // Per-category streaks
-      mind_current_streak: mindStreak.currentStreak,
-      body_current_streak: bodyStreak.currentStreak,
-      soul_current_streak: soulStreak.currentStreak,
-      mind_longest_streak: mindStreak.longestStreak,
-      body_longest_streak: bodyStreak.longestStreak,
-      soul_longest_streak: soulStreak.longestStreak,
-      // Unique routines
-      unique_mind_routines: uniqueMind,
-      unique_body_routines: uniqueBody,
-      unique_soul_routines: uniqueSoul,
-      // Last activity dates
-      last_mind_activity: lastMindActivity,
-      last_body_activity: lastBodyActivity,
-      last_soul_activity: lastSoulActivity,
-      updated_at: new Date().toISOString(),
-    })
+    .update(updateData)
     .eq('user_id', userId)
     .select()
     .single()
@@ -283,6 +300,14 @@ export async function updateEnhancedStats(userId: string): Promise<UserStats | n
   if (error) {
     console.error('Error updating enhanced stats:', error)
     throw error
+  }
+
+  // Update harmony status (checks requirements and updates is_in_harmony)
+  try {
+    await updateHarmonyStatus(userId)
+  } catch (harmonyError) {
+    console.error('Error updating harmony status:', harmonyError)
+    // Don't throw - harmony update is secondary
   }
 
   return data
@@ -345,112 +370,121 @@ export function getAvatarLightState(
 
 /**
  * Get all three avatar states (Mind/Body/Soul) for dashboard display
- * Based on TODAY's progress, not historical streaks
+ * Uses enhanced harmony mechanics with proper decay (48hr/96hr thresholds)
  */
 export async function getAllAvatarStates(userId: string): Promise<AvatarState[]> {
   // Get today's progress using local timezone
   const today = getLocalDateString()
 
-  const { data: todayProgress, error } = await supabase
-    .from('daily_progress')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('date', today)
-    .maybeSingle() // Use maybeSingle to avoid error when no rows exist
-
-  console.log('[Avatar States] Today progress:', { todayProgress, error, date: today })
-
-  // Check yesterday's harmony to determine if avatars should be "Sleepy" or "Dormant"
-  let yesterdayHadHarmony = false
-  if (!todayProgress) {
-    // No progress today yet, check yesterday
-    const yesterdayStr = getLocalYesterdayString()
-
-    const { data: yesterdayProgress } = await supabase
+  // Fetch today's progress and user stats in parallel
+  const [progressResult, statsResult] = await Promise.all([
+    supabase
       .from('daily_progress')
       .select('*')
       .eq('user_id', userId)
-      .eq('date', yesterdayStr)
-      .maybeSingle() // Use maybeSingle to avoid error when no rows exist
+      .eq('date', today)
+      .maybeSingle(),
+    supabase
+      .from('user_stats')
+      .select('mind_last_routine_at, body_last_routine_at, soul_last_routine_at, vacation_mode_active')
+      .eq('user_id', userId)
+      .maybeSingle()
+  ])
 
-    console.log('[Avatar States] Yesterday progress:', { yesterdayProgress, date: yesterdayStr })
+  const todayProgress = progressResult.data
+  const userStats = statsResult.data
 
-    // Check if yesterday had harmony (all 3 categories completed)
-    // If no yesterdayProgress exists (e.g., after Journey Reset), this evaluates to false
-    yesterdayHadHarmony =
-      yesterdayProgress?.mind_complete &&
-      yesterdayProgress?.body_complete &&
-      yesterdayProgress?.soul_complete
+  console.log('[Avatar States] Today progress:', { todayProgress, date: today })
+  console.log('[Avatar States] User stats:', userStats)
 
-    // Return default states:
-    // - "Sleepy" if had harmony yesterday (continuing positive streak)
-    // - "Dormant" if no harmony yesterday OR no data (fresh start/reset)
-    const defaultState: AvatarLightState = yesterdayHadHarmony ? 'Sleepy' : 'Dormant'
+  // Determine decay threshold based on vacation mode
+  const decayHours = userStats?.vacation_mode_active ? 96 : 48
+  const now = new Date()
+  const decayThreshold = new Date(now.getTime() - decayHours * 60 * 60 * 1000)
+  const awakeningThreshold = new Date(now.getTime() - 48 * 60 * 60 * 1000)
 
-    console.log('[Avatar States] Default state:', defaultState, 'yesterdayHadHarmony:', yesterdayHadHarmony)
-
-    return [
-      {
-        category: 'Mind',
-        lightState: defaultState,
-        lastActivity: null,
-        currentStreak: 0,
-        color: '#3B82F6',
-      },
-      {
-        category: 'Body',
-        lightState: defaultState,
-        lastActivity: null,
-        currentStreak: 0,
-        color: '#EF4444',
-      },
-      {
-        category: 'Soul',
-        lightState: defaultState,
-        lastActivity: null,
-        currentStreak: 0,
-        color: '#F59E0B',
-      },
-    ]
+  // Helper to check if category is dormant
+  const isDormant = (lastRoutineAt: string | null): boolean => {
+    if (!lastRoutineAt) return true
+    return new Date(lastRoutineAt) < decayThreshold
   }
 
-  // Check if all categories completed (perfect harmony = Radiant for all)
-  const allCategoriesCompleted =
-    todayProgress.mind_complete &&
-    todayProgress.body_complete &&
-    todayProgress.soul_complete
+  // Helper to check awakening (2+ routines in 48 hours - calculated separately if needed)
+  // For now, we'll use a simpler check: activity within 48 hours but not today
+  const couldBeAwakening = (lastRoutineAt: string | null): boolean => {
+    if (!lastRoutineAt) return false
+    const lastTime = new Date(lastRoutineAt)
+    return lastTime >= awakeningThreshold && lastTime >= decayThreshold
+  }
+
+  // Check if all categories completed today (for Radiant state)
+  const allCompletedToday = todayProgress?.mind_complete &&
+                            todayProgress?.body_complete &&
+                            todayProgress?.soul_complete
+
+  // Determine state for each category
+  const getStateForCategory = (
+    _category: RoutineCategory,
+    completedToday: boolean,
+    lastRoutineAt: string | null
+  ): AvatarLightState => {
+    // Priority 1: Radiant (all completed today)
+    if (allCompletedToday) {
+      return 'Radiant'
+    }
+
+    // Priority 2: Glowing (this category completed today)
+    if (completedToday) {
+      return 'Glowing'
+    }
+
+    // Priority 3: Dormant (no activity within decay threshold)
+    if (isDormant(lastRoutineAt)) {
+      return 'Dormant'
+    }
+
+    // Priority 4: Awakening (recent activity, building momentum)
+    // This would ideally check for 2+ routines in 48 hours
+    // For simplicity, we'll use recent activity without completion today
+    if (couldBeAwakening(lastRoutineAt)) {
+      return 'Awakening'
+    }
+
+    // Default: Sleepy
+    return 'Sleepy'
+  }
 
   return [
     {
       category: 'Mind',
-      lightState: getAvatarLightState(
-        todayProgress.mind_complete,
-        allCategoriesCompleted,
-        false // Not executing (will be true during routine execution)
+      lightState: getStateForCategory(
+        'Mind',
+        todayProgress?.mind_complete ?? false,
+        userStats?.mind_last_routine_at ?? null
       ),
-      lastActivity: null,
+      lastActivity: userStats?.mind_last_routine_at ?? null,
       currentStreak: 0,
       color: '#3B82F6',
     },
     {
       category: 'Body',
-      lightState: getAvatarLightState(
-        todayProgress.body_complete,
-        allCategoriesCompleted,
-        false // Not executing (will be true during routine execution)
+      lightState: getStateForCategory(
+        'Body',
+        todayProgress?.body_complete ?? false,
+        userStats?.body_last_routine_at ?? null
       ),
-      lastActivity: null,
+      lastActivity: userStats?.body_last_routine_at ?? null,
       currentStreak: 0,
       color: '#EF4444',
     },
     {
       category: 'Soul',
-      lightState: getAvatarLightState(
-        todayProgress.soul_complete,
-        allCategoriesCompleted,
-        false // Not executing (will be true during routine execution)
+      lightState: getStateForCategory(
+        'Soul',
+        todayProgress?.soul_complete ?? false,
+        userStats?.soul_last_routine_at ?? null
       ),
-      lastActivity: null,
+      lastActivity: userStats?.soul_last_routine_at ?? null,
       currentStreak: 0,
       color: '#F59E0B',
     },

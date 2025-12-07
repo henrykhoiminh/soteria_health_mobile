@@ -246,6 +246,44 @@ This is the mobile companion app to the Soteria Health web application, built wi
   - Display @username throughout social features
   - Username setup modal for new users
 
+### Harmony System
+- **Harmony Mechanic:**
+  - Users achieve Harmony by completing balanced routines for 7 consecutive days
+  - **Balanced Day** = At least 1 routine in each category (Mind, Body, Soul)
+  - Progress tracked via HarmonyProgressCard on dashboard
+  - Detailed progress view in HarmonyModal
+
+- **Today's Balance Tracking:**
+  - Visual indicators for Mind, Body, Soul completion
+  - Shows which categories still need routines today
+  - Updates in real-time as routines are completed
+
+- **Path to Harmony:**
+  - Shows consecutive balanced days completed
+  - Displays days remaining to achieve Harmony
+  - Suggested daily plan to reach harmony faster
+  - When in Harmony: Encouraging message with sparkles icon
+
+- **Advanced Routines (Harmony Gating):**
+  - Premium routines marked as "Advanced" by health team
+  - Require Harmony status to access
+  - Non-Harmony users can see but not start these routines
+  - **Locked State UI:**
+    - "Advanced" badge (amber/gold #F59E0B) on routine cards
+    - Reduced opacity and locked styling
+    - Exercises hidden on detail page
+    - "Harmony Required" button instead of Start
+    - Hint text explaining how to unlock
+
+- **Health Team Controls:**
+  - Manual Harmony toggle in HarmonyModal
+  - Can set routines as "Advanced" in routine builder
+  - Full control over harmony gating system
+
+- **Filter Options:**
+  - Filter routines by Advanced status in Discover
+  - Category filters use category-specific colors (Mind blue, Body red, Soul amber)
+
 ### Journey Focus System
 - **Two Journey Types:**
   - **Injury Prevention** - For users focused on preventing injuries through proactive wellness
@@ -1042,7 +1080,32 @@ npx expo start --ios
 
 ## Recent Updates
 
-### Pain Check-In System & Reset Journey (Latest)
+### Harmony System & Advanced Routines (Latest)
+- ✅ **Harmony Mechanic:**
+  - Users achieve Harmony by completing balanced routines for 7 consecutive days
+  - HarmonyProgressCard on dashboard showing Today's Balance and Path to Harmony
+  - HarmonyModal with detailed progress, consecutive balanced days, suggested plan
+  - When in Harmony: Shows encouraging message with sparkles icon
+- ✅ **Advanced Routines (Harmony Gating):**
+  - Health team can mark routines as "Advanced" in routine builder
+  - Advanced routines require Harmony status to access
+  - Non-Harmony users see routines with locked state (reduced opacity, locked badge)
+  - Routine detail page hides exercises, shows "Harmony Required" button
+  - Hint text explaining how to achieve Harmony to unlock
+- ✅ **Health Team Controls:**
+  - Manual Harmony toggle in HarmonyModal for testing/support
+  - Advanced Routine toggle in routine builder Details step
+  - Fixed harmony status persistence (respects manually set flag)
+- ✅ **Filter & Discovery Updates:**
+  - Added Advanced filter option in FilterModal
+  - Category filters (Mind, Body, Soul) now use category-specific colors
+  - Routine cards show "Advanced" badge with amber styling
+- ✅ **Routine Builder Improvements:**
+  - DetailsStep form wrapped in ScrollView for scrollable content
+  - Advanced toggle visible when scrolling down
+  - All form fields accessible on smaller screens
+
+### Pain Check-In System & Reset Journey
 - ✅ **Pain Check-In System for Recovery Journey:**
   - Initial pain check-in during onboarding (Step 2 for Recovery users)
   - Daily pain check-in modal with 3-step flow

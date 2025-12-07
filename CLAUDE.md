@@ -654,7 +654,7 @@ npx tsc --noEmit
 - Updated README.md with latest changes
 - Created this CLAUDE.md file
 
-### Session 17 (Latest - Benefits System)
+### Session 17 (Benefits System)
 - Added comprehensive benefits functionality to routines
 - Benefits input in Advanced Tags section (Metadata step)
 - Max 4 benefits per routine (5-100 characters each)
@@ -665,7 +665,90 @@ npx tsc --noEmit
 - Database: verified `benefits` column exists as `text[]`
 - Updated README.md and CLAUDE.md with benefits documentation
 
+### Session 18 (Latest - Harmony System)
+- **Harmony Mechanic Implementation:**
+  - Users achieve Harmony by completing balanced routines (1+ in Mind, Body, Soul) for 7 consecutive days
+  - HarmonyProgressCard shows Today's Balance and Path to Harmony
+  - HarmonyModal with detailed progress, consecutive balanced days tracking
+  - When in Harmony: Shows encouraging message with sparkles icon
+  - Removed redundant "Balanced" status tags
+
+- **Advanced Routines (Harmony Gating):**
+  - Added `is_advanced` field to routines table and types
+  - Health team can mark routines as "Advanced" in routine builder
+  - Advanced routines require Harmony status to access
+  - Non-Harmony users see routines but:
+    - "Advanced" badge (amber/gold) on routine cards
+    - Locked styling with reduced opacity
+    - Can view routine details but exercises hidden
+    - "Harmony Required" locked button instead of Start
+    - Hint text explaining how to unlock
+
+- **Health Team Controls:**
+  - Manual Harmony toggle in HarmonyModal for health team members
+  - `setHarmonyStatusManually()` function in harmony.ts
+  - Advanced Routine toggle in Details step of routine builder
+  - Fixed harmony status persistence (respects database flag first)
+
+- **Filter & Discovery Updates:**
+  - Added Advanced filter option in FilterModal
+  - Category filters (Mind, Body, Soul) now use category-specific colors
+  - `isAdvanced` filter in RoutineFilters type
+  - Routine discovery includes `is_advanced` field
+
+- **Routine Builder Scrolling Fix:**
+  - Wrapped DetailsStep form in ScrollView
+  - Advanced toggle visible when scrolling down
+  - Added `formScrollContainer` style
+
+- **Key Files Modified:**
+  - `types/index.ts` - Added `isAdvanced` to RoutineFilters, `is_advanced` to RoutineBuilderData
+  - `lib/utils/harmony.ts` - Added `setHarmonyStatusManually()`, fixed `checkHarmonyRequirements()`
+  - `lib/utils/routine-builder.ts` - Save/update `is_advanced` flag
+  - `lib/utils/routine-discovery.ts` - Added `is_advanced` to queries and filters
+  - `components/HarmonyProgressCard.tsx` - Updated UI, removed status badges
+  - `components/HarmonyModal.tsx` - Added health team controls section
+  - `app/(tabs)/builder.tsx` - Added Advanced toggle, wrapped in ScrollView
+  - `app/(tabs)/routines.tsx` - Added Advanced filter, category-specific filter colors
+  - `app/routines/[id].tsx` - Harmony locking for Advanced routines
+
+- **Styling Conventions:**
+  - Harmony/Advanced UI uses amber/gold color (#F59E0B)
+  - Consistent locked state styling across app
+  - Category colors: Mind (#3B82F6), Body (#EF4444), Soul (#F59E0B)
+
 ---
 
-**Last Updated:** 2025-11-19
+## Harmony System Reference
+
+### Core Concept
+- **Harmony** = Achieved by completing balanced routines for 7 consecutive days
+- **Balanced Day** = At least 1 routine in each category (Mind, Body, Soul)
+- **Advanced Routines** = Premium content requiring Harmony to access
+
+### Database Fields (user_stats)
+- `is_in_harmony` (boolean) - Current harmony status
+- `harmony_achieved_at` (timestamptz) - When harmony was achieved
+- `harmony_lost_at` (timestamptz) - When harmony was lost
+- `mind_routines_7d`, `body_routines_7d`, `soul_routines_7d` - 7-day rolling counts
+
+### Database Fields (routines)
+- `is_advanced` (boolean) - Whether routine requires Harmony
+
+### Key Functions
+```typescript
+// Check harmony requirements
+checkHarmonyRequirements(userId: string): Promise<HarmonyStatus>
+
+// Manual toggle (health team only)
+setHarmonyStatusManually(userId: string, isInHarmony: boolean): Promise<void>
+```
+
+### UI Components
+- `HarmonyProgressCard` - Dashboard card showing balance and path to harmony
+- `HarmonyModal` - Detailed modal with progress, plan, health team controls
+
+---
+
+**Last Updated:** 2025-12-06
 **Current Version:** Expo SDK 54, React Native 0.76+

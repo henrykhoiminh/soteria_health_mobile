@@ -164,6 +164,7 @@ function buildDiscoverQuery(
       save_count,
       author_type,
       official_author,
+      is_advanced,
       profiles (
         full_name,
         username,
@@ -203,6 +204,10 @@ function buildDiscoverQuery(
     // Search in name and description
     const searchTerm = `%${filters.searchQuery.trim()}%`;
     query = query.or(`name.ilike.${searchTerm},description.ilike.${searchTerm}`);
+  }
+
+  if (filters.isAdvanced !== undefined) {
+    query = query.eq('is_advanced', filters.isAdvanced);
   }
 
   // Apply sorting
@@ -331,6 +336,7 @@ export async function getDiscoverRoutines(
         badge_official: badges.badge_official,
         author_type: routine.author_type,
         official_author: routine.official_author,
+        is_advanced: routine.is_advanced || false,
         creator_name: routine.profiles?.full_name,
         creator_username: routine.profiles?.username,
         creator_avatar: routine.profiles?.profile_picture_url,

@@ -127,6 +127,8 @@ export async function publishCustomRoutine(
       // Optional tag fields for AI functionality
       tags: routineData.tags || [],
       body_parts: routineData.body_parts || [],
+      // Harmony gating - only health team can set this
+      is_advanced: shouldCreateOfficial ? (routineData.is_advanced || false) : false,
     })
     .select('id')
     .single()
@@ -190,6 +192,9 @@ export async function updateCustomRoutine(
   // Prepare exercises data (remove temporary IDs)
   const exercises = routineData.exercises.map(({ id, ...exercise }) => exercise)
 
+  // Check if user is Health Team member
+  const isHealthTeam = await isHealthTeamMember(userId)
+
   // Update routine in database
   // Note: Health team members can edit official routines (is_custom = false)
   // Regular users can only edit their own custom routines (is_custom = true)
@@ -207,6 +212,8 @@ export async function updateCustomRoutine(
       // Optional tag fields for AI functionality
       tags: routineData.tags || [],
       body_parts: routineData.body_parts || [],
+      // Harmony gating - only health team can update this
+      ...(isHealthTeam && { is_advanced: routineData.is_advanced || false }),
     })
     .eq('id', routineId)
 
@@ -289,6 +296,7 @@ export async function convertToOfficial(
     author_type: 'official',
     official_author: officialAuthor,
     is_public: true, // Official routines are always public
+    is_advanced: routineData.is_advanced || false, // Harmony gating
     // created_by stays the same (preserves original creator)
   }
 

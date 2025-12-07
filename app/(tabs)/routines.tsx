@@ -21,6 +21,7 @@ import {
   RoutineSourceFilter,
   JourneyFocus,
   RoutineFilters,
+  HarmonyStatus,
 } from '@/types';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import {
@@ -32,6 +33,7 @@ import {
   getRecentlyCompletedRoutines,
   toggleRoutinePublicStatus,
 } from '@/lib/utils/routine-discovery';
+import { checkHarmonyRequirements } from '@/lib/utils/harmony';
 import RoutineAuthorBadge from '@/components/RoutineAuthorBadge';
 
 const CATEGORIES: RoutineCategory[] = ['Mind', 'Body', 'Soul'];
@@ -114,6 +116,20 @@ function DiscoverTab({ userId, initialCategory }: { userId: string; initialCateg
     initialCategory ? { category: initialCategory } : {}
   );
   const [showFilterModal, setShowFilterModal] = useState(false);
+  const [harmonyStatus, setHarmonyStatus] = useState<HarmonyStatus | null>(null);
+
+  // Load harmony status
+  useEffect(() => {
+    const loadHarmonyStatus = async () => {
+      try {
+        const status = await checkHarmonyRequirements(userId);
+        setHarmonyStatus(status);
+      } catch (error) {
+        console.error('Error loading harmony status:', error);
+      }
+    };
+    loadHarmonyStatus();
+  }, [userId]);
 
   // Update filters when initialCategory changes (e.g., navigating from dashboard)
   useEffect(() => {
@@ -269,6 +285,15 @@ function DiscoverTab({ userId, initialCategory }: { userId: string; initialCateg
               </TouchableOpacity>
             </View>
           )}
+          {filters.isAdvanced && (
+            <View style={[styles.filterChip, styles.advancedFilterChip]}>
+              <Ionicons name="diamond" size={14} color="#F59E0B" />
+              <Text style={styles.advancedFilterText}>Advanced</Text>
+              <TouchableOpacity onPress={() => setFilters({ ...filters, isAdvanced: undefined })}>
+                <Ionicons name="close-circle" size={16} color="#F59E0B" />
+              </TouchableOpacity>
+            </View>
+          )}
         </ScrollView>
 
         {hasActiveFilters && (
@@ -296,6 +321,7 @@ function DiscoverTab({ userId, initialCategory }: { userId: string; initialCateg
               routine={routine}
               onPress={() => router.push(`/routines/${routine.id}`)}
               onSaveToggle={() => handleSaveToggle(routine)}
+              isInHarmony={harmonyStatus?.isInHarmony || false}
             />
           ))
         )}
@@ -472,6 +498,7 @@ interface RoutineCardProps {
   isOwner?: boolean;
   onTogglePublic?: () => void;
   compact?: boolean;
+  isInHarmony?: boolean;
 }
 
 function RoutineCard({
@@ -481,21 +508,43 @@ function RoutineCard({
   isOwner,
   onTogglePublic,
   compact,
+  isInHarmony = false,
 }: RoutineCardProps) {
+  const isLocked = routine.is_advanced && !isInHarmony;
+
   return (
     <TouchableOpacity
-      style={[styles.routineCard, compact && styles.routineCardCompact]}
+      style={[
+        styles.routineCard,
+        compact && styles.routineCardCompact,
+        isLocked && styles.routineCardLocked,
+      ]}
       onPress={onPress}
       activeOpacity={0.7}
     >
+      {/* Locked Overlay for Advanced Routines */}
+      {isLocked && (
+        <View style={styles.lockedOverlay}>
+          <Ionicons name="lock-closed" size={16} color="#F59E0B" />
+        </View>
+      )}
+
       {/* Header with badges */}
       <View style={styles.routineHeader}>
         <View style={[styles.categoryDot, { backgroundColor: getCategoryColor(routine.category) }]} />
-        <Text style={styles.routineName} numberOfLines={1}>
+        <Text style={[styles.routineName, isLocked && styles.routineNameLocked]} numberOfLines={1}>
           {routine.name}
         </Text>
 
-        {/* Badges */}
+        {/* Advanced Badge */}
+        {routine.is_advanced && (
+          <View style={styles.badgeAdvanced}>
+            <Ionicons name="diamond" size={14} color="#F59E0B" />
+            <Text style={styles.badgeAdvancedText}>Advanced</Text>
+          </View>
+        )}
+
+        {/* Other Badges */}
         {routine.badge_popular && (
           <View style={styles.badgePopular}>
             <Ionicons name="flame" size={14} color="#FF6B35" />
@@ -621,6 +670,19 @@ function FilterModal({ visible, filters, onApply, onClose }: FilterModalProps) {
     setLocalFilters({});
   };
 
+  const getCategoryColor = (category: RoutineCategory): string => {
+    switch (category) {
+      case 'Mind':
+        return AppColors.mind;
+      case 'Body':
+        return AppColors.body;
+      case 'Soul':
+        return AppColors.soul;
+      default:
+        return AppColors.primary;
+    }
+  };
+
   return (
     <Modal
       visible={visible}
@@ -643,30 +705,37 @@ function FilterModal({ visible, filters, onApply, onClose }: FilterModalProps) {
           {/* Category Filter */}
           <Text style={styles.filterSectionTitle}>Category</Text>
           <View style={styles.filterOptions}>
-            {CATEGORIES.map((category) => (
-              <TouchableOpacity
-                key={category}
-                style={[
-                  styles.filterOption,
-                  localFilters.category === category && styles.filterOptionActive,
-                ]}
-                onPress={() =>
-                  setLocalFilters({
-                    ...localFilters,
-                    category: localFilters.category === category ? undefined : category,
-                  })
-                }
-              >
-                <Text
+            {CATEGORIES.map((category) => {
+              const isSelected = localFilters.category === category;
+              const categoryColor = getCategoryColor(category);
+              return (
+                <TouchableOpacity
+                  key={category}
                   style={[
-                    styles.filterOptionText,
-                    localFilters.category === category && styles.filterOptionTextActive,
+                    styles.filterOption,
+                    isSelected && {
+                      backgroundColor: categoryColor,
+                      borderColor: categoryColor,
+                    },
                   ]}
+                  onPress={() =>
+                    setLocalFilters({
+                      ...localFilters,
+                      category: isSelected ? undefined : category,
+                    })
+                  }
                 >
-                  {category}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                  <Text
+                    style={[
+                      styles.filterOptionText,
+                      isSelected && styles.filterOptionTextActive,
+                    ]}
+                  >
+                    {category}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
 
           {/* Difficulty Filter */}
@@ -780,6 +849,50 @@ function FilterModal({ visible, filters, onApply, onClose }: FilterModalProps) {
               </Text>
             </TouchableOpacity>
           </View>
+
+          {/* Advanced Filter (Harmony Required) */}
+          <Text style={styles.filterSectionTitle}>Harmony</Text>
+          <TouchableOpacity
+            style={[
+              styles.advancedFilterOption,
+              localFilters.isAdvanced && styles.advancedFilterOptionActive,
+            ]}
+            onPress={() =>
+              setLocalFilters({
+                ...localFilters,
+                isAdvanced: localFilters.isAdvanced ? undefined : true,
+              })
+            }
+          >
+            <View style={styles.advancedFilterContent}>
+              <Ionicons
+                name="diamond"
+                size={20}
+                color={localFilters.isAdvanced ? '#FFFFFF' : '#F59E0B'}
+              />
+              <View style={styles.advancedFilterTextContent}>
+                <Text
+                  style={[
+                    styles.advancedFilterLabel,
+                    localFilters.isAdvanced && styles.advancedFilterLabelActive,
+                  ]}
+                >
+                  Advanced Routines
+                </Text>
+                <Text
+                  style={[
+                    styles.advancedFilterDescription,
+                    localFilters.isAdvanced && styles.advancedFilterDescriptionActive,
+                  ]}
+                >
+                  Show only routines that require Harmony
+                </Text>
+              </View>
+            </View>
+            {localFilters.isAdvanced && (
+              <Ionicons name="checkmark-circle" size={24} color="#FFFFFF" />
+            )}
+          </TouchableOpacity>
         </ScrollView>
 
         <View style={styles.modalFooter}>
@@ -1230,5 +1343,87 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: AppColors.textPrimary,
+  },
+  // Advanced filter styles for filter chips
+  advancedFilterChip: {
+    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    borderColor: '#F59E0B',
+  },
+  advancedFilterText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#F59E0B',
+  },
+  // Advanced badge on routine cards
+  badgeAdvanced: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    gap: 4,
+  },
+  badgeAdvancedText: {
+    color: '#F59E0B',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  // Locked routine card styles
+  routineCardLocked: {
+    opacity: 0.85,
+    borderColor: 'rgba(245, 158, 11, 0.3)',
+  },
+  lockedOverlay: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    zIndex: 1,
+    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    borderRadius: 12,
+    padding: 6,
+  },
+  routineNameLocked: {
+    color: AppColors.textSecondary,
+  },
+  // Advanced filter option in modal
+  advancedFilterOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    backgroundColor: 'rgba(245, 158, 11, 0.08)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.2)',
+  },
+  advancedFilterOptionActive: {
+    backgroundColor: '#F59E0B',
+    borderColor: '#F59E0B',
+  },
+  advancedFilterContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  advancedFilterTextContent: {
+    flex: 1,
+  },
+  advancedFilterLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#F59E0B',
+    marginBottom: 2,
+  },
+  advancedFilterLabelActive: {
+    color: '#FFFFFF',
+  },
+  advancedFilterDescription: {
+    fontSize: 13,
+    color: AppColors.textSecondary,
+  },
+  advancedFilterDescriptionActive: {
+    color: 'rgba(255, 255, 255, 0.8)',
   },
 });

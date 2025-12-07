@@ -3,8 +3,9 @@ import { AppColors } from '@/constants/theme';
 import { getRoutineById } from '@/lib/utils/dashboard';
 import { deleteCustomRoutine } from '@/lib/utils/routine-builder';
 import { isHealthTeamMember } from '@/lib/utils/routine-builder';
+import { checkHarmonyRequirements } from '@/lib/utils/harmony';
 import { formatDuration } from '@/lib/utils/time';
-import { Routine } from '@/types';
+import { Routine, HarmonyStatus } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -26,16 +27,28 @@ export default function RoutineDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [routine, setRoutine] = useState<Routine | null>(null);
   const [isHealthTeam, setIsHealthTeam] = useState(false);
+  const [harmonyStatus, setHarmonyStatus] = useState<HarmonyStatus | null>(null);
 
   useEffect(() => {
     loadRoutine();
     checkHealthTeamStatus();
+    loadHarmonyStatus();
   }, [id, user]);
 
   const checkHealthTeamStatus = async () => {
     if (!user) return;
     const healthTeamStatus = await isHealthTeamMember(user.id);
     setIsHealthTeam(healthTeamStatus);
+  };
+
+  const loadHarmonyStatus = async () => {
+    if (!user) return;
+    try {
+      const status = await checkHarmonyRequirements(user.id);
+      setHarmonyStatus(status);
+    } catch (error) {
+      console.error('Error loading harmony status:', error);
+    }
   };
 
   const loadRoutine = async () => {
@@ -101,6 +114,9 @@ export default function RoutineDetailScreen() {
   const isOfficialRoutine = routine?.author_type === 'official';
   const canEditOfficial = isHealthTeam && isOfficialRoutine;
   const canEdit = isCustomRoutine || canEditOfficial;
+  const isAdvancedRoutine = routine?.is_advanced === true;
+  const isInHarmony = harmonyStatus?.isInHarmony === true;
+  const isHarmonyLocked = isAdvancedRoutine && !isInHarmony;
 
   if (loading) {
     return (
@@ -141,6 +157,12 @@ export default function RoutineDetailScreen() {
                     <Ionicons name="trash-outline" size={24} color={AppColors.body} />
                   </TouchableOpacity>
                 )}
+              </View>
+            )}
+            {isAdvancedRoutine && (
+              <View style={styles.advancedBadge}>
+                <Ionicons name="diamond" size={16} color="#F59E0B" />
+                <Text style={styles.advancedBadgeText}>Advanced</Text>
               </View>
             )}
             <View style={[styles.categoryBadge, { backgroundColor: getCategoryColor(routine.category) }]}>
@@ -202,23 +224,32 @@ export default function RoutineDetailScreen() {
           <Text style={styles.sectionTitle}>
             Exercises ({routine.exercises?.length || 0})
           </Text>
-          {routine.exercises && routine.exercises.map((exercise, index) => (
-            <View key={index} style={styles.exerciseCard}>
-              <View style={styles.exerciseHeader}>
-                <View style={styles.exerciseNumber}>
-                  <Text style={styles.exerciseNumberText}>{index + 1}</Text>
-                </View>
-                <Text style={styles.exerciseName}>{exercise.name}</Text>
-              </View>
-              <Text style={styles.exerciseInstructions}>{exercise.instructions}</Text>
-              <View style={styles.exerciseDuration}>
-                <Ionicons name="timer-outline" size={16} color={AppColors.primary} />
-                <Text style={styles.exerciseDurationText}>
-                  {formatDuration(exercise.duration_seconds)}
-                </Text>
-              </View>
+          {isHarmonyLocked ? (
+            <View style={styles.exercisesLockedMessage}>
+              <Ionicons name="lock-closed" size={20} color="#F59E0B" />
+              <Text style={styles.exercisesLockedText}>
+                Achieve Harmony to view exercises
+              </Text>
             </View>
-          ))}
+          ) : (
+            routine.exercises && routine.exercises.map((exercise, index) => (
+              <View key={index} style={styles.exerciseCard}>
+                <View style={styles.exerciseHeader}>
+                  <View style={styles.exerciseNumber}>
+                    <Text style={styles.exerciseNumberText}>{index + 1}</Text>
+                  </View>
+                  <Text style={styles.exerciseName}>{exercise.name}</Text>
+                </View>
+                <Text style={styles.exerciseInstructions}>{exercise.instructions}</Text>
+                <View style={styles.exerciseDuration}>
+                  <Ionicons name="timer-outline" size={16} color={AppColors.primary} />
+                  <Text style={styles.exerciseDurationText}>
+                    {formatDuration(exercise.duration_seconds)}
+                  </Text>
+                </View>
+              </View>
+            ))
+          )}
         </View>
 
         <View style={{ height: 100 }} />
@@ -226,14 +257,26 @@ export default function RoutineDetailScreen() {
 
       {/* Footer with Start Button */}
       <View style={styles.footer}>
-        <TouchableOpacity
-          style={styles.startButton}
-          onPress={handleStartRoutine}
-          disabled={!user}
-        >
-          <Ionicons name="play" size={24} color={AppColors.textPrimary} />
-          <Text style={styles.startButtonText}>Start Routine</Text>
-        </TouchableOpacity>
+        {isHarmonyLocked ? (
+          <View style={styles.harmonyLockedContainer}>
+            <View style={styles.harmonyLockedButton}>
+              <Ionicons name="lock-closed" size={24} color="#F59E0B" />
+              <Text style={styles.harmonyLockedButtonText}>Harmony Required</Text>
+            </View>
+            <Text style={styles.harmonyLockedHint}>
+              Achieve Harmony by completing balanced routines for 7 consecutive days to unlock this Advanced routine.
+            </Text>
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={styles.startButton}
+            onPress={handleStartRoutine}
+            disabled={!user}
+          >
+            <Ionicons name="play" size={24} color={AppColors.textPrimary} />
+            <Text style={styles.startButtonText}>Start Routine</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -468,5 +511,62 @@ const styles = StyleSheet.create({
     color: AppColors.textPrimary,
     fontSize: 18,
     fontWeight: '600',
+  },
+  advancedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    gap: 6,
+  },
+  advancedBadgeText: {
+    color: '#F59E0B',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  harmonyLockedContainer: {
+    alignItems: 'center',
+  },
+  harmonyLockedButton: {
+    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+    width: '100%',
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.3)',
+  },
+  harmonyLockedButtonText: {
+    color: '#F59E0B',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  harmonyLockedHint: {
+    marginTop: 12,
+    fontSize: 13,
+    color: AppColors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  exercisesLockedMessage: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    borderRadius: 12,
+    padding: 20,
+    gap: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.2)',
+  },
+  exercisesLockedText: {
+    color: '#F59E0B',
+    fontSize: 15,
+    fontWeight: '500',
   },
 });

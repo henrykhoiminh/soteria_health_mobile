@@ -89,6 +89,8 @@ export interface Routine {
   creator_name?: string
   creator_username?: string
   creator_avatar?: string
+  // Harmony gating
+  is_advanced?: boolean // Advanced routines require Harmony to access
 }
 
 // Routine Discovery Types
@@ -103,6 +105,7 @@ export interface RoutineFilters {
   durationMin?: number
   durationMax?: number
   searchQuery?: string
+  isAdvanced?: boolean // Filter for Advanced routines (Harmony required)
 }
 
 export interface RoutineDiscoverParams {
@@ -157,6 +160,27 @@ export interface UserStats {
   last_mind_activity: string | null
   last_body_activity: string | null
   last_soul_activity: string | null
+  // Harmony System: 7-day rolling counts
+  mind_routines_7d: number
+  body_routines_7d: number
+  soul_routines_7d: number
+  // Harmony System: Status tracking
+  is_in_harmony: boolean
+  harmony_achieved_at: string | null
+  harmony_lost_at: string | null
+  // Harmony System: User type (based on 7-day activity)
+  user_type: 'mind' | 'body' | 'soul' | 'balanced'
+  // Harmony System: Per-category last routine timestamps (for decay)
+  mind_last_routine_at: string | null
+  body_last_routine_at: string | null
+  soul_last_routine_at: string | null
+  // Vacation Mode
+  vacation_days_banked: number
+  vacation_mode_active: boolean
+  vacation_mode_start: string | null
+  vacation_mode_end: string | null
+  last_vacation_ended_at: string | null
+  vacation_requested_at: string | null
   // Deprecated fields (still in DB but no longer used)
   health_score?: number
   harmony_score?: number
@@ -164,6 +188,36 @@ export interface UserStats {
 
 // Avatar Light States (Phase 2)
 export type AvatarLightState = 'Dormant' | 'Sleepy' | 'Awakening' | 'Glowing' | 'Radiant'
+
+// Harmony System Types
+export type UserType = 'mind' | 'body' | 'soul' | 'balanced'
+
+export interface HarmonyStatus {
+  isInHarmony: boolean
+  harmonyAchievedAt: string | null
+  harmonyLostAt: string | null
+  userType: UserType
+  mind7d: number
+  body7d: number
+  soul7d: number
+  isBalanced: boolean
+  totalRoutines7d: number
+  daysUntilCalibrationComplete: number // 0 if past day 7
+  // Consecutive balanced days tracking
+  consecutiveBalancedDays: number // How many days in a row user has been balanced
+  daysUntilHarmony: number // How many more balanced days needed (7 - consecutiveBalancedDays)
+  // Daily suggested plan to reach harmony
+  suggestedPlan: DailySuggestedRoutines[]
+}
+
+export interface DailySuggestedRoutines {
+  day: number // 1, 2, 3... days from now
+  date: string // YYYY-MM-DD
+  mind: number // Suggested Mind routines for this day
+  body: number // Suggested Body routines for this day
+  soul: number // Suggested Soul routines for this day
+  isCompleted?: boolean // If this day has passed and was balanced
+}
 
 export interface AvatarState {
   category: RoutineCategory
@@ -189,6 +243,8 @@ export interface RoutineBuilderData {
   tags?: string[]
   body_parts?: string[]
   benefits?: string[] // Array of benefit strings (max 4, each 5-100 chars)
+  // Harmony gating - only health team can set this
+  is_advanced?: boolean // Advanced routines require Harmony to access
 }
 
 // Journey Goals Types

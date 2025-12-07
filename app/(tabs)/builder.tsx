@@ -86,6 +86,7 @@ export default function RoutineBuilderScreen() {
     exercises: [],
     body_parts: [],
     benefits: [],
+    is_advanced: false,
   });
 
   useEffect(() => {
@@ -174,6 +175,7 @@ export default function RoutineBuilderScreen() {
         exercises,
         body_parts: routine.body_parts || [],
         benefits: routine.benefits || [],
+        is_advanced: routine.is_advanced || false,
       });
 
       setIsEditMode(true);
@@ -232,6 +234,7 @@ export default function RoutineBuilderScreen() {
               exercises: [],
               body_parts: [],
               benefits: [],
+              is_advanced: false,
             });
             setCurrentStep('exercises');
           },
@@ -409,6 +412,7 @@ export default function RoutineBuilderScreen() {
                     exercises: [],
                     body_parts: [],
                     benefits: [],
+                    is_advanced: false,
                   });
                   setCurrentStep('exercises');
                   setIsEditMode(false);
@@ -445,6 +449,7 @@ export default function RoutineBuilderScreen() {
                     exercises: [],
                     body_parts: [],
                     benefits: [],
+                    is_advanced: false,
                   });
                   setCurrentStep('exercises');
                   setIsEditMode(false);
@@ -486,6 +491,7 @@ export default function RoutineBuilderScreen() {
                   exercises: [],
                   body_parts: [],
                   benefits: [],
+                  is_advanced: false,
                 });
                 setCurrentStep('exercises');
               },
@@ -542,6 +548,7 @@ export default function RoutineBuilderScreen() {
             onNext={() => setCurrentStep('review')}
             onBack={() => setCurrentStep('exercises')}
             isEditMode={isEditMode}
+            isHealthTeam={isHealthTeam}
           />
         );
       case 'review':
@@ -1203,13 +1210,14 @@ function DetailsStep({
   onUpdate,
   onNext,
   onBack,
-  isEditMode,
+  isHealthTeam = false,
 }: {
   data: RoutineBuilderData;
   onUpdate: (data: Partial<RoutineBuilderData>) => void;
   onNext: () => void;
   onBack: () => void;
   isEditMode?: boolean;
+  isHealthTeam?: boolean;
 }) {
   const [bodyRegionFilter, setBodyRegionFilter] = useState<BodyRegion>('All');
   const [bodyPartsModalVisible, setBodyPartsModalVisible] = useState(false);
@@ -1282,6 +1290,7 @@ function DetailsStep({
         Provide information about your routine
       </Text>
 
+      <ScrollView style={styles.formScrollContainer} showsVerticalScrollIndicator={false}>
       <View style={styles.formContainer}>
         <Text style={styles.fieldLabel}>Routine Name *</Text>
         <TextInput
@@ -1488,7 +1497,42 @@ function DetailsStep({
             ))}
           </View>
         )}
+
+        {/* Advanced Routine Toggle (Health Team Only) */}
+        {isHealthTeam && (
+          <View style={styles.advancedToggleContainer}>
+            <View style={styles.advancedToggleHeader}>
+              <Ionicons name="diamond" size={20} color="#F59E0B" />
+              <Text style={styles.advancedToggleTitle}>Advanced Routine</Text>
+            </View>
+            <Text style={styles.advancedToggleDescription}>
+              Mark this routine as Advanced. Users must achieve Harmony to access it.
+            </Text>
+            <TouchableOpacity
+              style={[
+                styles.advancedToggleButton,
+                data.is_advanced && styles.advancedToggleButtonActive,
+              ]}
+              onPress={() => onUpdate({ is_advanced: !data.is_advanced })}
+            >
+              <Ionicons
+                name={data.is_advanced ? 'lock-closed' : 'lock-open'}
+                size={18}
+                color={data.is_advanced ? '#FFFFFF' : AppColors.textSecondary}
+              />
+              <Text
+                style={[
+                  styles.advancedToggleButtonText,
+                  data.is_advanced && styles.advancedToggleButtonTextActive,
+                ]}
+              >
+                {data.is_advanced ? 'Advanced (Harmony Required)' : 'Standard (No Restrictions)'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
+      </ScrollView>
 
       {/* Body Parts Multi-Select Modal */}
       <Modal
@@ -2198,8 +2242,12 @@ const styles = StyleSheet.create({
     color: AppColors.textSecondary,
     lineHeight: 20,
   },
+  formScrollContainer: {
+    flex: 1,
+  },
   formContainer: {
     gap: 20,
+    paddingBottom: 20,
   },
   fieldLabel: {
     fontSize: 16,
@@ -2766,5 +2814,54 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
     color: '#047857',
+  },
+  advancedToggleContainer: {
+    marginTop: 20,
+    padding: 16,
+    backgroundColor: 'rgba(245, 158, 11, 0.08)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.2)',
+  },
+  advancedToggleHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  advancedToggleTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#F59E0B',
+  },
+  advancedToggleDescription: {
+    fontSize: 13,
+    color: AppColors.textSecondary,
+    marginBottom: 12,
+    lineHeight: 18,
+  },
+  advancedToggleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: AppColors.surface,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: AppColors.border,
+  },
+  advancedToggleButtonActive: {
+    backgroundColor: '#F59E0B',
+    borderColor: '#F59E0B',
+  },
+  advancedToggleButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: AppColors.textSecondary,
+  },
+  advancedToggleButtonTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
 });
