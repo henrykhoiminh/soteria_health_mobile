@@ -1215,8 +1215,10 @@ npx expo start --ios
 
 ## License
 
+https://henrykhoiminh.github.io/soteria-legal/terms.html
+
 [Your License Here]
 
 ## Support
 
-For issues or questions, please contact [Your Contact Info]
+For issues or questions, please contact mochicrimp@gmail.com
