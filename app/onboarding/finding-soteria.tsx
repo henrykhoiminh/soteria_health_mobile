@@ -1,39 +1,40 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, StyleSheet, SafeAreaView, TouchableOpacity, Text, Animated } from 'react-native';
-import { useRouter } from 'expo-router';
+import JourneyBadge from '@/components/JourneyBadge';
+import { AppColors } from '@/constants/theme';
+import { useOnboarding } from '@/lib/contexts/OnboardingContext';
+import { JourneyFocus } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Animated, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import SoteriaPresence from './components/SoteriaPresence';
-import JourneyBadge from '@/components/JourneyBadge';
-import { useOnboarding } from '@/lib/contexts/OnboardingContext';
-import { AppColors } from '@/constants/theme';
-import { JourneyFocus } from '@/types';
 
 // Caption data with text and duration to wait after typing completes before next caption
 const introCaptions = [
-  { text: 'Oh... You found me!', pauseAfter: 1000 },
-  { text: "That's not easy to do, you know.", pauseAfter: 1500 },
-  { text: 'I am Soteria...\ngoddess of safety and protection.', pauseAfter: 2000 },
-  { text: 'So... what is it you seek?', pauseAfter: 0 }, // Last one stays
+  { text: 'Well, well... who do we have here?', pauseAfter: 1500 },
+  { text: 'You’ve come farther than most.', pauseAfter: 1500 },
+  { text: 'I am Soteria.', pauseAfter: 1500 },
+  { text: 'I have guided many before you.', pauseAfter: 2000 },
+  { text: 'So... tell me, human.', pauseAfter: 1500 },
+  { text: 'What is it you seek?', pauseAfter: 0 },
 ];
+
 
 // Welcome captions after journey selection
 const preventionWelcomeCaptions = [
-  { text: 'Prevention.', pauseAfter: 800 },
-  { text: "You're not waiting to break.", pauseAfter: 1200 },
-  { text: "You're building strength before you need it.", pauseAfter: 1500 },
-  { text: 'Smart.', pauseAfter: 1000 },
-  { text: 'I built this place for people like you.', pauseAfter: 1200 },
+  { text: 'You chose preparation over repair.', pauseAfter: 1400 },
+  { text: 'Wise.', pauseAfter: 1000 },
+  { text: 'I built this place for people like you', pauseAfter: 1400 },
   { text: 'Welcome.', pauseAfter: 0 },
 ];
 
+
 const recoveryWelcomeCaptions = [
-  { text: 'Recovery.', pauseAfter: 800 },
-  { text: 'Something happened.', pauseAfter: 1200 },
-  { text: "And instead of giving up,", pauseAfter: 1000 },
-  { text: "you're here looking for a way forward.", pauseAfter: 1500 },
-  { text: 'That takes strength.', pauseAfter: 1200 },
-  { text: 'I built this place for people like you.', pauseAfter: 1200 },
+  { text: 'You have suffered.', pauseAfter: 1200 },
+  { text: 'But instead of turning away,', pauseAfter: 1100 },
+  { text: 'you chose to come back stronger.', pauseAfter: 1500 },
+  { text: 'That takes courage.', pauseAfter: 1200 },
+  { text: 'I built this place for people like you.', pauseAfter: 1300 },
   { text: 'Welcome.', pauseAfter: 0 },
 ];
 

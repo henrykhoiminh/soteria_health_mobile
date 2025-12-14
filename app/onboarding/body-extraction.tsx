@@ -1,43 +1,29 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, StyleSheet, SafeAreaView, TouchableOpacity, Text, Animated } from 'react-native';
-import { useRouter } from 'expo-router';
+import JourneyBadge from '@/components/JourneyBadge';
+import { AppColors } from '@/constants/theme';
+import { BODY_NAME_OPTIONS, useOnboarding } from '@/lib/contexts/OnboardingContext';
 import * as Haptics from 'expo-haptics';
+import { useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Animated, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import AvatarOrb from './components/AvatarOrb';
 import NameSelector from './components/NameSelector';
-import JourneyBadge from '@/components/JourneyBadge';
-import { useOnboarding, BODY_NAME_OPTIONS } from '@/lib/contexts/OnboardingContext';
-import { AppColors } from '@/constants/theme';
 
 // Typing speed in milliseconds per character
 const TYPING_SPEED = 40;
 // Haptic frequency - trigger haptic every N characters
 const HAPTIC_FREQUENCY = 2;
 
-// Caption data for new users - Prevention
-const preventionCaptions = [
+// Caption data for new users
+const bodyCaptions = [
   { text: 'This is your Body.', pauseAfter: 800 },
-  { text: 'Your strength. Your movement. Your rest.', pauseAfter: 1000 },
-  { text: 'The one that carries you through everything.', pauseAfter: 1200 },
-  { text: 'You want to keep it strong.', pauseAfter: 1000 },
-  { text: 'Build resilience before you need it.', pauseAfter: 1000 },
-  { text: "That's why you're here.", pauseAfter: 1200 },
-  { text: "What's its name?", pauseAfter: 0 },
-];
-
-// Caption data for new users - Recovery
-const recoveryCaptions = [
-  { text: 'This is your Body.', pauseAfter: 800 },
-  { text: 'Your strength. Your movement. Your rest.', pauseAfter: 1000 },
-  { text: 'The one that carries you through everything.', pauseAfter: 1200 },
-  { text: "It's been through something.", pauseAfter: 1200 },
-  { text: "We'll rebuild it — the right way.", pauseAfter: 1200 },
-  { text: "What's its name?", pauseAfter: 0 },
+  { text: 'Your strength. Your movement.', pauseAfter: 1000 },
+  { text: "What shall you name this one?", pauseAfter: 0 },
 ];
 
 // Caption data for reset users
 const resetUserCaptions = [
   { text: 'Your Body. Ready to begin again.', pauseAfter: 1000 },
-  { text: "What's its name?", pauseAfter: 0 },
+  { text: "What shall you call it this time?", pauseAfter: 0 },
 ];
 
 // Screen 8: Body Extraction
@@ -52,10 +38,9 @@ export default function BodyExtractionScreen() {
   const typingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const charIndexRef = useRef(0);
 
-  const isPrevention = data.journeyFocus === 'Injury Prevention';
   const captions = isResetFlow
     ? resetUserCaptions
-    : (isPrevention ? preventionCaptions : recoveryCaptions);
+    : bodyCaptions;
   const isValid = data.bodyName.trim().length > 0;
 
   // Typewriter effect

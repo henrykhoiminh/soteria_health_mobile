@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, StyleSheet, SafeAreaView, TouchableOpacity, Text, Animated } from 'react-native';
-import { useRouter } from 'expo-router';
-import * as Haptics from 'expo-haptics';
-import AvatarOrb from './components/AvatarOrb';
 import JourneyBadge from '@/components/JourneyBadge';
-import { useOnboarding } from '@/lib/contexts/OnboardingContext';
 import { AppColors } from '@/constants/theme';
+import { useOnboarding } from '@/lib/contexts/OnboardingContext';
+import * as Haptics from 'expo-haptics';
+import { useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Animated, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import AvatarOrb from './components/AvatarOrb';
 
 // Typing speed in milliseconds per character
 const TYPING_SPEED = 40;
@@ -14,20 +14,28 @@ const HAPTIC_FREQUENCY = 2;
 
 // Caption data with text, pause duration, and optional highlight for orbs
 // highlight: 'Mind' | 'Body' | 'Soul' | 'all' | null
-const captions: Array<{ text: string; pauseAfter: number; highlight?: 'Mind' | 'Body' | 'Soul' | 'all' | null }> = [
+const captions: Array<{ 
+  text: string; 
+  pauseAfter: number; 
+  highlight?: 'Mind' | 'Body' | 'Soul' | 'all' | null 
+}> = [
   { text: 'Now.', pauseAfter: 800 },
-  { text: "Let me show you what you're working with.", pauseAfter: 1200 },
-  { text: 'Inside you are three lights.', pauseAfter: 1500, highlight: 'all' },
-  { text: 'Your Mind — thoughts, focus, clarity.', pauseAfter: 1500, highlight: 'Mind' },
+  { text: 'Let me show you what you carry.', pauseAfter: 1200 },
+  { text: 'Within you are three lights.', pauseAfter: 1500, highlight: 'all' },
+
+  { text: 'Your Mind — focus, clarity, thought.', pauseAfter: 1500, highlight: 'Mind' },
   { text: 'Your Body — strength, movement, energy.', pauseAfter: 1500, highlight: 'Body' },
-  { text: 'Your Soul — joy, peace, connection.', pauseAfter: 1500, highlight: 'Soul' },
-  { text: 'Together, they are your Light.', pauseAfter: 1200, highlight: 'all' },
-  { text: 'Every traveler here has them.', pauseAfter: 1000 },
-  { text: 'And every traveler here learns to care for them.', pauseAfter: 1500 },
-  { text: "When they're nurtured, they glow.", pauseAfter: 1200, highlight: 'all' },
-  { text: "When they're ignored, they dim.", pauseAfter: 1200 },
-  { text: 'Simple as that.', pauseAfter: 0 },
+  { text: 'Your Soul — peace, joy, connection.', pauseAfter: 1500, highlight: 'Soul' },
+
+  { text: 'Together, they form your Light.', pauseAfter: 1200, highlight: 'all' },
+  { text: 'Every human here carries it.', pauseAfter: 1000 },
+  { text: 'Few learn how to tend it.', pauseAfter: 1400 },
+
+  { text: 'When nurtured, it glows.', pauseAfter: 1200, highlight: 'all' },
+  { text: 'When neglected, it fades.', pauseAfter: 1200 },
+  { text: 'That part is simple.', pauseAfter: 0 },
 ];
+
 
 // Screen 5: The Three Lights
 export default function ThreeLightsScreen() {

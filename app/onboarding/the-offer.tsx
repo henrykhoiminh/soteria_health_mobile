@@ -1,12 +1,12 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, StyleSheet, SafeAreaView, TouchableOpacity, Text, Animated } from 'react-native';
-import { useRouter } from 'expo-router';
-import * as Haptics from 'expo-haptics';
-import SoteriaPresence from './components/SoteriaPresence';
-import AvatarOrb from './components/AvatarOrb';
 import JourneyBadge from '@/components/JourneyBadge';
-import { useOnboarding } from '@/lib/contexts/OnboardingContext';
 import { AppColors } from '@/constants/theme';
+import { useOnboarding } from '@/lib/contexts/OnboardingContext';
+import * as Haptics from 'expo-haptics';
+import { useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Animated, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import AvatarOrb from './components/AvatarOrb';
+import SoteriaPresence from './components/SoteriaPresence';
 
 // Typing speed in milliseconds per character
 const TYPING_SPEED = 40;
@@ -15,16 +15,16 @@ const HAPTIC_FREQUENCY = 2;
 
 // Caption data with text and pause duration after typing completes
 const captions = [
-  { text: "Here's what I can do.", pauseAfter: 1000 },
-  { text: 'I can pull these three out', pauseAfter: 800 },
-  { text: 'and give them form.', pauseAfter: 1200 },
-  { text: 'Little companions.', pauseAfter: 1000 },
-  { text: 'Visible pieces of yourself.', pauseAfter: 1200 },
-  { text: "You'll care for them.", pauseAfter: 1000 },
-  { text: 'Complete routines to keep them thriving.', pauseAfter: 1200 },
-  { text: 'And when you neglect them?', pauseAfter: 1200 },
-  { text: "Well. They'll let you know.", pauseAfter: 1500 },
-  { text: 'Ready to meet them?', pauseAfter: 0 },
+  { text: "Here is what I do.", pauseAfter: 1000 },
+  { text: 'I can pull these three from within you,', pauseAfter: 1000 },
+  { text: 'and give them shape.', pauseAfter: 1200 },
+  { text: 'Little companions.', pauseAfter: 1200 },
+  { text: 'Reflections of your being.', pauseAfter: 1200 },
+  { text: 'You will care for them.', pauseAfter: 1000 },
+  { text: 'Complete the routines, and they thrive.', pauseAfter: 1200 },
+  { text: 'Ignore them?', pauseAfter: 1200 },
+  { text: "They will fade...", pauseAfter: 1500 },
+  { text: 'Do you wish to meet them?', pauseAfter: 0 },
 ];
 
 // Screen 6: The Offer

@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, StyleSheet, SafeAreaView, TouchableOpacity, Text, Animated } from 'react-native';
-import { useRouter } from 'expo-router';
-import * as Haptics from 'expo-haptics';
-import SoteriaPresence from './components/SoteriaPresence';
 import JourneyBadge from '@/components/JourneyBadge';
-import { useOnboarding } from '@/lib/contexts/OnboardingContext';
 import { AppColors } from '@/constants/theme';
+import { useOnboarding } from '@/lib/contexts/OnboardingContext';
+import * as Haptics from 'expo-haptics';
+import { useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Animated, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import SoteriaPresence from './components/SoteriaPresence';
 
 // Typing speed in milliseconds per character
 const TYPING_SPEED = 40;
@@ -15,21 +15,23 @@ const HAPTIC_FREQUENCY = 2;
 // Caption data with text and pause duration after typing completes
 // The community lines (index 5-7) will stay on screen together
 const captions = [
-  { text: 'Let me tell you about this place.', pauseAfter: 1000 },
-  { text: 'I built it as a sanctuary.', pauseAfter: 1200 },
-  { text: 'A world where travelers come to care for themselves —', pauseAfter: 1000 },
-  { text: 'their minds, their bodies, their souls.', pauseAfter: 1500 },
-  { text: "You're not alone here.", pauseAfter: 1200 },
-  // These three will accumulate and stay together
-  { text: 'Other travelers walk these paths.', pauseAfter: 1000, accumulate: true },
-  { text: 'They share routines. Form Circles.', pauseAfter: 1000, accumulate: true },
-  { text: 'Support each other.', pauseAfter: 1500, accumulate: true },
-  // Back to replacing
-  { text: 'I curate the practices.', pauseAfter: 1000 },
-  { text: 'Guide the journeys.', pauseAfter: 1200 },
-  { text: "But the community? That's everyone.", pauseAfter: 1500 },
-  { text: 'Including, now, you.', pauseAfter: 0 },
+  { text: 'Let me show you this place.', pauseAfter: 1000 },
+  { text: 'A space where humans learn to care for themselves —', pauseAfter: 1100 },
+  { text: 'mind, body, and soul.', pauseAfter: 1500 },
+  { text: 'You are not alone here.', pauseAfter: 1200 },
+
+  // Accumulating community beats
+  { text: 'Others walk these paths with you.', pauseAfter: 1000, accumulate: true },
+  { text: 'They share practices.', pauseAfter: 1000, accumulate: true },
+  { text: 'They form Circles.', pauseAfter: 1200, accumulate: true },
+  { text: 'They support one another.', pauseAfter: 1500, accumulate: true },
+
+  // Authority without ego
+  { text: 'I guide the journeys.', pauseAfter: 1200 },
+  { text: 'The community sustains itself.', pauseAfter: 1400 },
+  { text: 'And now, you are part of it.', pauseAfter: 0 },
 ];
+
 
 // Screen 4: The World Introduction
 export default function WorldIntroScreen() {
