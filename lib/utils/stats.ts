@@ -127,6 +127,105 @@ export async function calculateUniqueRoutines(
 }
 
 /**
+ * Calculate activity streak
+ * Counts consecutive days where user completed ANY routine (regardless of category)
+ * This is the main "current_streak" shown to users
+ */
+export async function calculateActivityStreak(
+  userId: string
+): Promise<{ currentStreak: number; longestStreak: number }> {
+  // Get all routine completions, ordered by date (most recent first)
+  const { data: completions, error } = await supabase
+    .from('routine_completions')
+    .select('completed_at')
+    .eq('user_id', userId)
+    .order('completed_at', { ascending: false })
+    .limit(365) // Look back max 1 year
+
+  if (error) throw error
+  if (!completions || completions.length === 0) {
+    return { currentStreak: 0, longestStreak: 0 }
+  }
+
+  // Convert to unique dates (YYYY-MM-DD format) using local timezone
+  const completionDates = new Set(
+    completions.map(c => timestampToLocalDateString(c.completed_at))
+  )
+
+  // Calculate current streak
+  let currentStreak = 0
+  const today = getLocalDateString()
+  const yesterdayStr = getLocalYesterdayString()
+
+  // Check if user completed today OR yesterday
+  // If neither, streak is broken (missed a day)
+  const hasCompletionToday = completionDates.has(today)
+  const hasCompletionYesterday = completionDates.has(yesterdayStr)
+
+  if (!hasCompletionToday && !hasCompletionYesterday) {
+    // User missed yesterday (and hasn't completed today), streak is 0
+    currentStreak = 0
+  } else {
+    // Start checking from today backwards
+    let daysBack = 0
+
+    while (true) {
+      const dateStr = getLocalDateWithOffset(-daysBack)
+
+      if (completionDates.has(dateStr)) {
+        currentStreak++
+        // Move to previous day
+        daysBack++
+      } else {
+        // Streak broken
+        break
+      }
+    }
+  }
+
+  // Calculate longest streak (historical)
+  let longestStreak = 0
+  let tempStreak = 0
+  let prevDate: Date | null = null
+
+  // Sort dates for longest streak calculation
+  const sortedDates = Array.from(completionDates).sort()
+
+  for (const dateStr of sortedDates) {
+    const currentDate = new Date(dateStr)
+
+    if (prevDate === null) {
+      // First date
+      tempStreak = 1
+    } else {
+      // Check if this date is consecutive to previous
+      const daysDiff = Math.floor(
+        (currentDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24)
+      )
+
+      if (daysDiff === 1) {
+        // Consecutive day
+        tempStreak++
+      } else {
+        // Streak broken, start new streak
+        longestStreak = Math.max(longestStreak, tempStreak)
+        tempStreak = 1
+      }
+    }
+
+    prevDate = currentDate
+  }
+
+  // Check final streak
+  longestStreak = Math.max(longestStreak, tempStreak)
+
+  return {
+    currentStreak,
+    longestStreak: Math.max(longestStreak, currentStreak),
+  }
+}
+
+/**
  * Calculate harmony streak
  * Counts consecutive days where user achieved daily harmony (all 3 categories completed)
  */
@@ -233,6 +332,7 @@ export async function calculateHarmonyStreak(
 /**
  * Update all enhanced stats for a user
  * Call this after every routine completion
+ * Returns both the updated stats and the previous streak for animation purposes
  */
 export async function updateEnhancedStats(userId: string, completedCategory?: RoutineCategory): Promise<UserStats | null> {
   // Calculate per-category streaks
@@ -250,17 +350,17 @@ export async function updateEnhancedStats(userId: string, completedCategory?: Ro
   const lastBodyActivity = await getLastActivityDate(userId, 'Body')
   const lastSoulActivity = await getLastActivityDate(userId, 'Soul')
 
-  // Calculate harmony-based streak (consecutive days with all 3 categories)
-  const harmonyStreak = await calculateHarmonyStreak(userId)
+  // Calculate activity streak (consecutive days with ANY routine completion)
+  const activityStreak = await calculateActivityStreak(userId)
 
   // Calculate 7-day rolling counts for harmony system
   const counts7d = await calculate7DayRollingCounts(userId)
 
   // Build update object
   const updateData: Record<string, any> = {
-    // Harmony-based streaks (overall day streaks)
-    current_streak: harmonyStreak.currentStreak,
-    longest_streak: harmonyStreak.longestStreak,
+    // Activity-based streaks (consecutive days with any routine)
+    current_streak: activityStreak.currentStreak,
+    longest_streak: activityStreak.longestStreak,
     // Per-category streaks
     mind_current_streak: mindStreak.currentStreak,
     body_current_streak: bodyStreak.currentStreak,
@@ -370,7 +470,7 @@ export function getAvatarLightState(
 
 /**
  * Get all three avatar states (Mind/Body/Soul) for dashboard display
- * Uses enhanced harmony mechanics with proper decay (48hr/96hr thresholds)
+ * Uses enhanced harmony mechanics with proper decay (48hr threshold)
  */
 export async function getAllAvatarStates(userId: string): Promise<AvatarState[]> {
   // Get today's progress using local timezone
@@ -386,7 +486,7 @@ export async function getAllAvatarStates(userId: string): Promise<AvatarState[]>
       .maybeSingle(),
     supabase
       .from('user_stats')
-      .select('mind_last_routine_at, body_last_routine_at, soul_last_routine_at, vacation_mode_active')
+      .select('mind_last_routine_at, body_last_routine_at, soul_last_routine_at')
       .eq('user_id', userId)
       .maybeSingle()
   ])
@@ -397,8 +497,8 @@ export async function getAllAvatarStates(userId: string): Promise<AvatarState[]>
   console.log('[Avatar States] Today progress:', { todayProgress, date: today })
   console.log('[Avatar States] User stats:', userStats)
 
-  // Determine decay threshold based on vacation mode
-  const decayHours = userStats?.vacation_mode_active ? 96 : 48
+  // Decay threshold: 48 hours of inactivity → Dormant state
+  const decayHours = 48
   const now = new Date()
   const decayThreshold = new Date(now.getTime() - decayHours * 60 * 60 * 1000)
   const awakeningThreshold = new Date(now.getTime() - 48 * 60 * 60 * 1000)

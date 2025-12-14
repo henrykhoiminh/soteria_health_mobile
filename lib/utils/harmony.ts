@@ -108,11 +108,9 @@ export function getTypeMessage(userType: UserType, mind: number, body: number, s
 
 /**
  * Check if any avatar is dormant (48+ hours since last routine)
- * Uses vacation mode threshold (96 hours) if active
  */
 export async function checkForDormantAvatars(
-  userId: string,
-  vacationModeActive: boolean = false
+  userId: string
 ): Promise<{
   mindDormant: boolean
   bodyDormant: boolean
@@ -136,7 +134,7 @@ export async function checkForDormantAvatars(
     }
   }
 
-  const decayHours = vacationModeActive ? 96 : 48
+  const decayHours = 48
   const now = new Date()
   const decayThreshold = new Date(now.getTime() - decayHours * 60 * 60 * 1000)
 
@@ -161,12 +159,11 @@ export async function checkForDormantAvatars(
  * Calculate hours until avatar goes dormant
  */
 export function getHoursUntilDormant(
-  lastRoutineAt: string | null,
-  vacationModeActive: boolean = false
+  lastRoutineAt: string | null
 ): number | null {
   if (!lastRoutineAt) return 0 // Already dormant
 
-  const decayHours = vacationModeActive ? 96 : 48
+  const decayHours = 48
   const now = new Date()
   const lastRoutine = new Date(lastRoutineAt)
   const decayTime = new Date(lastRoutine.getTime() + decayHours * 60 * 60 * 1000)
@@ -360,7 +357,7 @@ export async function checkHarmonyRequirements(userId: string): Promise<HarmonyS
   const userType = getUserType(counts.mind, counts.body, counts.soul)
 
   // Check for dormant avatars
-  const dormantStatus = await checkForDormantAvatars(userId, stats.vacation_mode_active)
+  const dormantStatus = await checkForDormantAvatars(userId)
 
   // Calculate consecutive balanced days (the key metric for harmony)
   const { consecutiveDays, dailyHistory, todayCounts, isTodayBalanced } = await calculateConsecutiveBalancedDays(userId)
@@ -473,7 +470,7 @@ export async function getEnhancedAvatarState(
   const lastRoutineField = `${category.toLowerCase()}_last_routine_at` as keyof UserStats
   const lastRoutineAt = stats[lastRoutineField] as string | null
 
-  const decayHours = stats.vacation_mode_active ? 96 : 48
+  const decayHours = 48
   const now = new Date()
   const decayThreshold = new Date(now.getTime() - decayHours * 60 * 60 * 1000)
 

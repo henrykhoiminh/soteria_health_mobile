@@ -1107,7 +1107,25 @@ npx expo start --ios
 
 ## Recent Updates
 
-### Harmony System Improvements (Latest)
+### Streak & Stats Enhancements (Latest)
+- ✅ **Activity Streak Fix:**
+  - Current Streak now counts consecutive days with ANY routine completion
+  - Previously was tied to balanced days (Harmony streak) - now separate metrics
+- ✅ **Harmony Streak in Your Stats:**
+  - New StatCard showing days since achieving Harmony
+  - Displays 0 if user is not in Harmony
+  - Uses sparkles icon with amber/gold color
+- ✅ **StatCard Component Enhancement:**
+  - Added optional icon and iconColor props
+  - Icons display inline with stat values
+- ✅ **Streak Update Animation (Placeholder):**
+  - Shows "Streak Started!" or "Streak Updated!" screen after routine completion
+  - Placeholder for future animation implementation
+- ✅ **Streak Types Clarification:**
+  - **Current Streak** = Consecutive days with ANY routine completion
+  - **Harmony Streak** = Days since achieving Harmony status
+
+### Harmony System Improvements
 - ✅ **Simplified Harmony Requirements:**
   - Removed confusing "Calibration Period" - now just 2 simple steps
   - Step 1: Balance Each Day (1+ routine in Mind, Body, Soul)

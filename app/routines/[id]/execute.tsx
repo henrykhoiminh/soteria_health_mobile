@@ -2,7 +2,7 @@ import { useAuth } from '@/lib/contexts/AuthContext';
 import { AppColors } from '@/constants/theme';
 import { completeRoutine, getRoutineById, getTodayProgress, getUserStats } from '@/lib/utils/dashboard';
 import { completeCircleRoutine, getFormattedFriendActivity } from '@/lib/utils/social';
-import { getAvatarLightState, getAllAvatarStates } from '@/lib/utils/stats';
+import { getAvatarLightState, getAllAvatarStates, calculateActivityStreak } from '@/lib/utils/stats';
 import { getPainStatistics, getPainCheckInHistory } from '@/lib/utils/pain-checkin';
 import { checkHarmonyRequirements } from '@/lib/utils/harmony';
 import { setDashboardCache } from '@/lib/utils/dashboard-cache';
@@ -84,6 +84,11 @@ export default function ExecuteRoutineScreen() {
   const [animationFinished, setAnimationFinished] = useState(false);
   const [dashboardPreloaded, setDashboardPreloaded] = useState(false);
   const [loadingSeconds, setLoadingSeconds] = useState(0);
+
+  // Streak tracking for animation
+  const [showStreakUpdate, setShowStreakUpdate] = useState(false);
+  const [previousStreak, setPreviousStreak] = useState<number>(0);
+  const [newStreak, setNewStreak] = useState<number>(0);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const loadingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -213,8 +218,6 @@ export default function ExecuteRoutineScreen() {
   const handleRoutineComplete = async () => {
     if (!user || !routine) return;
 
-    setIsComplete(true);
-
     // Trigger strong vibration pattern for completion (like an alarm)
     // Pattern: vibrate 400ms, pause 200ms, vibrate 400ms, pause 200ms, vibrate 400ms
     if (Platform.OS === 'android') {
@@ -227,6 +230,10 @@ export default function ExecuteRoutineScreen() {
     }
 
     try {
+      // Get current streak BEFORE completing the routine
+      const streakBefore = await calculateActivityStreak(user.id);
+      setPreviousStreak(streakBefore.currentStreak);
+
       // Complete routine for individual daily progress
       await completeRoutine(user.id, routine.id, routine.category);
 
@@ -240,10 +247,24 @@ export default function ExecuteRoutineScreen() {
         }
       }
 
-      // Preload dashboard data in the background while completion screen shows
+      // Get new streak AFTER completing the routine
+      const streakAfter = await calculateActivityStreak(user.id);
+      setNewStreak(streakAfter.currentStreak);
+
+      // Show streak update screen if streak changed
+      if (streakAfter.currentStreak !== streakBefore.currentStreak) {
+        setShowStreakUpdate(true);
+      } else {
+        // Skip streak screen, go directly to completion
+        setIsComplete(true);
+      }
+
+      // Preload dashboard data in the background while screens show
       preloadDashboardData();
     } catch (error) {
       console.error('Error completing routine:', error);
+      // On error, still show completion screen
+      setIsComplete(true);
       // Still try to preload dashboard data
       preloadDashboardData();
     }
@@ -289,6 +310,12 @@ export default function ExecuteRoutineScreen() {
     router.replace('/(tabs)');
   };
 
+  const handleStreakContinue = () => {
+    // Move from streak update screen to completion screen
+    setShowStreakUpdate(false);
+    setIsComplete(true);
+  };
+
   const handleQuit = () => {
     Alert.alert(
       'Quit Routine?',
@@ -323,6 +350,42 @@ export default function ExecuteRoutineScreen() {
         <Text style={styles.errorText}>No exercises found</Text>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Text style={styles.backButtonText}>Go Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  // Streak Update Screen - shown when streak changes
+  // This is a proxy screen for future animation
+  if (showStreakUpdate) {
+    return (
+      <View style={styles.streakContainer}>
+        {/* Placeholder for future streak animation */}
+        <View style={styles.streakAnimationPlaceholder}>
+          <Ionicons name="flame" size={80} color="#F59E0B" />
+        </View>
+
+        <Text style={styles.streakTitle}>
+          {previousStreak === 0 ? 'Streak Started!' : 'Streak Updated!'}
+        </Text>
+
+        <View style={styles.streakChangeContainer}>
+          <Text style={styles.streakOldValue}>{previousStreak}</Text>
+          <Ionicons name="arrow-forward" size={32} color={AppColors.textTertiary} />
+          <Text style={styles.streakNewValue}>{newStreak}</Text>
+        </View>
+
+        <Text style={styles.streakMessage}>
+          {previousStreak === 0
+            ? "You've started a new streak! Keep it going!"
+            : `${newStreak} day${newStreak === 1 ? '' : 's'} in a row!`}
+        </Text>
+
+        <TouchableOpacity
+          style={styles.streakContinueButton}
+          onPress={handleStreakContinue}
+        >
+          <Text style={styles.streakContinueButtonText}>Continue</Text>
         </TouchableOpacity>
       </View>
     );
@@ -759,5 +822,66 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: AppColors.textSecondary,
     lineHeight: 24,
+  },
+  // Streak Update Screen Styles
+  streakContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+    backgroundColor: AppColors.background,
+  },
+  streakAnimationPlaceholder: {
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  streakTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: AppColors.textPrimary,
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  streakChangeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 20,
+    marginBottom: 24,
+  },
+  streakOldValue: {
+    fontSize: 48,
+    fontWeight: '300',
+    color: AppColors.textTertiary,
+  },
+  streakNewValue: {
+    fontSize: 64,
+    fontWeight: 'bold',
+    color: '#F59E0B',
+  },
+  streakMessage: {
+    fontSize: 16,
+    color: AppColors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 32,
+    paddingHorizontal: 24,
+  },
+  streakContinueButton: {
+    backgroundColor: '#F59E0B',
+    paddingHorizontal: 48,
+    paddingVertical: 16,
+    borderRadius: 12,
+    minWidth: 160,
+    alignItems: 'center',
+  },
+  streakContinueButtonText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });

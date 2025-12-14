@@ -175,13 +175,6 @@ export interface UserStats {
   mind_last_routine_at: string | null
   body_last_routine_at: string | null
   soul_last_routine_at: string | null
-  // Vacation Mode
-  vacation_days_banked: number
-  vacation_mode_active: boolean
-  vacation_mode_start: string | null
-  vacation_mode_end: string | null
-  last_vacation_ended_at: string | null
-  vacation_requested_at: string | null
   // Deprecated fields (still in DB but no longer used)
   health_score?: number
   harmony_score?: number

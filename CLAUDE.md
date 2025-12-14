@@ -804,6 +804,36 @@ npx tsc --noEmit
   - Color-coded count badges (Mind blue, Body red, Soul amber)
   - Status icons for each day (checkmark/X/ellipsis for today)
 
+### Session 21 (Latest - Vacation Mode Removal)
+- **Vacation Mode Removed:**
+  - Removed vacation mode feature entirely (added complexity without value)
+  - Avatar decay now uses fixed 48-hour threshold (was 96 hours during vacation)
+  - Simplified harmony and stats calculations
+
+- **Files Modified:**
+  - `types/index.ts` - Removed vacation mode fields from UserStats:
+    - `vacation_days_banked`, `vacation_mode_active`, `vacation_mode_start`
+    - `vacation_mode_end`, `last_vacation_ended_at`, `vacation_requested_at`
+  - `lib/utils/harmony.ts` - Removed vacation mode parameters:
+    - `checkForDormantAvatars()` - Removed `vacationModeActive` parameter
+    - `getHoursUntilDormant()` - Removed `vacationModeActive` parameter
+    - `checkHarmonyRequirements()` - No longer passes vacation flag
+    - `getEnhancedAvatarState()` - Hardcoded 48-hour decay
+  - `lib/utils/stats.ts` - Removed vacation mode from avatar states:
+    - `getAllAvatarStates()` - No longer queries `vacation_mode_active`
+    - Decay threshold now fixed at 48 hours
+
+- **What Was Removed:**
+  - Vacation day earning (1 day per 7-day streak)
+  - Vacation mode activation/deactivation
+  - Extended decay during vacation (96 hours → always 48 hours now)
+  - Vacation-related database queries
+
+- **What Remains:**
+  - SQL migrations still exist (for documentation purposes)
+  - Database columns still exist (harmless, unused)
+  - `phase_read_me_files/HARMONY_MECHANIC_UPDATE.md` - Planning docs (historical reference)
+
 - **New HarmonyStatus Fields:**
   - `mindToday`, `bodyToday`, `soulToday` - today's completion counts
   - `isTodayBalanced` - whether today has 1+ in each category
@@ -896,6 +926,54 @@ calculateConsecutiveBalancedDays(userId: string): Promise<{
   - Recent Activity table (daily history)
   - Harmony Benefits section
   - Health team manual toggle
+
+---
+
+### Avatar Decay Mechanics (Updated)
+- **Decay Threshold:** 48 hours of inactivity → Dormant state
+- **Per-Category Tracking:** Each category (Mind, Body, Soul) tracks last routine completion
+- **States:** Dormant → Sleepy → Awakening → Glowing → Radiant
+- **No Vacation Mode:** Removed - decay is always 48 hours
+
+---
+
+### Session 22 (Latest - Streak & Stats Enhancements)
+- **Activity Streak Calculation Fix:**
+  - Created `calculateActivityStreak()` function in `lib/utils/stats.ts`
+  - Counts consecutive days with ANY routine completion (not just balanced days)
+  - Updated `updateEnhancedStats()` to use activity streak for `current_streak`
+  - Harmony streak (consecutive balanced days) is separate from activity streak
+
+- **Streak Update Animation (Placeholder):**
+  - Added streak tracking state in execute.tsx (`showStreakUpdate`, `previousStreak`, `newStreak`)
+  - Captures streak before/after routine completion
+  - Shows "Streak Started!" or "Streak Updated!" screen with old → new values
+  - Placeholder for future animation (currently shows flame icon)
+
+- **Harmony Streak in Your Stats:**
+  - Added Harmony Streak StatCard to dashboard
+  - Shows days since user achieved Harmony (calculated from `harmonyAchievedAt`)
+  - Displays 0 if user is not in Harmony
+  - Uses sparkles icon in amber/gold color (#F59E0B)
+
+- **StatCard Component Enhancement:**
+  - Added optional `icon` and `iconColor` props
+  - Icon displays inline with value
+  - Added `statValueRow` and `statIcon` styles
+
+- **Supabase Security Fixes (Reverted):**
+  - Attempted to fix function search_path warnings
+  - Caused cascade of "table not found" errors
+  - Reverted all search_path changes - warnings are low-risk for this use case
+
+- **Key Files Modified:**
+  - `lib/utils/stats.ts` - Added `calculateActivityStreak()` function
+  - `app/routines/[id]/execute.tsx` - Streak tracking state and UI
+  - `app/(tabs)/index.tsx` - Harmony Streak StatCard, StatCard icon props
+
+- **Streak Types Clarification:**
+  - **Current Streak** = Consecutive days with ANY routine completion
+  - **Harmony Streak** = Days since achieving Harmony status (requires 7 consecutive balanced days first)
 
 ---
 

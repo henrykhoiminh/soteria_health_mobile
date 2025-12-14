@@ -509,6 +509,17 @@ export default function DashboardScreen() {
             suffix="days"
           />
           <StatCard
+            label="Harmony Streak"
+            value={
+              harmonyStatus?.isInHarmony && harmonyStatus?.harmonyAchievedAt
+                ? Math.floor((Date.now() - new Date(harmonyStatus.harmonyAchievedAt).getTime()) / (1000 * 60 * 60 * 24))
+                : 0
+            }
+            suffix="days"
+            icon="sparkles"
+            iconColor="#F59E0B"
+          />
+          <StatCard
             label="Total Routines"
             value={stats?.total_routines || 0}
             suffix=""
@@ -648,18 +659,27 @@ function StatCard({
   label,
   value,
   suffix,
-  onPress
+  onPress,
+  icon,
+  iconColor
 }: {
   label: string;
   value: number;
   suffix: string;
   onPress?: () => void;
+  icon?: keyof typeof Ionicons.glyphMap;
+  iconColor?: string;
 }) {
   const content = (
     <>
-      <Text style={styles.statValue}>
-        {value}{suffix && <Text style={styles.statSuffix}> {suffix}</Text>}
-      </Text>
+      <View style={styles.statValueRow}>
+        {icon && (
+          <Ionicons name={icon} size={20} color={iconColor || AppColors.primary} style={styles.statIcon} />
+        )}
+        <Text style={styles.statValue}>
+          {value}{suffix && <Text style={styles.statSuffix}> {suffix}</Text>}
+        </Text>
+      </View>
       <Text style={styles.statLabel}>{label}</Text>
       {onPress && (
         <View style={styles.tapIndicator}>
@@ -866,6 +886,14 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     color: AppColors.textPrimary,
+  },
+  statValueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statIcon: {
+    marginRight: 4,
   },
   statSuffix: {
     fontSize: 14,
