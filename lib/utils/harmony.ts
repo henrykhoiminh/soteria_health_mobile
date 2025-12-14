@@ -1,5 +1,5 @@
 import { supabase } from '../supabase/client'
-import { UserStats, RoutineCategory, HarmonyStatus, UserType, AvatarLightState, DailySuggestedRoutines } from '@/types'
+import { UserStats, RoutineCategory, HarmonyStatus, UserType, AvatarLightState, DailySuggestedRoutines, DailyBalanceRecord } from '@/types'
 import { getLocalDateString, getLocalDateWithOffset } from './timezone'
 
 /**
@@ -217,29 +217,23 @@ export async function getDailyRoutineCounts(userId: string, date: string): Promi
  */
 export async function calculateConsecutiveBalancedDays(userId: string): Promise<{
   consecutiveDays: number
-  dailyHistory: Array<{
-    date: string
-    mind: number
-    body: number
-    soul: number
-    isBalanced: boolean
-  }>
+  dailyHistory: DailyBalanceRecord[]
+  todayCounts: { mind: number; body: number; soul: number }
+  isTodayBalanced: boolean
 }> {
-  const dailyHistory: Array<{
-    date: string
-    mind: number
-    body: number
-    soul: number
-    isBalanced: boolean
-  }> = []
+  const dailyHistory: DailyBalanceRecord[] = []
+  const today = getLocalDateWithOffset(0)
 
   let consecutiveDays = 0
   let streakBroken = false
+  let todayCounts = { mind: 0, body: 0, soul: 0 }
+  let isTodayBalanced = false
 
-  // Check the last 14 days (enough to show history and calculate streak)
-  for (let i = 0; i < 14; i++) {
+  // Check the last 7 days (for the streak display)
+  for (let i = 0; i < 7; i++) {
     const date = getLocalDateWithOffset(-i)
     const counts = await getDailyRoutineCounts(userId, date)
+    const isToday = date === today
 
     // A day is balanced if:
     // 1. At least 1 routine in each category (mind >= 1, body >= 1, soul >= 1)
@@ -248,27 +242,40 @@ export async function calculateConsecutiveBalancedDays(userId: string): Promise<
     const isWithinBalance = checkBalance(counts.mind, counts.body, counts.soul)
     const isBalanced = hasAllCategories && isWithinBalance
 
+    if (isToday) {
+      todayCounts = counts
+      isTodayBalanced = isBalanced
+    }
+
     dailyHistory.push({
       date,
       ...counts,
       isBalanced,
+      isToday,
     })
 
-    // Count consecutive balanced days (starting from today/yesterday)
-    if (!streakBroken) {
+    // Count consecutive balanced days (starting from yesterday, not today)
+    // Today doesn't count until it's complete
+    if (!streakBroken && !isToday) {
       if (isBalanced) {
         consecutiveDays++
-      } else if (i > 0) {
-        // Day 0 (today) might not be complete yet, so we're lenient
-        // But if any past day is not balanced, streak is broken
+      } else {
+        // Past day is not balanced, streak is broken
         streakBroken = true
       }
     }
   }
 
+  // If today is balanced, add it to the streak
+  if (isTodayBalanced) {
+    consecutiveDays++
+  }
+
   return {
     consecutiveDays,
     dailyHistory,
+    todayCounts,
+    isTodayBalanced,
   }
 }
 
@@ -307,31 +314,6 @@ export function generateSuggestedPlan(
 }
 
 /**
- * Get days until calibration period completes
- * Calibration is 7 days from journey start
- */
-export async function getDaysUntilCalibrationComplete(userId: string): Promise<number> {
-  const { data: profile, error } = await supabase
-    .from('profiles')
-    .select('journey_started_at')
-    .eq('id', userId)
-    .single()
-
-  if (error || !profile?.journey_started_at) {
-    return 7 // Default to 7 if no journey start date
-  }
-
-  const journeyStart = new Date(profile.journey_started_at)
-  const now = new Date()
-  const daysSinceStart = Math.floor(
-    (now.getTime() - journeyStart.getTime()) / (1000 * 60 * 60 * 24)
-  )
-
-  if (daysSinceStart >= 7) return 0
-  return 7 - daysSinceStart
-}
-
-/**
  * Check all harmony requirements and return full status
  */
 export async function checkHarmonyRequirements(userId: string): Promise<HarmonyStatus> {
@@ -350,11 +332,15 @@ export async function checkHarmonyRequirements(userId: string): Promise<HarmonyS
     mind7d: 0,
     body7d: 0,
     soul7d: 0,
-    isBalanced: false,
     totalRoutines7d: 0,
-    daysUntilCalibrationComplete: 7,
+    mindToday: 0,
+    bodyToday: 0,
+    soulToday: 0,
+    isTodayBalanced: false,
+    isBalanced: false,
     consecutiveBalancedDays: 0,
     daysUntilHarmony: 7,
+    dailyHistory: [],
     suggestedPlan: generateSuggestedPlan(7, 0, 0, 0),
   }
 
@@ -376,11 +362,8 @@ export async function checkHarmonyRequirements(userId: string): Promise<HarmonyS
   // Check for dormant avatars
   const dormantStatus = await checkForDormantAvatars(userId, stats.vacation_mode_active)
 
-  // Get calibration status
-  const daysUntilCalibrationComplete = await getDaysUntilCalibrationComplete(userId)
-
   // Calculate consecutive balanced days (the key metric for harmony)
-  const { consecutiveDays } = await calculateConsecutiveBalancedDays(userId)
+  const { consecutiveDays, dailyHistory, todayCounts, isTodayBalanced } = await calculateConsecutiveBalancedDays(userId)
 
   // Days until harmony = 7 - consecutive balanced days (minimum 0)
   const daysUntilHarmony = Math.max(0, 7 - consecutiveDays)
@@ -389,11 +372,9 @@ export async function checkHarmonyRequirements(userId: string): Promise<HarmonyS
   const suggestedPlan = generateSuggestedPlan(daysUntilHarmony, counts.mind, counts.body, counts.soul)
 
   // Harmony requirements (natural achievement):
-  // 1. Past calibration period (day 8+)
-  // 2. 7 consecutive balanced days
-  // 3. No dormant avatars
+  // 1. 7 consecutive balanced days
+  // 2. No dormant avatars
   const naturallyInHarmony =
-    daysUntilCalibrationComplete === 0 &&
     consecutiveDays >= 7 &&
     !dormantStatus.anyDormant
 
@@ -410,11 +391,15 @@ export async function checkHarmonyRequirements(userId: string): Promise<HarmonyS
     mind7d: counts.mind,
     body7d: counts.body,
     soul7d: counts.soul,
-    isBalanced,
     totalRoutines7d: total,
-    daysUntilCalibrationComplete,
+    mindToday: todayCounts.mind,
+    bodyToday: todayCounts.body,
+    soulToday: todayCounts.soul,
+    isTodayBalanced,
+    isBalanced,
     consecutiveBalancedDays: consecutiveDays,
     daysUntilHarmony,
+    dailyHistory,
     suggestedPlan,
   }
 }
@@ -577,19 +562,13 @@ export function getHarmonyProgressMessage(status: HarmonyStatus): string {
 
   const issues: string[] = []
 
-  if (status.daysUntilCalibrationComplete > 0) {
-    issues.push(`${status.daysUntilCalibrationComplete} days left in calibration period`)
+  if (status.daysUntilHarmony > 0) {
+    issues.push(`${status.daysUntilHarmony} more balanced day${status.daysUntilHarmony === 1 ? '' : 's'} needed`)
   }
 
-  if (status.totalRoutines7d < 7) {
-    issues.push(`${7 - status.totalRoutines7d} more routines needed this week`)
+  if (!status.isTodayBalanced) {
+    issues.push('Complete 1+ routine in each category today')
   }
-
-  if (!status.isBalanced) {
-    issues.push('Balance your Mind, Body, and Soul activity')
-  }
-
-  // Note: Dormant avatar check would require additional state
 
   if (issues.length === 0) {
     return 'Keep all avatars active to maintain Harmony!'

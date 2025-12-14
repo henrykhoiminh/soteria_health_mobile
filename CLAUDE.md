@@ -772,6 +772,51 @@ npx tsc --noEmit
   - Avatar colors in execute screen not matching category (shows gold/yellow)
   - Will be replaced with animation, low priority to fix
 
+### Session 20 (Latest - Harmony UX Improvements)
+- **Dashboard Preloading Fix:**
+  - Fixed issue where dashboard showed loading screen after routine completion
+  - Dashboard now initializes from cache synchronously on mount
+  - All state variables initialize from cache if available
+  - `cacheUsed` state tracks if we initialized from cache to skip redundant load
+  - Instant navigation from completion screen to dashboard
+
+- **Harmony System Simplification:**
+  - Removed "Calibration Period" concept (was confusing, just a 7-day wait)
+  - Harmony now has 2 simple requirements:
+    1. Balance Each Day (1+ routine in Mind, Body, Soul)
+    2. Build a 7-Day Streak (7 consecutive balanced days)
+  - Removed `daysUntilCalibrationComplete` from HarmonyStatus type
+  - Removed `getDaysUntilCalibrationComplete()` function
+
+- **Enhanced HarmonyProgressCard:**
+  - Now shows TODAY's completions (mindToday, bodyToday, soulToday) not 7-day totals
+  - Added 7-Day Progress Tracker with visual circles for each day
+  - Green checkmark for balanced days, gray X for unbalanced, blue ? for today
+  - Streak badge in header (🔥 X/7)
+  - "Today's Progress" section with fill-in circles per category
+  - "Balanced" / "In Progress" status badges
+  - Hint text when not balanced
+
+- **Improved HarmonyModal:**
+  - Simplified "How to Achieve Harmony" from 3 steps to 2 steps
+  - Removed calibration step entirely
+  - Added "Recent Activity" table showing daily balance history
+  - Color-coded count badges (Mind blue, Body red, Soul amber)
+  - Status icons for each day (checkmark/X/ellipsis for today)
+
+- **New HarmonyStatus Fields:**
+  - `mindToday`, `bodyToday`, `soulToday` - today's completion counts
+  - `isTodayBalanced` - whether today has 1+ in each category
+  - `dailyHistory: DailyBalanceRecord[]` - last 7 days of activity
+
+- **Key Files Modified:**
+  - `types/index.ts` - Added new HarmonyStatus fields, DailyBalanceRecord type
+  - `lib/utils/harmony.ts` - Updated calculateConsecutiveBalancedDays(), removed calibration
+  - `components/HarmonyProgressCard.tsx` - Complete redesign with new UI
+  - `components/HarmonyModal.tsx` - Simplified steps, added history table
+  - `app/(tabs)/index.tsx` - Cache initialization on mount
+  - `app/routines/[id]/execute.tsx` - Removed early preloading
+
 ---
 
 ## Harmony System Reference
@@ -780,6 +825,11 @@ npx tsc --noEmit
 - **Harmony** = Achieved by completing balanced routines for 7 consecutive days
 - **Balanced Day** = At least 1 routine in each category (Mind, Body, Soul)
 - **Advanced Routines** = Premium content requiring Harmony to access
+
+### How to Achieve Harmony (2 Steps)
+1. **Balance Each Day** - Complete 1+ routine in Mind, Body, AND Soul
+2. **Build a 7-Day Streak** - Maintain balance for 7 consecutive days
+- Missing a day or category resets the streak
 
 ### Database Fields (user_stats)
 - `is_in_harmony` (boolean) - Current harmony status
@@ -790,6 +840,33 @@ npx tsc --noEmit
 ### Database Fields (routines)
 - `is_advanced` (boolean) - Whether routine requires Harmony
 
+### HarmonyStatus Type
+```typescript
+interface HarmonyStatus {
+  isInHarmony: boolean
+  harmonyAchievedAt: string | null
+  harmonyLostAt: string | null
+  userType: UserType
+  // 7-day rolling counts
+  mind7d: number
+  body7d: number
+  soul7d: number
+  totalRoutines7d: number
+  // Today's completions
+  mindToday: number
+  bodyToday: number
+  soulToday: number
+  isTodayBalanced: boolean
+  isBalanced: boolean
+  // Streak tracking
+  consecutiveBalancedDays: number
+  daysUntilHarmony: number
+  // Daily history (last 7 days)
+  dailyHistory: DailyBalanceRecord[]
+  suggestedPlan: DailySuggestedRoutines[]
+}
+```
+
 ### Key Functions
 ```typescript
 // Check harmony requirements
@@ -797,13 +874,30 @@ checkHarmonyRequirements(userId: string): Promise<HarmonyStatus>
 
 // Manual toggle (health team only)
 setHarmonyStatusManually(userId: string, isInHarmony: boolean): Promise<void>
+
+// Calculate consecutive balanced days with daily history
+calculateConsecutiveBalancedDays(userId: string): Promise<{
+  consecutiveDays: number
+  dailyHistory: DailyBalanceRecord[]
+  todayCounts: { mind: number; body: number; soul: number }
+  isTodayBalanced: boolean
+}>
 ```
 
 ### UI Components
-- `HarmonyProgressCard` - Dashboard card showing balance and path to harmony
-- `HarmonyModal` - Detailed modal with progress, plan, health team controls
+- `HarmonyProgressCard` - Dashboard card with:
+  - Streak badge (🔥 X/7)
+  - 7-day visual progress tracker (circles with checkmarks/X)
+  - Today's Progress section (Mind/Body/Soul circles)
+  - "Balanced" or "In Progress" status badge
+- `HarmonyModal` - Detailed modal with:
+  - "What is Harmony" explanation
+  - "How to Achieve" 2-step guide with current status
+  - Recent Activity table (daily history)
+  - Harmony Benefits section
+  - Health team manual toggle
 
 ---
 
-**Last Updated:** 2025-12-06
+**Last Updated:** 2025-12-14
 **Current Version:** Expo SDK 54, React Native 0.76+

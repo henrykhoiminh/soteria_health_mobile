@@ -38,15 +38,18 @@ import {
 export default function DashboardScreen() {
   const { user, profile } = useAuth();
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [todayProgress, setTodayProgress] = useState<DailyProgress | null>(null);
-  const [stats, setStats] = useState<UserStats | null>(null);
-  const [friendActivity, setFriendActivity] = useState<ActivityFeedItem[]>([]);
+
+  // Check for cached data immediately on mount to avoid loading flash
+  const initialCache = getDashboardCache();
+  const [loading, setLoading] = useState(!initialCache);
+  const [todayProgress, setTodayProgress] = useState<DailyProgress | null>(initialCache?.todayProgress || null);
+  const [stats, setStats] = useState<UserStats | null>(initialCache?.stats || null);
+  const [friendActivity, setFriendActivity] = useState<ActivityFeedItem[]>(initialCache?.friendActivity || []);
   const [showJourneyFocusModal, setShowJourneyFocusModal] = useState(false);
   const [showUsernameSetup, setShowUsernameSetup] = useState(false);
-  const [avatarStates, setAvatarStates] = useState<AvatarState[]>([]);
-  const [painStats, setPainStats] = useState<PainStatistics | null>(null);
-  const [painHistory, setPainHistory] = useState<PainCheckIn[]>([]);
+  const [avatarStates, setAvatarStates] = useState<AvatarState[]>(initialCache?.avatarStates || []);
+  const [painStats, setPainStats] = useState<PainStatistics | null>(initialCache?.painStats || null);
+  const [painHistory, setPainHistory] = useState<PainCheckIn[]>(initialCache?.painHistory || []);
   const [showRecommendedModal, setShowRecommendedModal] = useState(false);
   const [selectedRoutine, setSelectedRoutine] = useState<Routine | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<RoutineCategory>('Mind');
@@ -57,12 +60,18 @@ export default function DashboardScreen() {
   const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [invitedUsers, setInvitedUsers] = useState<Set<string>>(new Set());
-  const [harmonyStatus, setHarmonyStatus] = useState<HarmonyStatus | null>(null);
+  const [harmonyStatus, setHarmonyStatus] = useState<HarmonyStatus | null>(initialCache?.harmonyStatus || null);
   const [showHarmonyModal, setShowHarmonyModal] = useState(false);
+  const [cacheUsed] = useState(!!initialCache); // Track if we initialized from cache
 
   const isHealthTeam = profile?.role === 'health_team' || profile?.role === 'admin';
 
   useEffect(() => {
+    // If we initialized from cache, clear it and skip the initial load
+    if (cacheUsed) {
+      clearDashboardCache();
+      return;
+    }
     loadDashboardData();
 
     // Show username setup modal if user doesn't have a username
@@ -89,21 +98,6 @@ export default function DashboardScreen() {
     if (!user) return;
 
     try {
-      // Check if we have cached data from routine completion (for instant navigation)
-      const cachedData = getDashboardCache();
-      if (cachedData) {
-        setTodayProgress(cachedData.todayProgress);
-        setStats(cachedData.stats);
-        setFriendActivity(cachedData.friendActivity);
-        setAvatarStates(cachedData.avatarStates);
-        setPainStats(cachedData.painStats);
-        setPainHistory(cachedData.painHistory);
-        setHarmonyStatus(cachedData.harmonyStatus);
-        setLoading(false);
-        clearDashboardCache();
-        return;
-      }
-
       // Only show loading indicator on initial load, not on focus refresh
       if (showLoading) {
         setLoading(true);

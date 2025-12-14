@@ -1,10 +1,18 @@
 import { AppColors } from '@/constants/theme'
-import { HarmonyStatus } from '@/types'
+import { DailyBalanceRecord, HarmonyStatus } from '@/types'
 import { setHarmonyStatusManually } from '@/lib/utils/harmony'
 import { Ionicons } from '@expo/vector-icons'
 import React, { useState } from 'react'
 import { ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native'
 import HarmonyProgressCard from './HarmonyProgressCard'
+
+// Helper to format date for display
+function formatDateForDisplay(dateString: string, isToday: boolean): string {
+  if (isToday) return 'Today'
+  const date = new Date(dateString + 'T12:00:00')
+  const options: Intl.DateTimeFormatOptions = { weekday: 'short', month: 'short', day: 'numeric' }
+  return date.toLocaleDateString('en-US', options)
+}
 
 interface HarmonyModalProps {
   visible: boolean
@@ -71,74 +79,124 @@ export default function HarmonyModal({
             <View style={styles.infoSection}>
               <Text style={styles.infoTitle}>What is Harmony?</Text>
               <Text style={styles.infoText}>
-                Harmony is achieved when you maintain balance across Mind, Body, and Soul for 7 consecutive days.
-                Each day, complete at least 1 routine in each category while keeping all categories within ±1 of each other.
+                Harmony represents a state of balanced wellness across your Mind, Body, and Soul. Achieving Harmony unlocks advanced routines and special features.
               </Text>
             </View>
 
-            {/* Requirements Section */}
-            <View style={styles.requirementsSection}>
-              <Text style={styles.requirementsTitle}>Requirements</Text>
+            {/* How to Achieve Section */}
+            <View style={styles.howToSection}>
+              <Text style={styles.howToTitle}>How to Achieve Harmony</Text>
 
-              <View style={styles.requirementItem}>
-                <View style={[
-                  styles.requirementIcon,
-                  harmonyStatus.consecutiveBalancedDays >= 7 && styles.requirementIconComplete
-                ]}>
-                  <Ionicons
-                    name={harmonyStatus.consecutiveBalancedDays >= 7 ? 'checkmark' : 'calendar-outline'}
-                    size={18}
-                    color={harmonyStatus.consecutiveBalancedDays >= 7 ? '#FFFFFF' : AppColors.textSecondary}
-                  />
+              <View style={styles.howToStep}>
+                <View style={styles.howToStepNumber}>
+                  <Text style={styles.howToStepNumberText}>1</Text>
                 </View>
-                <View style={styles.requirementContent}>
-                  <Text style={styles.requirementLabel}>7 Consecutive Balanced Days</Text>
-                  <Text style={styles.requirementValue}>
-                    {harmonyStatus.consecutiveBalancedDays}/7 days completed
+                <View style={styles.howToStepContent}>
+                  <Text style={styles.howToStepLabel}>Balance Each Day</Text>
+                  <Text style={styles.howToStepDescription}>
+                    Complete at least 1 routine in each category (Mind, Body, Soul) every day. A "balanced day" requires all three.
                   </Text>
+                  <View style={[
+                    styles.howToStepStatus,
+                    harmonyStatus.isTodayBalanced && styles.howToStepStatusComplete
+                  ]}>
+                    <Ionicons
+                      name={harmonyStatus.isTodayBalanced ? 'checkmark-circle' : 'ellipsis-horizontal'}
+                      size={14}
+                      color={harmonyStatus.isTodayBalanced ? '#10B981' : AppColors.textSecondary}
+                    />
+                    <Text style={[
+                      styles.howToStepStatusText,
+                      harmonyStatus.isTodayBalanced && styles.howToStepStatusTextComplete
+                    ]}>
+                      {harmonyStatus.isTodayBalanced
+                        ? 'Today is balanced!'
+                        : `Today: Mind ${harmonyStatus.mindToday}, Body ${harmonyStatus.bodyToday}, Soul ${harmonyStatus.soulToday}`}
+                    </Text>
+                  </View>
                 </View>
               </View>
 
-              <View style={styles.requirementItem}>
-                <View style={[
-                  styles.requirementIcon,
-                  harmonyStatus.isBalanced && styles.requirementIconComplete
-                ]}>
-                  <Ionicons
-                    name={harmonyStatus.isBalanced ? 'checkmark' : 'scale-outline'}
-                    size={18}
-                    color={harmonyStatus.isBalanced ? '#FFFFFF' : AppColors.textSecondary}
-                  />
+              <View style={styles.howToStep}>
+                <View style={styles.howToStepNumber}>
+                  <Text style={styles.howToStepNumberText}>2</Text>
                 </View>
-                <View style={styles.requirementContent}>
-                  <Text style={styles.requirementLabel}>Daily Balance</Text>
-                  <Text style={styles.requirementValue}>
-                    Complete 1+ routine in each category (Mind, Body, Soul) daily
+                <View style={styles.howToStepContent}>
+                  <Text style={styles.howToStepLabel}>Build Your 7-Day Streak</Text>
+                  <Text style={styles.howToStepDescription}>
+                    Maintain your balance for 7 consecutive days. Missing a day or category resets your streak.
                   </Text>
-                </View>
-              </View>
-
-              <View style={styles.requirementItem}>
-                <View style={[
-                  styles.requirementIcon,
-                  harmonyStatus.daysUntilCalibrationComplete === 0 && styles.requirementIconComplete
-                ]}>
-                  <Ionicons
-                    name={harmonyStatus.daysUntilCalibrationComplete === 0 ? 'checkmark' : 'time-outline'}
-                    size={18}
-                    color={harmonyStatus.daysUntilCalibrationComplete === 0 ? '#FFFFFF' : AppColors.textSecondary}
-                  />
-                </View>
-                <View style={styles.requirementContent}>
-                  <Text style={styles.requirementLabel}>Calibration Period</Text>
-                  <Text style={styles.requirementValue}>
-                    {harmonyStatus.daysUntilCalibrationComplete === 0
-                      ? 'Completed'
-                      : `${harmonyStatus.daysUntilCalibrationComplete} days remaining`}
-                  </Text>
+                  <View style={[
+                    styles.howToStepStatus,
+                    harmonyStatus.consecutiveBalancedDays >= 7 && styles.howToStepStatusComplete
+                  ]}>
+                    <Ionicons
+                      name={harmonyStatus.consecutiveBalancedDays >= 7 ? 'checkmark-circle' : 'flame'}
+                      size={14}
+                      color={harmonyStatus.consecutiveBalancedDays >= 7 ? '#10B981' : '#F59E0B'}
+                    />
+                    <Text style={[
+                      styles.howToStepStatusText,
+                      harmonyStatus.consecutiveBalancedDays >= 7 && styles.howToStepStatusTextComplete
+                    ]}>
+                      {harmonyStatus.consecutiveBalancedDays >= 7
+                        ? '7-day streak achieved!'
+                        : `${harmonyStatus.consecutiveBalancedDays}/7 consecutive balanced days`}
+                    </Text>
+                  </View>
                 </View>
               </View>
             </View>
+
+            {/* Daily History Section */}
+            {harmonyStatus.dailyHistory.length > 0 && (
+              <View style={styles.historySection}>
+                <Text style={styles.historyTitle}>Recent Activity</Text>
+                {harmonyStatus.dailyHistory.map((day) => (
+                  <View key={day.date} style={styles.historyRow}>
+                    <View style={styles.historyDateColumn}>
+                      <Text style={[styles.historyDate, day.isToday && styles.historyDateToday]}>
+                        {formatDateForDisplay(day.date, day.isToday)}
+                      </Text>
+                    </View>
+                    <View style={styles.historyCounts}>
+                      <View style={[styles.historyCountBadge, { backgroundColor: day.mind >= 1 ? AppColors.mind : AppColors.border }]}>
+                        <Text style={styles.historyCountText}>{day.mind}</Text>
+                      </View>
+                      <View style={[styles.historyCountBadge, { backgroundColor: day.body >= 1 ? AppColors.body : AppColors.border }]}>
+                        <Text style={styles.historyCountText}>{day.body}</Text>
+                      </View>
+                      <View style={[styles.historyCountBadge, { backgroundColor: day.soul >= 1 ? AppColors.soul : AppColors.border }]}>
+                        <Text style={styles.historyCountText}>{day.soul}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.historyStatus}>
+                      {day.isBalanced ? (
+                        <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+                      ) : day.isToday ? (
+                        <Ionicons name="ellipsis-horizontal-circle" size={20} color={AppColors.textTertiary} />
+                      ) : (
+                        <Ionicons name="close-circle" size={20} color={AppColors.textTertiary} />
+                      )}
+                    </View>
+                  </View>
+                ))}
+                <View style={styles.historyLegend}>
+                  <View style={styles.legendItem}>
+                    <View style={[styles.legendDot, { backgroundColor: AppColors.mind }]} />
+                    <Text style={styles.legendText}>Mind</Text>
+                  </View>
+                  <View style={styles.legendItem}>
+                    <View style={[styles.legendDot, { backgroundColor: AppColors.body }]} />
+                    <Text style={styles.legendText}>Body</Text>
+                  </View>
+                  <View style={styles.legendItem}>
+                    <View style={[styles.legendDot, { backgroundColor: AppColors.soul }]} />
+                    <Text style={styles.legendText}>Soul</Text>
+                  </View>
+                </View>
+              </View>
+            )}
 
             {/* Benefits Section */}
             <View style={styles.benefitsSection}>
@@ -410,5 +468,142 @@ const styles = StyleSheet.create({
   healthTeamToggleDescription: {
     fontSize: 12,
     color: AppColors.textSecondary,
+  },
+  // How To Achieve Section styles
+  howToSection: {
+    marginTop: 20,
+  },
+  howToTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: AppColors.textPrimary,
+    marginBottom: 16,
+  },
+  howToStep: {
+    flexDirection: 'row',
+    marginBottom: 16,
+    gap: 12,
+  },
+  howToStepNumber: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: AppColors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  howToStepNumberText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  howToStepContent: {
+    flex: 1,
+  },
+  howToStepLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: AppColors.textPrimary,
+    marginBottom: 4,
+  },
+  howToStepDescription: {
+    fontSize: 13,
+    color: AppColors.textSecondary,
+    lineHeight: 18,
+    marginBottom: 8,
+  },
+  howToStepStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: AppColors.border,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  howToStepStatusComplete: {
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+  },
+  howToStepStatusText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: AppColors.textSecondary,
+  },
+  howToStepStatusTextComplete: {
+    color: '#10B981',
+  },
+  // History Section styles
+  historySection: {
+    marginTop: 20,
+    padding: 16,
+    backgroundColor: AppColors.surface,
+    borderRadius: 12,
+  },
+  historyTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: AppColors.textPrimary,
+    marginBottom: 12,
+  },
+  historyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: AppColors.border,
+  },
+  historyDateColumn: {
+    flex: 1,
+  },
+  historyDate: {
+    fontSize: 13,
+    color: AppColors.textSecondary,
+  },
+  historyDateToday: {
+    color: AppColors.primary,
+    fontWeight: '600',
+  },
+  historyCounts: {
+    flexDirection: 'row',
+    gap: 6,
+    marginRight: 12,
+  },
+  historyCountBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  historyCountText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  historyStatus: {
+    width: 24,
+    alignItems: 'center',
+  },
+  historyLegend: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 16,
+    marginTop: 12,
+    paddingTop: 8,
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  legendDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  legendText: {
+    fontSize: 11,
+    color: AppColors.textTertiary,
   },
 })

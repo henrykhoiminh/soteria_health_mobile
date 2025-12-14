@@ -252,22 +252,35 @@ This is the mobile companion app to the Soteria Health web application, built wi
   - Username setup modal for new users
 
 ### Harmony System
-- **Harmony Mechanic:**
-  - Users achieve Harmony by completing balanced routines for 7 consecutive days
-  - **Balanced Day** = At least 1 routine in each category (Mind, Body, Soul)
-  - Progress tracked via HarmonyProgressCard on dashboard
-  - Detailed progress view in HarmonyModal
+- **What is Harmony?**
+  - Harmony represents a state of balanced wellness across Mind, Body, and Soul
+  - Achieving Harmony unlocks advanced routines and special features
 
-- **Today's Balance Tracking:**
-  - Visual indicators for Mind, Body, Soul completion
-  - Shows which categories still need routines today
-  - Updates in real-time as routines are completed
+- **How to Achieve Harmony:**
+  1. **Balance Each Day** - Complete at least 1 routine in each category (Mind, Body, Soul)
+  2. **Build a 7-Day Streak** - Maintain balance for 7 consecutive days
+  - Missing a day or category resets your streak
 
-- **Path to Harmony:**
-  - Shows consecutive balanced days completed
-  - Displays days remaining to achieve Harmony
-  - Suggested daily plan to reach harmony faster
-  - When in Harmony: Encouraging message with sparkles icon
+- **HarmonyProgressCard (Dashboard):**
+  - **Header:** Shows "Path to Harmony" with streak badge (e.g., "🔥 3/7")
+  - **7-Day Progress Tracker:** Visual row of 7 circles showing:
+    - ✓ Green checkmark for balanced days
+    - ✗ Gray X for unbalanced past days
+    - ? Blue outline for today (in progress)
+  - **Today's Progress:** Mind/Body/Soul circles that fill when completed
+    - "Balanced" badge when all three categories done
+    - "In Progress" badge otherwise
+    - Hint: "Complete 1+ routine in each category to balance today"
+
+- **HarmonyModal (Detailed View):**
+  - **What is Harmony** explanation section
+  - **How to Achieve** - 2-step numbered guide with current status
+  - **Recent Activity** - Daily history table showing:
+    - Date with Mind/Body/Soul count badges (colored when ≥1)
+    - Status icon (checkmark/X/ellipsis for today)
+    - Color legend for categories
+  - **Harmony Benefits** - Lists rewards for achieving Harmony
+  - **Health Team Controls** - Manual toggle for testing (health team only)
 
 - **Advanced Routines (Harmony Gating):**
   - Premium routines marked as "Advanced" by health team
@@ -281,7 +294,7 @@ This is the mobile companion app to the Soteria Health web application, built wi
     - Hint text explaining how to unlock
 
 - **Health Team Controls:**
-  - Manual Harmony toggle in HarmonyModal
+  - Manual Harmony toggle in HarmonyModal for testing
   - Can set routines as "Advanced" in routine builder
   - Full control over harmony gating system
 
@@ -1094,11 +1107,33 @@ npx expo start --ios
 
 ## Recent Updates
 
-### Harmony System & Advanced Routines (Latest)
+### Harmony System Improvements (Latest)
+- ✅ **Simplified Harmony Requirements:**
+  - Removed confusing "Calibration Period" - now just 2 simple steps
+  - Step 1: Balance Each Day (1+ routine in Mind, Body, Soul)
+  - Step 2: Build a 7-Day Streak (7 consecutive balanced days)
+- ✅ **Enhanced HarmonyProgressCard:**
+  - Shows today's completions (not 7-day totals)
+  - 7-Day Progress Tracker with visual circles for each day
+  - Streak badge in header (e.g., "🔥 3/7")
+  - "Today's Progress" section with fill-in circles per category
+  - "Balanced" / "In Progress" status badges
+- ✅ **Improved HarmonyModal:**
+  - Clearer "How to Achieve Harmony" 2-step guide
+  - Recent Activity table showing daily balance history
+  - Color-coded count badges (Mind blue, Body red, Soul amber)
+  - Status icons for each day (checkmark/X/ellipsis)
+- ✅ **Dashboard Preloading Fix:**
+  - Dashboard data now preloads during completion animation
+  - Done button only appears after data is ready
+  - Instant navigation from completion screen to dashboard
+  - No loading screen flash after pressing Done
+
+### Harmony System & Advanced Routines
 - ✅ **Harmony Mechanic:**
   - Users achieve Harmony by completing balanced routines for 7 consecutive days
   - HarmonyProgressCard on dashboard showing Today's Balance and Path to Harmony
-  - HarmonyModal with detailed progress, consecutive balanced days, suggested plan
+  - HarmonyModal with detailed progress, consecutive balanced days
   - When in Harmony: Shows encouraging message with sparkles icon
 - ✅ **Advanced Routines (Harmony Gating):**
   - Health team can mark routines as "Advanced" in routine builder

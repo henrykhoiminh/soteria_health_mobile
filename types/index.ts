@@ -198,17 +198,33 @@ export interface HarmonyStatus {
   harmonyAchievedAt: string | null
   harmonyLostAt: string | null
   userType: UserType
+  // 7-day rolling counts
   mind7d: number
   body7d: number
   soul7d: number
-  isBalanced: boolean
   totalRoutines7d: number
-  daysUntilCalibrationComplete: number // 0 if past day 7
+  // Today's completions
+  mindToday: number
+  bodyToday: number
+  soulToday: number
+  isTodayBalanced: boolean // Did user complete 1+ in each category today?
+  isBalanced: boolean // Is the 7-day rolling window balanced?
   // Consecutive balanced days tracking
   consecutiveBalancedDays: number // How many days in a row user has been balanced
   daysUntilHarmony: number // How many more balanced days needed (7 - consecutiveBalancedDays)
+  // Daily history for visual progress tracker (last 7-14 days)
+  dailyHistory: DailyBalanceRecord[]
   // Daily suggested plan to reach harmony
   suggestedPlan: DailySuggestedRoutines[]
+}
+
+export interface DailyBalanceRecord {
+  date: string // YYYY-MM-DD
+  mind: number
+  body: number
+  soul: number
+  isBalanced: boolean
+  isToday: boolean
 }
 
 export interface DailySuggestedRoutines {

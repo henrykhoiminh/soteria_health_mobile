@@ -240,7 +240,7 @@ export default function ExecuteRoutineScreen() {
         }
       }
 
-      // Preload dashboard data in the background while animation plays
+      // Preload dashboard data in the background while completion screen shows
       preloadDashboardData();
     } catch (error) {
       console.error('Error completing routine:', error);
