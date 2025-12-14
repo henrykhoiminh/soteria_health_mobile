@@ -1,12 +1,12 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, StyleSheet, SafeAreaView, TouchableOpacity, Text, Animated } from 'react-native';
-import { useRouter } from 'expo-router';
+import JourneyBadge from '@/components/JourneyBadge';
+import { AppColors } from '@/constants/theme';
+import { SOUL_NAME_OPTIONS, useOnboarding } from '@/lib/contexts/OnboardingContext';
 import * as Haptics from 'expo-haptics';
+import { useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Animated, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import AvatarOrb from './components/AvatarOrb';
 import NameSelector from './components/NameSelector';
-import JourneyBadge from '@/components/JourneyBadge';
-import { useOnboarding, SOUL_NAME_OPTIONS } from '@/lib/contexts/OnboardingContext';
-import { AppColors } from '@/constants/theme';
 
 // Typing speed in milliseconds per character
 const TYPING_SPEED = 40;
@@ -16,12 +16,8 @@ const HAPTIC_FREQUENCY = 2;
 // Caption data for new users
 const newUserCaptions = [
   { text: 'And this is your Soul.', pauseAfter: 800 },
-  { text: 'Your joy. Your peace.', pauseAfter: 1000 },
-  { text: 'Your ability to feel something', pauseAfter: 800 },
-  { text: 'beyond just "busy" and "fine."', pauseAfter: 1200 },
-  { text: "It's the easiest to forget.", pauseAfter: 1000 },
-  { text: 'And the most important to remember.', pauseAfter: 1200 },
-  { text: 'What will you call it?', pauseAfter: 0 },
+  { text: 'Your peace. Your connection.', pauseAfter: 1000 },
+  { text: 'And what shall you call this one?', pauseAfter: 0 },
 ];
 
 // Caption data for reset users
