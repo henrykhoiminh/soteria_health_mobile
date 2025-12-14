@@ -66,26 +66,36 @@ export async function getTodayCheckIn(userId: string): Promise<PainCheckIn | nul
 }
 
 /**
- * Submit a pain check-in
+ * Submit a pain check-in with Mind/Body/Soul scores
  * @param userId - User ID
- * @param painLevel - Pain level (0-10)
- * @param painLocations - Array of pain locations
+ * @param mindScore - Mind wellness score (0-10, higher = worse)
+ * @param bodyScore - Body wellness score (0-10, higher = worse)
+ * @param soulScore - Soul wellness score (0-10, higher = worse)
  * @param notes - Optional notes
  * @returns Promise<PainCheckIn | null>
  */
 export async function submitPainCheckIn(
   userId: string,
-  painLevel: number,
-  painLocations: string[],
+  mindScore: number,
+  bodyScore: number,
+  soulScore: number,
   notes: string | null
 ): Promise<PainCheckIn | null> {
   try {
     const today = getTodayDate()
 
-    // Validate pain level
-    if (painLevel < 0 || painLevel > 10) {
-      throw new Error('Pain level must be between 0 and 10')
+    // Validate scores
+    const validateScore = (score: number, name: string) => {
+      if (score < 0 || score > 10) {
+        throw new Error(`${name} score must be between 0 and 10`)
+      }
     }
+    validateScore(mindScore, 'Mind')
+    validateScore(bodyScore, 'Body')
+    validateScore(soulScore, 'Soul')
+
+    // Calculate overall pain level as average of the three scores
+    const painLevel = Math.round((mindScore + bodyScore + soulScore) / 3)
 
     // Check if already checked in today
     const existingCheckIn = await getTodayCheckIn(userId)
@@ -95,8 +105,11 @@ export async function submitPainCheckIn(
       const { data, error } = await supabase
         .from('pain_checkins')
         .update({
+          mind_score: mindScore,
+          body_score: bodyScore,
+          soul_score: soulScore,
           pain_level: painLevel,
-          pain_locations: painLocations,
+          pain_locations: [], // Deprecated field
           notes: notes,
         })
         .eq('id', existingCheckIn.id)
@@ -115,8 +128,11 @@ export async function submitPainCheckIn(
         .from('pain_checkins')
         .insert({
           user_id: userId,
+          mind_score: mindScore,
+          body_score: bodyScore,
+          soul_score: soulScore,
           pain_level: painLevel,
-          pain_locations: painLocations,
+          pain_locations: [], // Deprecated field
           notes: notes,
           check_in_date: today,
         })
@@ -133,6 +149,25 @@ export async function submitPainCheckIn(
   } catch (error) {
     console.error('Error in submitPainCheckIn:', error)
     throw error
+  }
+}
+
+/**
+ * Get wellness level description and color for a category score
+ * @param score - Wellness score (0-10, higher = worse)
+ * @returns Object with label and color
+ */
+export function getWellnessLevelInfo(score: number): { label: string; color: string } {
+  if (score === 0) {
+    return { label: 'Thriving', color: '#34C759' } // Green
+  } else if (score <= 3) {
+    return { label: 'Good', color: '#34C759' } // Green
+  } else if (score <= 5) {
+    return { label: 'Okay', color: '#FFD60A' } // Yellow
+  } else if (score <= 7) {
+    return { label: 'Struggling', color: '#FF9500' } // Orange
+  } else {
+    return { label: 'Needs Care', color: '#FF3B30' } // Red
   }
 }
 
@@ -197,6 +232,13 @@ export async function getPainStatistics(
       avg_30_days: 0,
       pain_free_days: 0,
       trend: 'insufficient_data',
+      // Per-category defaults
+      current_mind: 0,
+      current_body: 0,
+      current_soul: 0,
+      mind_avg_7_days: 0,
+      body_avg_7_days: 0,
+      soul_avg_7_days: 0,
     }
   }
 }

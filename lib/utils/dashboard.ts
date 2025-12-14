@@ -1,5 +1,5 @@
 import { supabase } from '../supabase/client'
-import { DailyProgress, Routine, RoutineCategory, UserStats, JourneyFocus, FitnessLevel } from '@/types'
+import { DailyProgress, Routine, RoutineCategory, UserStats, JourneyFocus } from '@/types'
 import { format } from 'date-fns'
 import { recordActivity } from './social'
 import { updateEnhancedStats } from './stats'
@@ -53,10 +53,9 @@ export async function getRecommendedRoutines(limit: number = 6): Promise<Routine
   return data || []
 }
 
-// Get personalized routines based on user's journey focus and fitness level
+// Get personalized routines based on user's journey focus
 export async function getPersonalizedRoutines(
   journeyFocus: JourneyFocus | null,
-  fitnessLevel: FitnessLevel | null,
   limit: number = 6
 ): Promise<Routine[]> {
   let query = supabase
@@ -66,11 +65,6 @@ export async function getPersonalizedRoutines(
   // Filter by journey focus if user has one
   if (journeyFocus) {
     query = query.contains('journey_focus', [journeyFocus])
-  }
-
-  // Filter by fitness level (difficulty) if user has one
-  if (fitnessLevel) {
-    query = query.eq('difficulty', fitnessLevel)
   }
 
   // Order by popularity and limit results
@@ -103,8 +97,7 @@ export async function getRoutinesByCategory(category: RoutineCategory): Promise<
 
 // Get one routine from each category (Mind, Body, Soul) for a balanced recommendation
 export async function getBalancedRoutines(
-  journeyFocus: JourneyFocus | null,
-  fitnessLevel: FitnessLevel | null
+  journeyFocus: JourneyFocus | null
 ): Promise<Routine[]> {
   const categories: RoutineCategory[] = ['Mind', 'Body', 'Soul']
   const routines: Routine[] = []
@@ -119,11 +112,6 @@ export async function getBalancedRoutines(
     // Filter by journey focus if user has one
     if (journeyFocus) {
       query = query.contains('journey_focus', [journeyFocus])
-    }
-
-    // Filter by fitness level (difficulty) if user has one
-    if (fitnessLevel) {
-      query = query.eq('difficulty', fitnessLevel)
     }
 
     // Order by popularity and get the top routine

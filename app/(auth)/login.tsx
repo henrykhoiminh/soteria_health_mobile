@@ -58,9 +58,9 @@ export default function LoginScreen() {
       // Email is confirmed, check if profile is complete
       const profile = await getUserProfile(user.id);
 
-      if (!profile?.journey_focus || !profile?.fitness_level) {
-        // Profile incomplete, redirect to onboarding
-        router.replace('/(auth)/onboarding');
+      if (!profile?.onboarding_completed) {
+        // Profile incomplete, redirect to narrative onboarding
+        router.replace('/onboarding');
       } else {
         // Profile complete, redirect to dashboard
         router.replace('/(tabs)');

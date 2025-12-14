@@ -435,11 +435,13 @@ export async function updateHarmonyStatus(userId: string): Promise<void> {
 
   const { error } = await supabase
     .from('user_stats')
-    .update(updateData)
-    .eq('user_id', userId)
+    .upsert(
+      { user_id: userId, ...updateData },
+      { onConflict: 'user_id' }
+    )
 
   if (error) {
-    console.error('Error updating harmony status:', error)
+    console.error('Error upserting harmony status:', error)
     throw error
   }
 }

@@ -1,5 +1,4 @@
 // User Types
-export type FitnessLevel = 'Beginner' | 'Intermediate' | 'Advanced'
 export type JourneyFocus = 'Injury Prevention' | 'Recovery'
 export type JourneyFocusOption = 'Injury Prevention' | 'Recovery' | 'Both'
 export type UserRole = 'user' | 'health_team' | 'admin'
@@ -9,15 +8,17 @@ export interface Profile {
   first_name: string | null
   last_name: string | null
   username: string | null
-  age: number | null
-  fitness_level: FitnessLevel | null
   journey_focus: JourneyFocus | null
   journey_started_at: string | null // Timestamp when user began their journey
-  recovery_areas: string[] // Array of body parts user is recovering from
-  recovery_goals: string[] // Array of predefined recovery goals
-  injuries: string[]
   profile_picture_url: string | null
   role: UserRole // User role: 'user' (default), 'health_team', or 'admin'
+  // Avatar names (narrative onboarding)
+  mind_name: string | null
+  body_name: string | null
+  soul_name: string | null
+  // Onboarding status
+  onboarding_completed: boolean
+  onboarding_completed_at: string | null
   created_at: string
   updated_at: string
 }
@@ -269,7 +270,7 @@ export interface JourneyGoal {
   completed_at: string | null
 }
 
-// Recovery area options organized by body region
+// Body part options organized by body region (used for routine tagging)
 export const UPPER_BODY_AREAS = [
   'Neck',
   'Shoulder',
@@ -287,24 +288,7 @@ export const LOWER_BODY_AREAS = [
   'Foot',
 ] as const
 
-export const ALL_RECOVERY_AREAS = [...UPPER_BODY_AREAS, ...LOWER_BODY_AREAS] as const
-
-export type RecoveryArea = typeof ALL_RECOVERY_AREAS[number]
 export type BodyRegion = 'Upper Body' | 'Lower Body' | 'All'
-
-// Predefined recovery goals
-export const RECOVERY_GOALS = [
-  'Reduce pain and discomfort',
-  'Improve range of motion',
-  'Increase strength',
-  'Return to daily activities',
-  'Return to sports/exercise',
-  'Prevent re-injury',
-  'Improve posture',
-  'Reduce inflammation',
-] as const
-
-export type RecoveryGoal = typeof RECOVERY_GOALS[number]
 
 // Social Features Types
 
@@ -432,13 +416,51 @@ export interface UserSearchResult {
   username: string | null
   profile_picture_url: string | null
   journey_focus: JourneyFocus | null
-  fitness_level: FitnessLevel | null
   friendship_status?: FriendshipStatus | null
   match_score?: number
   role?: UserRole
 }
 
-// Pain Check-In Types
+// Pain Check-In Types (Mind/Body/Soul Wellness System)
+// Note: Higher scores = worse state (0 = thriving, 10 = struggling)
+
+export interface PainCheckIn {
+  id: string
+  user_id: string
+  // Mind/Body/Soul scores (0-10, higher = worse)
+  mind_score: number
+  body_score: number
+  soul_score: number
+  // Overall pain level (derived from average of mind/body/soul)
+  pain_level: number // 0-10
+  // Legacy field - deprecated, kept for backwards compatibility
+  pain_locations: string[] // DEPRECATED: Previously stored body part locations
+  notes: string | null
+  check_in_date: string // Date in YYYY-MM-DD format
+  created_at: string
+  updated_at: string
+}
+
+export type PainTrend = 'decreasing' | 'stable' | 'increasing' | 'insufficient_data'
+
+export interface PainStatistics {
+  // Overall scores
+  current_pain: number
+  avg_7_days: number
+  avg_30_days: number
+  pain_free_days: number
+  trend: PainTrend
+  // Per-category current scores
+  current_mind: number
+  current_body: number
+  current_soul: number
+  // Per-category 7-day averages
+  mind_avg_7_days: number
+  body_avg_7_days: number
+  soul_avg_7_days: number
+}
+
+// Legacy constant - deprecated but kept for backwards compatibility
 export const PAIN_LOCATIONS = [
   'Mind',
   'Soul',
@@ -455,27 +477,6 @@ export const PAIN_LOCATIONS = [
 ] as const
 
 export type PainLocation = typeof PAIN_LOCATIONS[number]
-
-export interface PainCheckIn {
-  id: string
-  user_id: string
-  pain_level: number // 0-10
-  pain_locations: string[] // Array of body parts with pain
-  notes: string | null
-  check_in_date: string // Date in YYYY-MM-DD format
-  created_at: string
-  updated_at: string
-}
-
-export type PainTrend = 'decreasing' | 'stable' | 'increasing' | 'insufficient_data'
-
-export interface PainStatistics {
-  current_pain: number
-  avg_7_days: number
-  avg_30_days: number
-  pain_free_days: number
-  trend: PainTrend
-}
 
 // Milestone System Types
 export type MilestoneCategory =

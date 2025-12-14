@@ -358,7 +358,7 @@ function FriendsTab({ userId, onRefresh }: { userId: string; onRefresh: () => vo
                     <Text style={styles.userRealName}>{user.full_name}</Text>
                   )}
                   <Text style={styles.userMeta}>
-                    {user.journey_focus} • {user.fitness_level}
+                    {user.journey_focus || 'New User'}
                   </Text>
                 </View>
                 <View style={styles.userActions}>

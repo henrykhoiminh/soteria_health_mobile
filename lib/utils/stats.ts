@@ -389,16 +389,18 @@ export async function updateEnhancedStats(userId: string, completedCategory?: Ro
     updateData[timestampField] = new Date().toISOString()
   }
 
-  // Update user_stats table
+  // Upsert user_stats table (insert if not exists, update if exists)
   const { data, error } = await supabase
     .from('user_stats')
-    .update(updateData)
-    .eq('user_id', userId)
+    .upsert(
+      { user_id: userId, ...updateData },
+      { onConflict: 'user_id' }
+    )
     .select()
     .single()
 
   if (error) {
-    console.error('Error updating enhanced stats:', error)
+    console.error('Error upserting enhanced stats:', error)
     throw error
   }
 

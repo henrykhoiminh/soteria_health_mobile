@@ -2,7 +2,7 @@ import { useAuth } from '@/lib/contexts/AuthContext';
 import { AppColors } from '@/constants/theme';
 import { updateUserProfile, uploadProfilePicture, hardResetUserData } from '@/lib/utils/auth';
 import { validateUsername, getSuggestedUsernames } from '@/lib/utils/username';
-import { FitnessLevel, JourneyFocus, MilestoneSummary, HealthTeamInvitation, HealthTeamStats } from '@/types';
+import { JourneyFocus, MilestoneSummary, HealthTeamInvitation, HealthTeamStats } from '@/types';
 import { useState, useCallback } from 'react';
 import { useFocusEffect } from 'expo-router';
 import {
@@ -35,7 +35,6 @@ import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 
 const JOURNEY_FOCUSES: JourneyFocus[] = ['Injury Prevention', 'Recovery'];
-const FITNESS_LEVELS: FitnessLevel[] = ['Beginner', 'Intermediate', 'Advanced'];
 
 export default function ProfileScreen() {
   const { user, profile, refreshProfile, signOut } = useAuth();
@@ -47,10 +46,7 @@ export default function ProfileScreen() {
   const [usernameError, setUsernameError] = useState('');
   const [validatingUsername, setValidatingUsername] = useState(false);
   const [editedJourneyFocus, setEditedJourneyFocus] = useState<JourneyFocus | null>(null);
-  const [editedFitnessLevel, setEditedFitnessLevel] = useState<FitnessLevel | null>(null);
-  const [editedAge, setEditedAge] = useState('');
   const [showJourneyFocusModal, setShowJourneyFocusModal] = useState(false);
-  const [showFitnessLevelModal, setShowFitnessLevelModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [resetting, setResetting] = useState(false);
@@ -153,8 +149,6 @@ export default function ProfileScreen() {
     setEditedUsername(profile?.username || '');
     setUsernameError('');
     setEditedJourneyFocus(profile?.journey_focus || null);
-    setEditedFitnessLevel(profile?.fitness_level || null);
-    setEditedAge(profile?.age?.toString() || '');
     setIsEditing(true);
   };
 
@@ -186,8 +180,6 @@ export default function ProfileScreen() {
     setEditedUsername('');
     setUsernameError('');
     setEditedJourneyFocus(null);
-    setEditedFitnessLevel(null);
-    setEditedAge('');
   };
 
   const handleSave = async () => {
@@ -217,8 +209,6 @@ export default function ProfileScreen() {
         last_name: editedLastName.trim() || null,
         username: editedUsername.trim() || null,
         journey_focus: editedJourneyFocus,
-        fitness_level: editedFitnessLevel,
-        age: editedAge ? parseInt(editedAge, 10) : null,
       };
 
       await updateUserProfile(user.id, updates);
@@ -257,7 +247,7 @@ export default function ProfileScreen() {
   const handleResetJourney = async () => {
     Alert.alert(
       'Reset Journey - Warning',
-      'This will permanently delete ALL your data including:\n\n• Journey progress and stats\n• Routine completions and history\n• Daily progress tracking\n• Recovery goals and areas\n\nYou will be sent back through onboarding to start fresh.\n\nThis action CANNOT be undone!',
+      'This will permanently delete ALL your data including:\n\n• Journey progress and stats\n• Routine completions and history\n• Daily progress tracking\n• Avatar companion names\n\nYou will be sent back through onboarding to start fresh.\n\nThis action CANNOT be undone!',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -278,10 +268,8 @@ export default function ProfileScreen() {
               // Small delay to ensure database has processed all deletions
               await new Promise(resolve => setTimeout(resolve, 500));
 
-              // Redirect to onboarding
-              router.replace('/(auth)/onboarding');
-
-              Alert.alert('Success', 'Your journey has been reset. Welcome back!');
+              // Redirect to onboarding from the beginning
+              router.replace('/onboarding');
             } catch (error: any) {
               Alert.alert('Error', error.message || 'Failed to reset journey');
             } finally {
@@ -418,46 +406,6 @@ export default function ProfileScreen() {
           ) : (
             <Text style={styles.infoValue}>
               {profile?.journey_focus || 'Not set'}
-            </Text>
-          )}
-        </View>
-
-        {/* Fitness Level */}
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Fitness Level</Text>
-          {isEditing ? (
-            <TouchableOpacity
-              style={styles.selectButton}
-              onPress={() => setShowFitnessLevelModal(true)}
-            >
-              <Text style={styles.selectButtonText}>
-                {editedFitnessLevel || 'Select'}
-              </Text>
-              <Ionicons name="chevron-down" size={20} color={AppColors.textSecondary} />
-            </TouchableOpacity>
-          ) : (
-            <Text style={styles.infoValue}>
-              {profile?.fitness_level || 'Not set'}
-            </Text>
-          )}
-        </View>
-
-        {/* Age */}
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Age</Text>
-          {isEditing ? (
-            <TextInput
-              style={styles.ageInput}
-              value={editedAge}
-              onChangeText={setEditedAge}
-              placeholder="Age"
-              placeholderTextColor={AppColors.textTertiary}
-              keyboardType="number-pad"
-              maxLength={3}
-            />
-          ) : (
-            <Text style={styles.infoValue}>
-              {profile?.age || 'Not set'}
             </Text>
           )}
         </View>
@@ -657,19 +605,6 @@ export default function ProfileScreen() {
         )}
       </View>
 
-      {profile?.injuries && profile.injuries.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Injuries/Limitations</Text>
-          <View style={styles.goalsContainer}>
-            {profile.injuries.map((injury, index) => (
-              <View key={index} style={[styles.goalTag, styles.injuryTag]}>
-                <Text style={styles.goalText}>{injury}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-      )}
-
       <View style={styles.section}>
         <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
           <Text style={styles.signOutText}>Sign Out</Text>
@@ -727,38 +662,6 @@ export default function ProfileScreen() {
         </TouchableOpacity>
       </Modal>
 
-      {/* Fitness Level Modal */}
-      <Modal
-        visible={showFitnessLevelModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowFitnessLevelModal(false)}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setShowFitnessLevelModal(false)}
-        >
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Select Fitness Level</Text>
-            {FITNESS_LEVELS.map((level) => (
-              <TouchableOpacity
-                key={level}
-                style={styles.modalOption}
-                onPress={() => {
-                  setEditedFitnessLevel(level);
-                  setShowFitnessLevelModal(false);
-                }}
-              >
-                <Text style={styles.modalOptionText}>{level}</Text>
-                {editedFitnessLevel === level && (
-                  <Ionicons name="checkmark" size={20} color={AppColors.primary} />
-                )}
-              </TouchableOpacity>
-            ))}
-          </View>
-        </TouchableOpacity>
-      </Modal>
     </ScrollView>
   );
 }
@@ -888,24 +791,6 @@ const styles = StyleSheet.create({
     color: AppColors.textPrimary,
     fontWeight: '500',
   },
-  goalsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  goalTag: {
-    backgroundColor: AppColors.lightBlue,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
-  },
-  injuryTag: {
-    backgroundColor: AppColors.lightOrange,
-  },
-  goalText: {
-    fontSize: 14,
-    color: AppColors.textPrimary,
-  },
   selectButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -921,16 +806,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: AppColors.textPrimary,
     fontWeight: '500',
-  },
-  ageInput: {
-    fontSize: 16,
-    color: AppColors.textPrimary,
-    fontWeight: '500',
-    borderBottomWidth: 1,
-    borderBottomColor: AppColors.primary,
-    paddingVertical: 4,
-    minWidth: 60,
-    textAlign: 'right',
   },
   usernameInputContainer: {
     position: 'relative',

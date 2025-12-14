@@ -17,8 +17,6 @@ import { updateUserProfile } from '@/lib/utils/auth';
 interface JourneyFocusModalProps {
   visible: boolean;
   currentFocus: JourneyFocus;
-  currentRecoveryAreas?: string[];
-  currentRecoveryGoals?: string[];
   journeyStartedAt?: string;
   userId: string;
   onClose: () => void;
@@ -30,8 +28,6 @@ const JOURNEY_OPTIONS: JourneyFocus[] = ['Injury Prevention', 'Recovery'];
 export default function JourneyFocusModal({
   visible,
   currentFocus,
-  currentRecoveryAreas = [],
-  currentRecoveryGoals = [],
   journeyStartedAt,
   userId,
   onClose,
@@ -62,11 +58,6 @@ export default function JourneyFocusModal({
       // Update the journey focus
       await updateUserProfile(userId, {
         journey_focus: selectedFocus,
-        // Reset recovery-specific fields if switching to Prevention
-        ...(selectedFocus === 'Injury Prevention' && {
-          recovery_areas: [],
-          recovery_goals: [],
-        }),
       });
 
       Alert.alert(
@@ -135,18 +126,6 @@ export default function JourneyFocusModal({
                 <Text style={styles.currentJourneyTitle}>Current Focus</Text>
               </View>
               <Text style={styles.currentJourneyName}>{currentFocus}</Text>
-              {currentFocus === 'Recovery' && currentRecoveryAreas.length > 0 && (
-                <View style={styles.infoSection}>
-                  <Text style={styles.infoLabel}>Recovery Areas:</Text>
-                  <Text style={styles.infoText}>{currentRecoveryAreas.join(', ')}</Text>
-                </View>
-              )}
-              {currentFocus === 'Recovery' && currentRecoveryGoals.length > 0 && (
-                <View style={styles.infoSection}>
-                  <Text style={styles.infoLabel}>Goals:</Text>
-                  <Text style={styles.infoText}>{currentRecoveryGoals.join(', ')}</Text>
-                </View>
-              )}
             </View>
 
             {/* Change Journey Section */}
@@ -302,18 +281,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: AppColors.textPrimary,
     marginBottom: 8,
-  },
-  infoSection: {
-    marginTop: 12,
-  },
-  infoLabel: {
-    fontSize: 12,
-    color: AppColors.textSecondary,
-    marginBottom: 4,
-  },
-  infoText: {
-    fontSize: 14,
-    color: AppColors.textPrimary,
   },
   sectionTitle: {
     fontSize: 18,

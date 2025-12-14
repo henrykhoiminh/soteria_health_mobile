@@ -127,7 +127,7 @@ export default function FriendInviteModal({
             </Text>
           )}
           <Text style={styles.friendMeta}>
-            {friend.journey_focus} • {friend.fitness_level}
+            {friend.journey_focus || 'New User'}
           </Text>
         </View>
         <TouchableOpacity

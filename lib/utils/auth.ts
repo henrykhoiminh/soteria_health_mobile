@@ -2,16 +2,11 @@ import { supabase } from '../supabase/client'
 import { Profile } from '@/types'
 import { decode } from 'base64-arraybuffer'
 
-export async function signUp(email: string, password: string, firstName: string, lastName: string) {
+export async function signUp(email: string, password: string) {
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: {
-      data: {
-        first_name: firstName,
-        last_name: lastName,
-      },
-    },
+    // Note: first_name and last_name are now collected during narrative onboarding
   })
 
   if (error) throw error
@@ -120,31 +115,6 @@ export function calculateJourneyDays(journeyStartedAt: string | null): number {
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
 
   return diffDays
-}
-
-/**
- * Update recovery-specific information for a user
- * @param userId - User ID
- * @param recoveryAreas - Array of body parts being recovered
- * @param recoveryGoals - Array of predefined recovery goals
- */
-export async function updateRecoveryInfo(
-  userId: string,
-  recoveryAreas: string[],
-  recoveryGoals: string[]
-) {
-  const { data, error } = await supabase
-    .from('profiles')
-    .update({
-      recovery_areas: recoveryAreas,
-      recovery_goals: recoveryGoals,
-    })
-    .eq('id', userId)
-    .select()
-    .single()
-
-  if (error) throw error
-  return data
 }
 
 /**

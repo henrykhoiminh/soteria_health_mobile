@@ -266,8 +266,6 @@ export default function DashboardScreen() {
       <JourneyFocusModal
         visible={showJourneyFocusModal}
         currentFocus={profile?.journey_focus || 'Injury Prevention'}
-        currentRecoveryAreas={profile?.recovery_areas}
-        currentRecoveryGoals={profile?.recovery_goals}
         journeyStartedAt={profile?.journey_started_at || undefined}
         userId={user?.id || ''}
         onClose={() => setShowJourneyFocusModal(false)}
@@ -377,7 +375,7 @@ export default function DashboardScreen() {
                       </Text>
                     )}
                     <Text style={styles.inviteUserMeta}>
-                      {user.journey_focus} • {user.fitness_level}
+                      {user.journey_focus || 'New User'}
                     </Text>
                   </View>
                   {user.role === 'health_team' || user.role === 'admin' ? (
@@ -453,7 +451,6 @@ export default function DashboardScreen() {
                 focus={profile.journey_focus}
                 size="sm"
                 showLabel={true}
-                recoveryAreas={profile.recovery_areas || []}
               />
             </TouchableOpacity>
           )}
@@ -488,14 +485,27 @@ export default function DashboardScreen() {
           )}
         </View>
         <View style={styles.avatarsGrid}>
-          {avatarStates.map((avatarState) => (
-            <Avatar
-              key={avatarState.category}
-              category={avatarState.category}
-              lightState={avatarState.lightState}
-              onPress={() => handleAvatarClick(avatarState.category)}
-            />
-          ))}
+          {avatarStates.map((avatarState) => {
+            // Get the companion name based on category
+            const getCompanionName = () => {
+              switch (avatarState.category) {
+                case 'Mind': return profile?.mind_name;
+                case 'Body': return profile?.body_name;
+                case 'Soul': return profile?.soul_name;
+                default: return null;
+              }
+            };
+
+            return (
+              <Avatar
+                key={avatarState.category}
+                category={avatarState.category}
+                lightState={avatarState.lightState}
+                name={getCompanionName()}
+                onPress={() => handleAvatarClick(avatarState.category)}
+              />
+            );
+          })}
         </View>
       </View>
 

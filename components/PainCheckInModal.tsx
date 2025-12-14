@@ -65,7 +65,8 @@ export default function PainCheckInModal({ visible, userId, onComplete }: PainCh
     try {
       setSubmitting(true);
 
-      await submitPainCheckIn(userId, painLevel, selectedLocations, notes || null);
+      // Legacy modal - submit with same score for all categories
+      await submitPainCheckIn(userId, painLevel, painLevel, painLevel, notes || null);
 
       // Show encouragement message
       const message = getEncouragementMessage(painLevel);

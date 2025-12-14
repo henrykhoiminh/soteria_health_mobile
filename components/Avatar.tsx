@@ -7,10 +7,11 @@ import { AppColors } from '@/constants/theme';
 interface AvatarProps {
   category: RoutineCategory;
   lightState: AvatarLightState;
+  name?: string | null; // User's chosen name for this avatar companion
   onPress?: () => void;
 }
 
-export default function Avatar({ category, lightState, onPress }: AvatarProps) {
+export default function Avatar({ category, lightState, name, onPress }: AvatarProps) {
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const glowAnim = useRef(new Animated.Value(0)).current;
 
@@ -187,8 +188,8 @@ export default function Avatar({ category, lightState, onPress }: AvatarProps) {
         </Animated.View>
       </View>
 
-      {/* Category Label */}
-      <Text style={styles.label}>{config.label}</Text>
+      {/* Companion Name or Category Label */}
+      <Text style={[styles.label, { color: config.color }]}>{name || config.label}</Text>
 
       {/* Light State Status */}
       <Text style={[styles.statusText, { color: stateConfig.statusColor }]}>

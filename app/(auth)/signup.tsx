@@ -16,8 +16,6 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 export default function SignupScreen() {
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -27,7 +25,7 @@ export default function SignupScreen() {
   const router = useRouter();
 
   const handleSignup = async () => {
-    if (!firstName || !lastName || !email || !password || !confirmPassword) {
+    if (!email || !password || !confirmPassword) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
@@ -44,7 +42,8 @@ export default function SignupScreen() {
 
     setLoading(true);
     try {
-      const { user } = await signUp(email, password, firstName, lastName);
+      // Sign up without first/last name - collected during narrative onboarding
+      const { user } = await signUp(email, password);
 
       // Check if email confirmation is required
       if (user && !user.email_confirmed_at) {
@@ -55,16 +54,8 @@ export default function SignupScreen() {
         });
       } else {
         // Email is already confirmed (or confirmation not required)
-        Alert.alert(
-          'Success',
-          'Account created! Complete your profile to get started.',
-          [
-            {
-              text: 'OK',
-              onPress: () => router.replace('/(auth)/onboarding'),
-            },
-          ]
-        );
+        // Go directly to narrative onboarding - no alert needed
+        router.replace('/onboarding');
       }
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to create account');
@@ -91,26 +82,6 @@ export default function SignupScreen() {
           </Text>
 
           <View style={styles.form}>
-            <TextInput
-              style={styles.input}
-              placeholder="First Name"
-              placeholderTextColor={AppColors.textPlaceholder}
-              value={firstName}
-              onChangeText={setFirstName}
-              editable={!loading}
-              autoCapitalize="words"
-            />
-
-            <TextInput
-              style={styles.input}
-              placeholder="Last Name"
-              placeholderTextColor={AppColors.textPlaceholder}
-              value={lastName}
-              onChangeText={setLastName}
-              editable={!loading}
-              autoCapitalize="words"
-            />
-
             <TextInput
               style={styles.input}
               placeholder="Email"

@@ -8,14 +8,12 @@ interface JourneyBadgeProps {
   focus: JourneyFocus;
   size?: 'sm' | 'md' | 'lg';
   showLabel?: boolean;
-  recoveryAreas?: string[];
 }
 
 export default function JourneyBadge({
   focus,
   size = 'md',
   showLabel = true,
-  recoveryAreas = []
 }: JourneyBadgeProps) {
   // Determine icon and color based on journey focus
   const isRecovery = focus === 'Recovery';
