@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import SoteriaPresence from './components/SoteriaPresence';
 import JourneyBadge from '@/components/JourneyBadge';
+import OnboardingProgress from './components/OnboardingProgress';
 import { useOnboarding } from '@/lib/contexts/OnboardingContext';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { supabase } from '@/lib/supabase/client';
@@ -209,6 +210,8 @@ export default function TheBeginningScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <OnboardingProgress currentStep="the-beginning" />
+
       {/* Journey badge at top */}
       {data.journeyFocus && (
         <View style={styles.badgeContainer}>

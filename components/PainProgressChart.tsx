@@ -346,7 +346,7 @@ const styles = StyleSheet.create({
     color: AppColors.textSecondary,
   },
   timeRangeButtonTextSelected: {
-    color: AppColors.textPrimary,
+    color: AppColors.primaryText,
   },
   timeRangeButtonTextDisabled: {
     color: AppColors.textTertiary,

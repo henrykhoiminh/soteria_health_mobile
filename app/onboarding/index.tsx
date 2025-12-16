@@ -37,8 +37,8 @@ export default function ValuePropScreen() {
         }),
       ]).start();
 
-      // Wait 2.5 seconds, then fade in subheadline
-      await new Promise(resolve => setTimeout(resolve, 2500));
+      // Wait 1.5 seconds, then fade in subheadline
+      await new Promise(resolve => setTimeout(resolve, 1500));
 
       Animated.parallel([
         Animated.timing(subheadlineOpacity, {
@@ -53,7 +53,7 @@ export default function ValuePropScreen() {
         }),
       ]).start();
 
-      // Wait 4 seconds after subheadline, then pop in button with haptic
+      // Wait 2.5 seconds after subheadline, then pop in button with haptic
       await new Promise(resolve => setTimeout(resolve, 2500));
 
       setShowButton(true);
@@ -139,7 +139,7 @@ export default function ValuePropScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0A0F', // Dark background
+    backgroundColor: '#0A0A0F',
   },
   content: {
     flex: 1,
@@ -178,7 +178,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   buttonText: {
-    color: '#FFFFFF',
+    color: AppColors.primaryText,
     fontSize: 18,
     fontWeight: '600',
   },

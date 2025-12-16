@@ -4,7 +4,9 @@ import { useOnboarding } from '@/lib/contexts/OnboardingContext';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Animated, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import OnboardingButton from './components/OnboardingButton';
+import OnboardingProgress from './components/OnboardingProgress';
 import SoteriaPresence from './components/SoteriaPresence';
 
 // Typing speed in milliseconds per character
@@ -26,10 +28,8 @@ const captions = [
   { text: 'They form Circles.', pauseAfter: 1200, accumulate: true },
   { text: 'They support one another.', pauseAfter: 1500, accumulate: true },
 
-  // Authority without ego
-  { text: 'I guide the journeys.', pauseAfter: 1200 },
-  { text: 'The community sustains itself.', pauseAfter: 1400 },
-  { text: 'And now, you are part of it.', pauseAfter: 0 },
+  // Bridge to next screen (streamlined - removed authority lines)
+  { text: 'Ready to see what you carry?', pauseAfter: 0 },
 ];
 
 
@@ -42,7 +42,7 @@ export default function WorldIntroScreen() {
   const [accumulatedText, setAccumulatedText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [allComplete, setAllComplete] = useState(false);
-  const continueOpacity = useRef(new Animated.Value(0)).current;
+  const [showSkip, setShowSkip] = useState(true);
   const typingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const charIndexRef = useRef(0);
 
@@ -112,11 +112,6 @@ export default function WorldIntroScreen() {
         const completeTimer = setTimeout(() => {
           setAllComplete(true);
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          Animated.timing(continueOpacity, {
-            toValue: 1,
-            duration: 400,
-            useNativeDriver: true,
-          }).start();
         }, 1000);
 
         typingRef.current = completeTimer;
@@ -128,11 +123,20 @@ export default function WorldIntroScreen() {
         clearTimeout(typingRef.current);
       }
     };
-  }, [currentIndex, startTyping, continueOpacity]);
+  }, [currentIndex, startTyping]);
 
   const handleContinue = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     router.push('/onboarding/three-lights');
+  };
+
+  const handleSkip = () => {
+    if (typingRef.current) clearTimeout(typingRef.current);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setShowSkip(false);
+    setAllComplete(true);
+    setAccumulatedText('');
+    setDisplayedText(captions[captions.length - 1].text);
   };
 
   // Determine what to show - accumulated text + current typing, or just current
@@ -142,6 +146,8 @@ export default function WorldIntroScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <OnboardingProgress currentStep="world-intro" />
+
       {/* Journey badge at top */}
       {data.journeyFocus && (
         <View style={styles.badgeContainer}>
@@ -173,16 +179,20 @@ export default function WorldIntroScreen() {
         </View>
       </View>
 
-      {/* Continue button - always rendered to prevent layout shift */}
-      <Animated.View style={[styles.footer, { opacity: continueOpacity }]}>
-        <TouchableOpacity
-          style={styles.tapArea}
-          onPress={handleContinue}
-          disabled={!allComplete}
-        >
-          <Text style={styles.tapHint}>Tap to continue</Text>
-        </TouchableOpacity>
-      </Animated.View>
+      {/* Skip button */}
+      <OnboardingButton
+        label="Skip"
+        onPress={handleSkip}
+        visible={showSkip && !allComplete}
+        variant="secondary"
+      />
+
+      {/* Continue button */}
+      <OnboardingButton
+        label="Continue"
+        onPress={handleContinue}
+        visible={allComplete}
+      />
     </SafeAreaView>
   );
 }
@@ -222,18 +232,5 @@ const styles = StyleSheet.create({
   cursor: {
     color: AppColors.primary,
     fontWeight: '300',
-  },
-  footer: {
-    padding: 24,
-    paddingBottom: 40,
-  },
-  tapArea: {
-    alignItems: 'center',
-    padding: 16,
-  },
-  tapHint: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.5)',
-    fontStyle: 'italic',
   },
 });

@@ -1,4 +1,5 @@
 import JourneyBadge from '@/components/JourneyBadge';
+import OnboardingProgress from './components/OnboardingProgress';
 import { AppColors } from '@/constants/theme';
 import { SOUL_NAME_OPTIONS, useOnboarding } from '@/lib/contexts/OnboardingContext';
 import * as Haptics from 'expo-haptics';
@@ -13,11 +14,10 @@ const TYPING_SPEED = 40;
 // Haptic frequency - trigger haptic every N characters
 const HAPTIC_FREQUENCY = 2;
 
-// Caption data for new users
+// Caption data for new users (streamlined for pacing)
 const newUserCaptions = [
-  { text: 'And this is your Soul.', pauseAfter: 800 },
-  { text: 'Your peace. Your connection.', pauseAfter: 1000 },
-  { text: 'And what shall you call this one?', pauseAfter: 0 },
+  { text: 'Your Soul. Peace and connection.', pauseAfter: 1000 },
+  { text: 'What shall you call it?', pauseAfter: 0 },
 ];
 
 // Caption data for reset users
@@ -131,6 +131,8 @@ export default function SoulExtractionScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <OnboardingProgress currentStep="soul-extraction" />
+
       {/* Journey badge at top */}
       {data.journeyFocus && (
         <View style={styles.badgeContainer}>
@@ -241,7 +243,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
   buttonText: {
-    color: '#FFFFFF',
+    color: AppColors.primaryText,
     fontSize: 18,
     fontWeight: '600',
   },

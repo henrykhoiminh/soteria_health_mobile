@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, StyleSheet, SafeAreaView, TouchableOpacity, Text, Animated } from 'react-native';
+import { View, StyleSheet, SafeAreaView, Text } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import AvatarOrb from './components/AvatarOrb';
 import JourneyBadge from '@/components/JourneyBadge';
+import OnboardingButton from './components/OnboardingButton';
+import OnboardingProgress from './components/OnboardingProgress';
 import { useOnboarding } from '@/lib/contexts/OnboardingContext';
 import { AppColors } from '@/constants/theme';
 
@@ -20,7 +22,7 @@ export default function TheBondScreen() {
   const [displayedText, setDisplayedText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [allComplete, setAllComplete] = useState(false);
-  const continueOpacity = useRef(new Animated.Value(0)).current;
+  const [showSkip, setShowSkip] = useState(true);
   const typingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const charIndexRef = useRef(0);
 
@@ -88,11 +90,6 @@ export default function TheBondScreen() {
         const completeTimer = setTimeout(() => {
           setAllComplete(true);
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          Animated.timing(continueOpacity, {
-            toValue: 1,
-            duration: 400,
-            useNativeDriver: true,
-          }).start();
         }, 1000);
 
         typingRef.current = completeTimer;
@@ -104,15 +101,25 @@ export default function TheBondScreen() {
         clearTimeout(typingRef.current);
       }
     };
-  }, [currentIndex, startTyping, continueOpacity]);
+  }, [currentIndex, startTyping]);
 
   const handleContinue = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     router.push('/onboarding/the-pact');
   };
 
+  const handleSkip = () => {
+    if (typingRef.current) clearTimeout(typingRef.current);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setShowSkip(false);
+    setAllComplete(true);
+    setDisplayedText(captions[captions.length - 1].text);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
+      <OnboardingProgress currentStep="the-bond" />
+
       {/* Journey badge at top */}
       {data.journeyFocus && (
         <View style={styles.badgeContainer}>
@@ -143,16 +150,20 @@ export default function TheBondScreen() {
         </View>
       </View>
 
-      {/* Continue button - always rendered to prevent layout shift */}
-      <Animated.View style={[styles.footer, { opacity: continueOpacity }]}>
-        <TouchableOpacity
-          style={styles.tapArea}
-          onPress={handleContinue}
-          disabled={!allComplete}
-        >
-          <Text style={styles.tapHint}>Tap to continue</Text>
-        </TouchableOpacity>
-      </Animated.View>
+      {/* Skip button */}
+      <OnboardingButton
+        label="Skip"
+        onPress={handleSkip}
+        visible={showSkip && !allComplete}
+        variant="secondary"
+      />
+
+      {/* Continue button */}
+      <OnboardingButton
+        label="Continue"
+        onPress={handleContinue}
+        visible={allComplete}
+      />
     </SafeAreaView>
   );
 }
@@ -201,18 +212,5 @@ const styles = StyleSheet.create({
   cursor: {
     color: AppColors.primary,
     fontWeight: '300',
-  },
-  footer: {
-    padding: 24,
-    paddingBottom: 40,
-  },
-  tapArea: {
-    alignItems: 'center',
-    padding: 16,
-  },
-  tapHint: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.5)',
-    fontStyle: 'italic',
   },
 });

@@ -1518,7 +1518,7 @@ function DetailsStep({
               <Ionicons
                 name={data.is_advanced ? 'lock-closed' : 'lock-open'}
                 size={18}
-                color={data.is_advanced ? '#FFFFFF' : AppColors.textSecondary}
+                color={data.is_advanced ? AppColors.primaryText : AppColors.textSecondary}
               />
               <Text
                 style={[
@@ -2861,7 +2861,7 @@ const styles = StyleSheet.create({
     color: AppColors.textSecondary,
   },
   advancedToggleButtonTextActive: {
-    color: '#FFFFFF',
+    color: AppColors.primaryText,
     fontWeight: '600',
   },
 });

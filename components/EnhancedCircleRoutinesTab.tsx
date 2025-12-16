@@ -820,6 +820,6 @@ const styles = StyleSheet.create({
   applyButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: AppColors.textPrimary,
+    color: AppColors.primaryText,
   },
 });

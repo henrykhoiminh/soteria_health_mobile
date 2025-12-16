@@ -7,6 +7,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import AvatarOrb from './components/AvatarOrb';
 import NameSelector from './components/NameSelector';
+import OnboardingProgress from './components/OnboardingProgress';
 
 // Typing speed in milliseconds per character
 const TYPING_SPEED = 40;
@@ -119,6 +120,8 @@ export default function MindExtractionScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <OnboardingProgress currentStep="mind-extraction" />
+
       {/* Journey badge at top */}
       {data.journeyFocus && (
         <View style={styles.badgeContainer}>
@@ -229,7 +232,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
   buttonText: {
-    color: '#FFFFFF',
+    color: AppColors.primaryText,
     fontSize: 18,
     fontWeight: '600',
   },

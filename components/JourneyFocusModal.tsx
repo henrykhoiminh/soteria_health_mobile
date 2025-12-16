@@ -211,7 +211,7 @@ export default function JourneyFocusModal({
               disabled={saving}
             >
               {saving ? (
-                <ActivityIndicator color={AppColors.textPrimary} />
+                <ActivityIndicator color={AppColors.primaryText} />
               ) : (
                 <Text style={styles.saveButtonText}>
                   {selectedFocus === currentFocus ? 'Close' : 'Save Changes'}
@@ -382,6 +382,6 @@ const styles = StyleSheet.create({
   saveButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: AppColors.textPrimary,
+    color: AppColors.primaryText,
   },
 });

@@ -562,7 +562,7 @@ const styles = StyleSheet.create({
   nextButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: AppColors.textPrimary,
+    color: AppColors.primaryText,
   },
   submitButton: {
     flexDirection: 'row',
@@ -582,7 +582,7 @@ const styles = StyleSheet.create({
   submitButtonText: {
     fontSize: 18,
     fontWeight: '600',
-    color: AppColors.textPrimary,
+    color: AppColors.primaryText,
   },
   footerNote: {
     fontSize: 14,

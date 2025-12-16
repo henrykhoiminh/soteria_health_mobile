@@ -341,7 +341,7 @@ const styles = StyleSheet.create({
     color: AppColors.textPrimary,
   },
   suggestionTextSelected: {
-    color: AppColors.textPrimary,
+    color: AppColors.primaryText,
     fontWeight: '600',
   },
   buttonContainer: {
@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: AppColors.textPrimary,
+    color: AppColors.primaryText,
   },
   secondaryButtonText: {
     fontSize: 16,

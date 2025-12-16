@@ -4,8 +4,10 @@ import { useOnboarding } from '@/lib/contexts/OnboardingContext';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Animated, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import AvatarOrb from './components/AvatarOrb';
+import OnboardingButton from './components/OnboardingButton';
+import OnboardingProgress from './components/OnboardingProgress';
 
 // Typing speed in milliseconds per character
 const TYPING_SPEED = 40;
@@ -45,8 +47,8 @@ export default function ThreeLightsScreen() {
   const [displayedText, setDisplayedText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [allComplete, setAllComplete] = useState(false);
+  const [showSkip, setShowSkip] = useState(true);
   const [highlightedOrb, setHighlightedOrb] = useState<'Mind' | 'Body' | 'Soul' | 'all' | null>(null);
-  const continueOpacity = useRef(new Animated.Value(0)).current;
   const typingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const charIndexRef = useRef(0);
 
@@ -106,11 +108,6 @@ export default function ThreeLightsScreen() {
         const completeTimer = setTimeout(() => {
           setAllComplete(true);
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          Animated.timing(continueOpacity, {
-            toValue: 1,
-            duration: 400,
-            useNativeDriver: true,
-          }).start();
         }, 1000);
 
         typingRef.current = completeTimer;
@@ -122,11 +119,20 @@ export default function ThreeLightsScreen() {
         clearTimeout(typingRef.current);
       }
     };
-  }, [currentIndex, startTyping, continueOpacity]);
+  }, [currentIndex, startTyping]);
 
   const handleContinue = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     router.push('/onboarding/the-offer');
+  };
+
+  const handleSkip = () => {
+    if (typingRef.current) clearTimeout(typingRef.current);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setShowSkip(false);
+    setAllComplete(true);
+    setHighlightedOrb('all');
+    setDisplayedText(captions[captions.length - 1].text);
   };
 
   // Helper to check if an orb should be highlighted
@@ -136,6 +142,8 @@ export default function ThreeLightsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <OnboardingProgress currentStep="three-lights" />
+
       {/* Journey badge at top */}
       {data.journeyFocus && (
         <View style={styles.badgeContainer}>
@@ -166,16 +174,20 @@ export default function ThreeLightsScreen() {
         </View>
       </View>
 
-      {/* Continue button - always rendered to prevent layout shift */}
-      <Animated.View style={[styles.footer, { opacity: continueOpacity }]}>
-        <TouchableOpacity
-          style={styles.tapArea}
-          onPress={handleContinue}
-          disabled={!allComplete}
-        >
-          <Text style={styles.tapHint}>Tap to continue</Text>
-        </TouchableOpacity>
-      </Animated.View>
+      {/* Skip button */}
+      <OnboardingButton
+        label="Skip"
+        onPress={handleSkip}
+        visible={showSkip && !allComplete}
+        variant="secondary"
+      />
+
+      {/* Continue button */}
+      <OnboardingButton
+        label="Continue"
+        onPress={handleContinue}
+        visible={allComplete}
+      />
     </SafeAreaView>
   );
 }
@@ -227,18 +239,5 @@ const styles = StyleSheet.create({
   cursor: {
     color: AppColors.primary,
     fontWeight: '300',
-  },
-  footer: {
-    padding: 24,
-    paddingBottom: 40,
-  },
-  tapArea: {
-    alignItems: 'center',
-    padding: 16,
-  },
-  tapHint: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.5)',
-    fontStyle: 'italic',
   },
 });

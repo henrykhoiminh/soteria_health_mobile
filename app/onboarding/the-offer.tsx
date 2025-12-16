@@ -4,8 +4,10 @@ import { useOnboarding } from '@/lib/contexts/OnboardingContext';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Animated, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import AvatarOrb from './components/AvatarOrb';
+import OnboardingButton from './components/OnboardingButton';
+import OnboardingProgress from './components/OnboardingProgress';
 import SoteriaPresence from './components/SoteriaPresence';
 
 // Typing speed in milliseconds per character
@@ -35,7 +37,7 @@ export default function TheOfferScreen() {
   const [displayedText, setDisplayedText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [allComplete, setAllComplete] = useState(false);
-  const buttonOpacity = useRef(new Animated.Value(0)).current;
+  const [showSkip, setShowSkip] = useState(true);
   const typingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const charIndexRef = useRef(0);
 
@@ -92,11 +94,6 @@ export default function TheOfferScreen() {
         const completeTimer = setTimeout(() => {
           setAllComplete(true);
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          Animated.timing(buttonOpacity, {
-            toValue: 1,
-            duration: 400,
-            useNativeDriver: true,
-          }).start();
         }, 1000);
 
         typingRef.current = completeTimer;
@@ -108,15 +105,25 @@ export default function TheOfferScreen() {
         clearTimeout(typingRef.current);
       }
     };
-  }, [currentIndex, startTyping, buttonOpacity]);
+  }, [currentIndex, startTyping]);
 
   const handleShowMe = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     router.push('/onboarding/mind-extraction');
   };
 
+  const handleSkip = () => {
+    if (typingRef.current) clearTimeout(typingRef.current);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setShowSkip(false);
+    setAllComplete(true);
+    setDisplayedText(captions[captions.length - 1].text);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
+      <OnboardingProgress currentStep="the-offer" />
+
       {/* Journey badge at top */}
       {data.journeyFocus && (
         <View style={styles.badgeContainer}>
@@ -144,16 +151,20 @@ export default function TheOfferScreen() {
         </View>
       </View>
 
-      {/* "Show me" button - always rendered to prevent layout shift */}
-      <Animated.View style={[styles.footer, { opacity: buttonOpacity }]}>
-        <TouchableOpacity
-          style={styles.button}
-          onPress={handleShowMe}
-          disabled={!allComplete}
-        >
-          <Text style={styles.buttonText}>Show me</Text>
-        </TouchableOpacity>
-      </Animated.View>
+      {/* Skip button */}
+      <OnboardingButton
+        label="Skip"
+        onPress={handleSkip}
+        visible={showSkip && !allComplete}
+        variant="secondary"
+      />
+
+      {/* Show me button */}
+      <OnboardingButton
+        label="Show me"
+        onPress={handleShowMe}
+        visible={allComplete}
+      />
     </SafeAreaView>
   );
 }
@@ -201,20 +212,5 @@ const styles = StyleSheet.create({
   cursor: {
     color: AppColors.primary,
     fontWeight: '300',
-  },
-  footer: {
-    padding: 24,
-    paddingBottom: 40,
-  },
-  button: {
-    backgroundColor: AppColors.primary,
-    borderRadius: 12,
-    paddingVertical: 18,
-    alignItems: 'center',
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '600',
   },
 });

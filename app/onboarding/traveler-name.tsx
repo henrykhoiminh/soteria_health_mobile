@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import SoteriaPresence from './components/SoteriaPresence';
 import JourneyBadge from '@/components/JourneyBadge';
+import OnboardingProgress from './components/OnboardingProgress';
 import { useOnboarding, USERNAME_MAX_LENGTH } from '@/lib/contexts/OnboardingContext';
 import { checkUsernameAvailability } from '@/lib/utils/username';
 import { AppColors } from '@/constants/theme';
@@ -28,15 +29,10 @@ export default function TravelerNameScreen() {
   const typingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const charIndexRef = useRef(0);
 
-  // Caption data - dynamically includes user's name
+  // Caption data - ask for username (streamlined for pacing)
   const captions = [
-    { text: `Perfect. ${data.firstName} ${data.lastName}.`, pauseAfter: 1200 },
-    { text: 'Now — one more thing.', pauseAfter: 1000 },
-    { text: "You're not alone in this world.", pauseAfter: 1000 },
-    { text: 'Other travelers walk these paths.', pauseAfter: 1000 },
-    { text: 'They share routines. Form Circles.', pauseAfter: 1000 },
-    { text: 'Some might become companions on your journey.', pauseAfter: 1200 },
-    { text: 'What should they call you?', pauseAfter: 0 },
+    { text: 'One last thing.', pauseAfter: 1000 },
+    { text: 'What should other travelers call you?', pauseAfter: 0 },
   ];
 
   const isValid = data.username.trim().length >= 3 && isAvailable === true;
@@ -144,6 +140,8 @@ export default function TravelerNameScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <OnboardingProgress currentStep="traveler-name" />
+
       {/* Journey badge at top */}
       {data.journeyFocus && (
         <View style={styles.badgeContainer}>
@@ -331,7 +329,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
   buttonText: {
-    color: '#FFFFFF',
+    color: AppColors.primaryText,
     fontSize: 18,
     fontWeight: '600',
   },

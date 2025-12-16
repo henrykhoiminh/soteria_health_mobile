@@ -613,7 +613,7 @@ const styles = StyleSheet.create({
     color: AppColors.textSecondary,
   },
   segmentButtonTextActive: {
-    color: AppColors.textPrimary,
+    color: AppColors.primaryText,
   },
   durationRow: {
     flexDirection: 'row',
@@ -798,7 +798,7 @@ const styles = StyleSheet.create({
     color: AppColors.textSecondary,
   },
   filterButtonTextActive: {
-    color: AppColors.textPrimary,
+    color: AppColors.primaryText,
     fontWeight: '600',
   },
   modalScrollView: {

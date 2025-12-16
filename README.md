@@ -1107,7 +1107,27 @@ npx expo start --ios
 
 ## Recent Updates
 
-### Streak & Stats Enhancements (Latest)
+### Onboarding Flow & Design System (Latest)
+- ✅ **Primary Button Visibility Fix:**
+  - Fixed critical accessibility issue with primary buttons
+  - Changed button text from white to dark charcoal (#1A1A1A)
+  - Improved contrast ratio from 1.35:1 to 12.87:1 (WCAG AAA compliant)
+  - Updated 25+ files across auth, onboarding, modals, and components
+  - Added `AppColors.primaryText` constant for consistent button text color
+  - Also fixed soul/harmony amber color contrast (2.15:1 → 8.10:1)
+- ✅ **Onboarding Name Collection Moved Earlier:**
+  - Name collection now happens on the second screen (finding-soteria)
+  - Soteria asks "Well, well..." (1.5s pause) "Who do we have here?"
+  - User enters first and last name
+  - Positive reinforcement: "[Name]... I sense something very special about you."
+  - Then "Who are you?" button leads to Soteria's introduction
+  - Gives users a "quick win" with personalized acknowledgment early in the flow
+- ✅ **Updated Later Onboarding Screens:**
+  - `introduce-yourself.tsx` - Avatars now greet user by their already-known name
+  - `traveler-name.tsx` - Removed redundant name acknowledgment caption
+  - Streamlined flow with less repetition
+
+### Streak & Stats Enhancements
 - ✅ **Activity Streak Fix:**
   - Current Streak now counts consecutive days with ANY routine completion
   - Previously was tied to balanced days (Harmony streak) - now separate metrics

@@ -975,7 +975,44 @@ calculateConsecutiveBalancedDays(userId: string): Promise<{
   - **Current Streak** = Consecutive days with ANY routine completion
   - **Harmony Streak** = Days since achieving Harmony status (requires 7 consecutive balanced days first)
 
+### Session 23 (Latest - Design System & Onboarding Improvements)
+- **Primary Button Visibility Fix (via soteria-design-system agent):**
+  - Fixed critical accessibility issue with primary buttons app-wide
+  - Original: White text (#FFFFFF) on soft gold background (#F7DD6F) = 1.35:1 contrast (FAIL)
+  - Fixed: Dark text (#1A1A1A) on soft gold background = 12.87:1 contrast (WCAG AAA)
+  - Added `AppColors.primaryText` constant in `constants/theme.ts`
+  - Updated 25+ files: auth screens (3), onboarding screens (9), modals (8), components (4)
+  - Also fixed soul/harmony amber color (#F59E0B) contrast: 2.15:1 → 8.10:1
+
+- **Onboarding Name Collection Moved Earlier:**
+  - Name collection now happens on second screen (finding-soteria.tsx) instead of later
+  - Flow: "Well, well..." (1.5s pause) → "Who do we have here?" → Name inputs
+  - After name entry: Positive reinforcement "[Name]... I sense something very special about you."
+  - Then "Who are you?" button leads to Soteria's introduction
+  - Gives users a "quick win" with personalized acknowledgment early in onboarding
+
+- **Finding Soteria Screen Updates (`app/onboarding/finding-soteria.tsx`):**
+  - Added new phases: `mystery` → `name-entry` → `reinforcement` → `intro` → `choices` → `welcome` → `complete`
+  - `mysteryCaptions` array with two-part dialogue
+  - `mysteryIndex` state to track mystery caption progression
+  - Name inputs with first/last name fields
+  - Reinforcement message with italic styling and high intensity Soteria glow
+  - KeyboardAvoidingView for proper keyboard handling
+
+- **Updated Later Onboarding Screens:**
+  - `introduce-yourself.tsx` - Removed name inputs, avatars now greet user by already-known name
+  - `traveler-name.tsx` - Removed "Perfect. [Name]." caption since already acknowledged
+  - Streamlined flow with less repetition
+
+- **Key Files Modified:**
+  - `constants/theme.ts` - Added `primaryText`, `destructiveText`, `successText`
+  - `app/onboarding/index.tsx` - Kept as original value prop screen (reverted)
+  - `app/onboarding/finding-soteria.tsx` - Added name collection and reinforcement
+  - `app/onboarding/introduce-yourself.tsx` - Removed name inputs
+  - `app/onboarding/traveler-name.tsx` - Removed redundant name caption
+  - 25+ additional files for button text color updates
+
 ---
 
-**Last Updated:** 2025-12-14
+**Last Updated:** 2025-12-15
 **Current Version:** Expo SDK 54, React Native 0.76+

@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, StyleSheet, SafeAreaView, TouchableOpacity, Text, TextInput, KeyboardAvoidingView, Platform, ScrollView, Animated } from 'react-native';
+import { View, StyleSheet, SafeAreaView, TouchableOpacity, Text, Animated } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import AvatarOrb from './components/AvatarOrb';
 import JourneyBadge from '@/components/JourneyBadge';
+import OnboardingProgress from './components/OnboardingProgress';
 import { useOnboarding } from '@/lib/contexts/OnboardingContext';
 import { AppColors } from '@/constants/theme';
 
@@ -12,27 +13,26 @@ const TYPING_SPEED = 40;
 // Haptic frequency - trigger haptic every N characters
 const HAPTIC_FREQUENCY = 2;
 
-// Screen 10: Introduce Yourself
+// Screen 10: Introduce Yourself (Avatars greet the user)
 export default function IntroduceYourselfScreen() {
   const router = useRouter();
-  const { data, setFirstName, setLastName } = useOnboarding();
+  const { data } = useOnboarding();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [displayedText, setDisplayedText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [showInputs, setShowInputs] = useState(false);
-  const inputsOpacity = useRef(new Animated.Value(0)).current;
+  const [showButton, setShowButton] = useState(false);
+  const buttonOpacity = useRef(new Animated.Value(0)).current;
+  const buttonScale = useRef(new Animated.Value(0.8)).current;
   const typingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const charIndexRef = useRef(0);
 
-  // Caption data - dynamically includes companion names
+  // Caption data - avatars acknowledge the user by name
   const captions = [
     { text: `${data.mindName}, ${data.bodyName}, and ${data.soulName}.`, pauseAfter: 1000 },
     { text: "They're yours now.", pauseAfter: 1200 },
-    { text: "But they don't know who you are yet.", pauseAfter: 1200 },
-    { text: 'Introduce yourself.', pauseAfter: 0 },
+    { text: `And they already know your name, ${data.firstName}.`, pauseAfter: 1200 },
+    { text: "Together, you'll build something extraordinary.", pauseAfter: 0 },
   ];
-
-  const isValid = data.firstName.trim().length > 0 && data.lastName.trim().length > 0;
 
   // Typewriter effect
   const startTyping = useCallback((text: string, onComplete: () => void) => {
@@ -83,16 +83,24 @@ export default function IntroduceYourselfScreen() {
 
         typingRef.current = nextTimer;
       } else {
-        // All captions complete - show inputs
+        // All captions complete - show continue button
         const completeTimer = setTimeout(() => {
-          setShowInputs(true);
+          setShowButton(true);
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          Animated.timing(inputsOpacity, {
-            toValue: 1,
-            duration: 400,
-            useNativeDriver: true,
-          }).start();
-        }, 800);
+          Animated.parallel([
+            Animated.timing(buttonOpacity, {
+              toValue: 1,
+              duration: 400,
+              useNativeDriver: true,
+            }),
+            Animated.spring(buttonScale, {
+              toValue: 1,
+              friction: 4,
+              tension: 100,
+              useNativeDriver: true,
+            }),
+          ]).start();
+        }, 1200);
 
         typingRef.current = completeTimer;
       }
@@ -103,17 +111,17 @@ export default function IntroduceYourselfScreen() {
         clearTimeout(typingRef.current);
       }
     };
-  }, [currentIndex, startTyping, inputsOpacity]);
+  }, [currentIndex, startTyping, buttonOpacity, buttonScale]);
 
   const handleContinue = () => {
-    if (isValid) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      router.push('/onboarding/traveler-name');
-    }
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    router.push('/onboarding/traveler-name');
   };
 
   return (
     <SafeAreaView style={styles.container}>
+      <OnboardingProgress currentStep="introduce-yourself" />
+
       {/* Journey badge at top */}
       {data.journeyFocus && (
         <View style={styles.badgeContainer}>
@@ -121,65 +129,41 @@ export default function IntroduceYourselfScreen() {
         </View>
       )}
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
-      >
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={styles.content}>
-            {/* Three orbs looking at user */}
-            <View style={styles.orbsContainer}>
-              <AvatarOrb type="Mind" size="small" name={data.mindName} showName={true} />
-              <AvatarOrb type="Body" size="small" name={data.bodyName} showName={true} />
-              <AvatarOrb type="Soul" size="small" name={data.soulName} showName={true} />
-            </View>
-
-            {/* Caption text - typewriter effect */}
-            <View style={styles.captionContainer}>
-              <Text style={styles.captionText}>
-                {displayedText}
-                {isTyping && <Text style={styles.cursor}>|</Text>}
-              </Text>
-            </View>
-
-            {/* Name inputs - fade in after typing */}
-            <Animated.View style={[styles.inputsContainer, { opacity: inputsOpacity }]}>
-              {showInputs && (
-                <>
-                  <TextInput
-                    style={styles.input}
-                    value={data.firstName}
-                    onChangeText={setFirstName}
-                    placeholder="First Name"
-                    placeholderTextColor="rgba(255, 255, 255, 0.4)"
-                    autoCapitalize="words"
-                    autoFocus={true}
-                  />
-                  <TextInput
-                    style={styles.input}
-                    value={data.lastName}
-                    onChangeText={setLastName}
-                    placeholder="Last Name"
-                    placeholderTextColor="rgba(255, 255, 255, 0.4)"
-                    autoCapitalize="words"
-                  />
-                </>
-              )}
-            </Animated.View>
-          </View>
-        </ScrollView>
-
-        {/* Continue button */}
-        <View style={styles.footer}>
-          <TouchableOpacity
-            style={[styles.button, !isValid && styles.buttonDisabled]}
-            onPress={handleContinue}
-            disabled={!isValid}
-          >
-            <Text style={styles.buttonText}>Continue</Text>
-          </TouchableOpacity>
+      <View style={styles.content}>
+        {/* Three orbs looking at user */}
+        <View style={styles.orbsContainer}>
+          <AvatarOrb type="Mind" size="small" name={data.mindName} showName={true} />
+          <AvatarOrb type="Body" size="small" name={data.bodyName} showName={true} />
+          <AvatarOrb type="Soul" size="small" name={data.soulName} showName={true} />
         </View>
-      </KeyboardAvoidingView>
+
+        {/* Caption text - typewriter effect */}
+        <View style={styles.captionContainer}>
+          <Text style={styles.captionText}>
+            {displayedText}
+            {isTyping && <Text style={styles.cursor}>|</Text>}
+          </Text>
+        </View>
+      </View>
+
+      {/* Continue button */}
+      <Animated.View
+        style={[
+          styles.footer,
+          {
+            opacity: buttonOpacity,
+            transform: [{ scale: buttonScale }],
+          },
+        ]}
+      >
+        <TouchableOpacity
+          style={styles.button}
+          onPress={handleContinue}
+          disabled={!showButton}
+        >
+          <Text style={styles.buttonText}>Continue</Text>
+        </TouchableOpacity>
+      </Animated.View>
     </SafeAreaView>
   );
 }
@@ -193,13 +177,6 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingHorizontal: 24,
     alignItems: 'flex-start',
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
   },
   content: {
     flex: 1,
@@ -219,7 +196,6 @@ const styles = StyleSheet.create({
     minHeight: 80,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 24,
   },
   captionText: {
     fontSize: 20,
@@ -232,22 +208,6 @@ const styles = StyleSheet.create({
     color: AppColors.primary,
     fontWeight: '300',
   },
-  inputsContainer: {
-    width: '100%',
-    maxWidth: 300,
-    gap: 12,
-    minHeight: 120,
-  },
-  input: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 18,
-    color: '#FFFFFF',
-    textAlign: 'center',
-  },
   footer: {
     padding: 24,
     paddingBottom: 40,
@@ -258,11 +218,8 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
     alignItems: 'center',
   },
-  buttonDisabled: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-  },
   buttonText: {
-    color: '#FFFFFF',
+    color: AppColors.primaryText,
     fontSize: 18,
     fontWeight: '600',
   },

@@ -15,7 +15,6 @@ export default function OnboardingLayout() {
         <Stack.Screen name="index" />
         <Stack.Screen name="finding-soteria" />
         <Stack.Screen name="journey-focus" />
-        <Stack.Screen name="journey-response" />
         <Stack.Screen name="world-intro" />
         <Stack.Screen name="three-lights" />
         <Stack.Screen name="the-offer" />

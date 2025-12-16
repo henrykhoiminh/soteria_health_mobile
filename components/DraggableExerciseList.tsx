@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
     color: AppColors.primary,
   },
   reorderModeButtonTextActive: {
-    color: '#FFFFFF',
+    color: AppColors.primaryText,
   },
   exerciseCard: {
     backgroundColor: AppColors.surface,

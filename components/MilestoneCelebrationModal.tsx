@@ -206,7 +206,7 @@ export default function MilestoneCelebrationModal({
                   <Ionicons
                     name="share-social"
                     size={20}
-                    color={AppColors.textPrimary}
+                    color={AppColors.primaryText}
                   />
                   <Text style={styles.shareButtonText}>Share</Text>
                 </TouchableOpacity>
@@ -325,7 +325,7 @@ const styles = StyleSheet.create({
   shareButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: AppColors.textPrimary,
+    color: AppColors.primaryText,
   },
   continueButton: {
     backgroundColor: AppColors.surfaceSecondary,

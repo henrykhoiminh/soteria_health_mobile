@@ -350,7 +350,7 @@ const styles = StyleSheet.create({
     color: AppColors.textSecondary,
   },
   filterButtonTextActive: {
-    color: '#fff',
+    color: AppColors.primaryText,
     fontWeight: '600',
   },
   resultsCount: {

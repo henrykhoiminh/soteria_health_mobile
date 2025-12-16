@@ -1,4 +1,5 @@
 import JourneyBadge from '@/components/JourneyBadge';
+import OnboardingProgress from './components/OnboardingProgress';
 import { AppColors } from '@/constants/theme';
 import { BODY_NAME_OPTIONS, useOnboarding } from '@/lib/contexts/OnboardingContext';
 import * as Haptics from 'expo-haptics';
@@ -13,11 +14,10 @@ const TYPING_SPEED = 40;
 // Haptic frequency - trigger haptic every N characters
 const HAPTIC_FREQUENCY = 2;
 
-// Caption data for new users
+// Caption data for new users (streamlined for pacing)
 const bodyCaptions = [
-  { text: 'This is your Body.', pauseAfter: 800 },
-  { text: 'Your strength. Your movement.', pauseAfter: 1000 },
-  { text: "What shall you name this one?", pauseAfter: 0 },
+  { text: 'Your Body. Strength and movement.', pauseAfter: 1000 },
+  { text: 'What shall you call it?', pauseAfter: 0 },
 ];
 
 // Caption data for reset users
@@ -127,6 +127,8 @@ export default function BodyExtractionScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <OnboardingProgress currentStep="body-extraction" />
+
       {/* Journey badge at top */}
       {data.journeyFocus && (
         <View style={styles.badgeContainer}>
@@ -237,7 +239,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
   buttonText: {
-    color: '#FFFFFF',
+    color: AppColors.primaryText,
     fontSize: 18,
     fontWeight: '600',
   },

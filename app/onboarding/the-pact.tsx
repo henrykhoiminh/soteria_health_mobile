@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, StyleSheet, SafeAreaView, TouchableOpacity, Text, Animated } from 'react-native';
+import { View, StyleSheet, SafeAreaView, Text } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import SoteriaPresence from './components/SoteriaPresence';
 import JourneyBadge from '@/components/JourneyBadge';
+import OnboardingButton from './components/OnboardingButton';
+import OnboardingProgress from './components/OnboardingProgress';
 import { useOnboarding } from '@/lib/contexts/OnboardingContext';
 import { AppColors } from '@/constants/theme';
 
@@ -50,7 +52,7 @@ export default function ThePactScreen() {
   const [displayedText, setDisplayedText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [allComplete, setAllComplete] = useState(false);
-  const buttonOpacity = useRef(new Animated.Value(0)).current;
+  const [showSkip, setShowSkip] = useState(true);
   const typingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const charIndexRef = useRef(0);
 
@@ -124,11 +126,6 @@ export default function ThePactScreen() {
         const completeTimer = setTimeout(() => {
           setAllComplete(true);
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          Animated.timing(buttonOpacity, {
-            toValue: 1,
-            duration: 400,
-            useNativeDriver: true,
-          }).start();
         }, 1000);
 
         typingRef.current = completeTimer;
@@ -140,15 +137,25 @@ export default function ThePactScreen() {
         clearTimeout(typingRef.current);
       }
     };
-  }, [currentIndex, startTyping, buttonOpacity]);
+  }, [currentIndex, startTyping]);
 
   const handleCommit = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     router.push('/onboarding/the-beginning');
   };
 
+  const handleSkip = () => {
+    if (typingRef.current) clearTimeout(typingRef.current);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setShowSkip(false);
+    setAllComplete(true);
+    setDisplayedText(captions[captions.length - 1].text);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
+      <OnboardingProgress currentStep="the-pact" />
+
       {/* Journey badge at top */}
       {data.journeyFocus && (
         <View style={styles.badgeContainer}>
@@ -171,16 +178,20 @@ export default function ThePactScreen() {
         </View>
       </View>
 
-      {/* Commitment button - always rendered to prevent layout shift */}
-      <Animated.View style={[styles.footer, { opacity: buttonOpacity }]}>
-        <TouchableOpacity
-          style={styles.button}
-          onPress={handleCommit}
-          disabled={!allComplete}
-        >
-          <Text style={styles.buttonText}>{buttonText}</Text>
-        </TouchableOpacity>
-      </Animated.View>
+      {/* Skip button */}
+      <OnboardingButton
+        label="Skip"
+        onPress={handleSkip}
+        visible={showSkip && !allComplete}
+        variant="secondary"
+      />
+
+      {/* Commitment button */}
+      <OnboardingButton
+        label={buttonText}
+        onPress={handleCommit}
+        visible={allComplete}
+      />
     </SafeAreaView>
   );
 }
@@ -220,20 +231,5 @@ const styles = StyleSheet.create({
   cursor: {
     color: AppColors.primary,
     fontWeight: '300',
-  },
-  footer: {
-    padding: 24,
-    paddingBottom: 40,
-  },
-  button: {
-    backgroundColor: AppColors.primary,
-    borderRadius: 12,
-    paddingVertical: 18,
-    alignItems: 'center',
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '600',
   },
 });

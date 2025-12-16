@@ -30,8 +30,10 @@ export const Colors = {
 // Soteria Health App Colors - Dark Mode Aesthetic
 export const AppColors = {
   // Primary Brand Colors - Soteria's Guiding Light
-  primary: '#F7DD6F',      // Soft gold - Soteria's aura of light
+  primary: '#F7DD6F',         // Soft gold - Soteria's aura of light
+  primaryText: '#1A1A1A',     // Dark text for primary buttons (WCAG AA compliant: 12.87:1 contrast)
   destructive: '#FF3B30',
+  destructiveText: '#FFFFFF', // White text for destructive buttons
 
   // Category Colors (kept for good contrast on dark backgrounds)
   mind: '#3B82F6',
@@ -57,6 +59,7 @@ export const AppColors = {
 
   // Semantic Colors (kept for good contrast)
   success: '#34C759',
+  successText: '#FFFFFF',     // White text for success buttons
 
   // Tag Backgrounds - Dark Mode
   lightBlue: '#1E3A5F',       // Dark blue for goals/mind tags

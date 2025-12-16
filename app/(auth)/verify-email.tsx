@@ -73,7 +73,7 @@ export default function VerifyEmailScreen() {
         onPress={handleResendEmail}
         disabled={loading}
       >
-        <Ionicons name="refresh-outline" size={20} color={AppColors.textPrimary} />
+        <Ionicons name="refresh-outline" size={20} color={AppColors.primaryText} />
         <Text style={styles.buttonText}>
           {loading ? 'Sending...' : 'Resend Verification Email'}
         </Text>
@@ -160,7 +160,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   buttonText: {
-    color: AppColors.textPrimary,
+    color: AppColors.primaryText,
     fontSize: 16,
     fontWeight: '600',
   },
