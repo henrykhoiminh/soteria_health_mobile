@@ -3,7 +3,7 @@ import { AppColors } from '@/constants/theme';
 import { useOnboarding } from '@/lib/contexts/OnboardingContext';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import AvatarOrb from './components/AvatarOrb';
 import OnboardingProgress from './components/OnboardingProgress';
@@ -27,10 +27,10 @@ export default function IntroduceYourselfScreen() {
   const charIndexRef = useRef(0);
 
   // Caption data - avatars acknowledge the user by name
-  const captions = [
+  const captions = useMemo(() => [
     { text: `${data.mindName}, ${data.bodyName}, and ${data.soulName}.`, pauseAfter: 700 },
     { text: `Meet your guardian, ${data.firstName}.`, pauseAfter: 0 },
-  ];
+  ], [data.mindName, data.bodyName, data.soulName, data.firstName]);
 
   // Typewriter effect
   const startTyping = useCallback((text: string, onComplete: () => void) => {
@@ -109,7 +109,7 @@ export default function IntroduceYourselfScreen() {
         clearTimeout(typingRef.current);
       }
     };
-  }, [currentIndex, startTyping, buttonOpacity, buttonScale]);
+  }, [currentIndex, captions, startTyping, buttonOpacity, buttonScale]);
 
   const handleContinue = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -128,11 +128,22 @@ export default function IntroduceYourselfScreen() {
       )}
 
       <View style={styles.content}>
-        {/* Three orbs looking at user */}
+        {/* Three orbs - matching three-lights layout */}
         <View style={styles.orbsContainer}>
-          <AvatarOrb type="Mind" size="small" name={data.mindName} showName={true} />
-          <AvatarOrb type="Body" size="small" name={data.bodyName} showName={true} />
-          <AvatarOrb type="Soul" size="small" name={data.soulName} showName={true} />
+          <View style={styles.orbWrapper}>
+            <AvatarOrb type="Mind" size="medium" state="glowing" />
+            <Text style={[styles.orbLabel, { color: '#3B82F6' }]}>{data.mindName}</Text>
+          </View>
+
+          <View style={styles.orbWrapper}>
+            <AvatarOrb type="Body" size="medium" state="glowing" />
+            <Text style={[styles.orbLabel, { color: '#EF4444' }]}>{data.bodyName}</Text>
+          </View>
+
+          <View style={styles.orbWrapper}>
+            <AvatarOrb type="Soul" size="medium" state="glowing" />
+            <Text style={[styles.orbLabel, { color: '#F59E0B' }]}>{data.soulName}</Text>
+          </View>
         </View>
 
         {/* Caption text - typewriter effect */}
@@ -178,23 +189,38 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
-    paddingBottom: 80,
   },
   orbsContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    alignItems: 'flex-start',
-    gap: 20,
-    marginBottom: 32,
+    alignItems: 'center',
+    gap: 24,
+    marginBottom: 48,
+    paddingHorizontal: 16,
+  },
+  orbWrapper: {
+    alignItems: 'center',
+  },
+  orbLabel: {
+    marginTop: 12,
+    fontSize: 14,
+    fontWeight: '600',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
   },
   captionContainer: {
     width: '100%',
+    backgroundColor: AppColors.surface,
+    borderRadius: 16,
+    padding: 20,
     minHeight: 80,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: AppColors.borderLight,
   },
   captionText: {
     fontSize: 20,
@@ -208,6 +234,10 @@ const styles = StyleSheet.create({
     fontWeight: '300',
   },
   footer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     padding: 24,
     paddingBottom: 40,
   },
