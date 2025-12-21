@@ -7,7 +7,7 @@ import { View, TouchableOpacity, Text, StyleSheet, Modal, ScrollView } from 'rea
 const SCREEN_ORDER = [
   { path: '/onboarding', label: '1. Value Prop' },
   { path: '/onboarding/finding-soteria', label: '2. Finding Soteria' },
-  { path: '/onboarding/dashboard-tutorial', label: '3. Dashboard Tutorial' },
+  { path: '/onboarding/three-lights', label: '3. Three Lights' },
   { path: '/onboarding/mind-extraction', label: '4. Mind Extraction' },
   { path: '/onboarding/body-extraction', label: '5. Body Extraction' },
   { path: '/onboarding/soul-extraction', label: '6. Soul Extraction' },

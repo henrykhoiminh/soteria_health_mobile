@@ -21,7 +21,7 @@ const mysteryCaptions = [
 const introCaptions = [
   { text: 'I am Soteria.', pauseAfter: 700 },
   { text: 'I have guided many before you.', pauseAfter: 800 },
-  { text: 'Tell me, human.', pauseAfter: 600 },
+  { text: 'So tell me...', pauseAfter: 600 },
   { text: 'What is it you seek?', pauseAfter: 0 },
 ];
 
@@ -250,6 +250,9 @@ export default function FindingSoteriaScreen() {
       : recoveryWelcomeCaptions;
     const currentCaption = captions[currentIndex];
 
+    // Guard: wait until currentIndex is valid (set after badge animation)
+    if (!currentCaption) return;
+
     startTyping(currentCaption.text, () => {
       if (currentIndex < captions.length - 1) {
         const nextTimer = setTimeout(() => {
@@ -321,20 +324,20 @@ export default function FindingSoteriaScreen() {
     setJourneyFocus(focus);
     setSelectedFocus(focus);
 
-    // Hide choices
-    Animated.timing(choicesOpacity, { toValue: 0, duration: 300, useNativeDriver: true }).start(() => {
+    // Immediately change phase to remove choices from DOM and update layout
+    setPhase('welcome');
+
+    // Brief delay, then show badge and start welcome dialogue
+    setTimeout(() => {
       // Show badge
       Animated.parallel([
-        Animated.timing(badgeOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
+        Animated.timing(badgeOpacity, { toValue: 1, duration: 350, useNativeDriver: true }),
         Animated.spring(badgeScale, { toValue: 1, friction: 6, tension: 80, useNativeDriver: true }),
       ]).start(() => {
-        // Start welcome dialogue
-        setTimeout(() => {
-          setCurrentIndex(0);
-          setPhase('welcome');
-        }, 400);
+        // Start welcome dialogue after badge appears
+        setCurrentIndex(0);
       });
-    });
+    }, 150);
   };
 
   // Handle skip - jump to choices
@@ -363,7 +366,7 @@ export default function FindingSoteriaScreen() {
   };
 
   const handleContinue = () => {
-    router.push('/onboarding/dashboard-tutorial');
+    router.push('/onboarding/three-lights');
   };
 
   // Get button label and action based on phase
@@ -374,7 +377,7 @@ export default function FindingSoteriaScreen() {
       return { label: 'Who are you?', onPress: handleAskWhoAreYou, visible: reinforcementComplete && showButton };
     }
     if (phase === 'complete') {
-      return { label: 'Continue', onPress: handleContinue, visible: showButton };
+      return { label: 'Enter Soteria', onPress: handleContinue, visible: showButton };
     }
     return { label: '', onPress: () => {}, visible: false };
   };
@@ -555,16 +558,20 @@ const styles = StyleSheet.create({
   },
   captionContainer: {
     width: '100%',
-    minHeight: 70,
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    borderRadius: 16,
+    padding: 20,
+    minHeight: 80,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   captionText: {
-    fontSize: 20,
-    lineHeight: 30,
+    fontSize: 18,
+    lineHeight: 28,
     color: AppColors.textPrimary,
     textAlign: 'center',
-    paddingHorizontal: 20,
   },
   cursor: {
     color: AppColors.primary,

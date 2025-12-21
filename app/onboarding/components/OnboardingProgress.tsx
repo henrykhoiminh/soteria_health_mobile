@@ -2,22 +2,32 @@ import { AppColors } from '@/constants/theme';
 import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
 
-// Define the onboarding steps for new users
-export const ONBOARDING_STEPS = [
-  'index',           // 0: Value prop
-  'finding-soteria', // 1: Meet Soteria + Journey selection
-  'world-intro',     // 2: World introduction
-  'three-lights',    // 3: Mind/Body/Soul introduction
-  'the-offer',       // 4: Avatar mechanic explanation
-  'mind-extraction', // 5: Name Mind
-  'body-extraction', // 6: Name Body
-  'soul-extraction', // 7: Name Soul
-  'introduce-yourself', // 8: Enter name
-  'traveler-name',   // 9: Choose username
-  'the-bond',        // 10: Avatar bond explanation
-  'the-pact',        // 11: Commitment
-  'the-beginning',   // 12: Finale
+// Define the onboarding segments and their steps
+export const ONBOARDING_SEGMENTS = [
+  {
+    name: 'Welcome',
+    steps: ['index', 'finding-soteria'],
+  },
+  {
+    name: 'Discovery',
+    steps: ['journey-focus', 'three-lights'],
+  },
+  {
+    name: 'Extraction',
+    steps: ['mind-extraction', 'body-extraction', 'soul-extraction'],
+  },
+  {
+    name: 'Identity',
+    steps: ['introduce-yourself', 'traveler-name'],
+  },
+  {
+    name: 'Bond',
+    steps: ['the-bond', 'the-pact', 'the-beginning'],
+  },
 ] as const;
+
+// Flatten steps for backwards compatibility
+export const ONBOARDING_STEPS = ONBOARDING_SEGMENTS.flatMap(s => s.steps);
 
 export type OnboardingStep = typeof ONBOARDING_STEPS[number];
 
@@ -25,6 +35,25 @@ export type OnboardingStep = typeof ONBOARDING_STEPS[number];
 export function getStepIndex(screenName: string): number {
   const index = ONBOARDING_STEPS.indexOf(screenName as OnboardingStep);
   return index === -1 ? 0 : index;
+}
+
+// Get which segment a step belongs to
+export function getSegmentIndex(screenName: string): number {
+  for (let i = 0; i < ONBOARDING_SEGMENTS.length; i++) {
+    if (ONBOARDING_SEGMENTS[i].steps.includes(screenName as any)) {
+      return i;
+    }
+  }
+  return 0;
+}
+
+// Get progress within current segment (0-1)
+export function getSegmentProgress(screenName: string): number {
+  const segmentIndex = getSegmentIndex(screenName);
+  const segment = ONBOARDING_SEGMENTS[segmentIndex];
+  const stepInSegment = segment.steps.indexOf(screenName as any);
+  if (stepInSegment === -1 || segment.steps.length <= 1) return 1;
+  return (stepInSegment + 1) / segment.steps.length;
 }
 
 // Get progress percentage (0-1)
@@ -43,9 +72,12 @@ export default function OnboardingProgress({
   showFromStep = 1
 }: OnboardingProgressProps) {
   const stepIndex = getStepIndex(currentStep);
-  const progress = getProgress(currentStep);
-  const animatedWidth = useRef(new Animated.Value(0)).current;
+  const currentSegmentIndex = getSegmentIndex(currentStep);
+  const segmentProgress = getSegmentProgress(currentStep);
   const opacity = useRef(new Animated.Value(0)).current;
+  const segmentAnimations = useRef(
+    ONBOARDING_SEGMENTS.map(() => new Animated.Value(0))
+  ).current;
 
   // Don't render if before showFromStep
   if (stepIndex < showFromStep) {
@@ -62,28 +94,47 @@ export default function OnboardingProgress({
   }, []);
 
   useEffect(() => {
-    // Animate progress bar width
-    Animated.timing(animatedWidth, {
-      toValue: progress,
-      duration: 400,
-      useNativeDriver: false,
-    }).start();
-  }, [progress]);
+    // Animate each segment
+    ONBOARDING_SEGMENTS.forEach((_, index) => {
+      let targetValue = 0;
+
+      if (index < currentSegmentIndex) {
+        // Completed segments are fully filled
+        targetValue = 1;
+      } else if (index === currentSegmentIndex) {
+        // Current segment shows progress within it
+        targetValue = segmentProgress;
+      }
+      // Future segments stay at 0
+
+      Animated.timing(segmentAnimations[index], {
+        toValue: targetValue,
+        duration: 400,
+        useNativeDriver: false,
+      }).start();
+    });
+  }, [currentStep, currentSegmentIndex, segmentProgress]);
 
   return (
     <Animated.View style={[styles.container, { opacity }]}>
-      <View style={styles.track}>
-        <Animated.View
-          style={[
-            styles.fill,
-            {
-              width: animatedWidth.interpolate({
-                inputRange: [0, 1],
-                outputRange: ['0%', '100%'],
-              }),
-            },
-          ]}
-        />
+      <View style={styles.segmentsContainer}>
+        {ONBOARDING_SEGMENTS.map((segment, index) => (
+          <View key={segment.name} style={styles.segmentWrapper}>
+            <View style={styles.segmentTrack}>
+              <Animated.View
+                style={[
+                  styles.segmentFill,
+                  {
+                    width: segmentAnimations[index].interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ['0%', '100%'],
+                    }),
+                  },
+                ]}
+              />
+            </View>
+          </View>
+        ))}
       </View>
     </Animated.View>
   );
@@ -95,13 +146,20 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 4,
   },
-  track: {
+  segmentsContainer: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  segmentWrapper: {
+    flex: 1,
+  },
+  segmentTrack: {
     height: 3,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
     borderRadius: 2,
     overflow: 'hidden',
   },
-  fill: {
+  segmentFill: {
     height: '100%',
     backgroundColor: AppColors.primary,
     borderRadius: 2,

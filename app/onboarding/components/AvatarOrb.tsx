@@ -54,15 +54,15 @@ export default function AvatarOrb({
     }
   };
 
-  // Get icon for category
+  // Get icon for category (matches dashboard Avatar component)
   const getIcon = (): keyof typeof Ionicons.glyphMap => {
     switch (type) {
       case 'Mind':
-        return 'bulb';
+        return 'bulb-outline';
       case 'Body':
         return 'body';
       case 'Soul':
-        return 'heart';
+        return 'flame';
       default:
         return 'ellipse';
     }
@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   name: {
-    marginTop: 12,
+    marginTop: 20,
     fontSize: 16,
     fontWeight: '600',
   },
