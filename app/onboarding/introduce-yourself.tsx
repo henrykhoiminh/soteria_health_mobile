@@ -1,12 +1,12 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, StyleSheet, SafeAreaView, TouchableOpacity, Text, Animated } from 'react-native';
-import { useRouter } from 'expo-router';
-import * as Haptics from 'expo-haptics';
-import AvatarOrb from './components/AvatarOrb';
 import JourneyBadge from '@/components/JourneyBadge';
-import OnboardingProgress from './components/OnboardingProgress';
-import { useOnboarding } from '@/lib/contexts/OnboardingContext';
 import { AppColors } from '@/constants/theme';
+import { useOnboarding } from '@/lib/contexts/OnboardingContext';
+import * as Haptics from 'expo-haptics';
+import { useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Animated, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import AvatarOrb from './components/AvatarOrb';
+import OnboardingProgress from './components/OnboardingProgress';
 
 // Typing speed in milliseconds per character
 const TYPING_SPEED = 40;
@@ -29,9 +29,7 @@ export default function IntroduceYourselfScreen() {
   // Caption data - avatars acknowledge the user by name
   const captions = [
     { text: `${data.mindName}, ${data.bodyName}, and ${data.soulName}.`, pauseAfter: 700 },
-    { text: "They're yours now.", pauseAfter: 700 },
-    { text: `And ${data.firstName}, they already know your name.`, pauseAfter: 800 },
-    { text: "Together, you'll build something extraordinary.", pauseAfter: 0 },
+    { text: `Meet your guardian, ${data.firstName}.`, pauseAfter: 0 },
   ];
 
   // Typewriter effect
