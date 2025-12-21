@@ -296,6 +296,8 @@ export default function FindingSoteriaScreen() {
         }),
       ]).start(() => {
         setShowNameInputs(false);
+        // Clear the "Who do we have here?" text before transitioning
+        setDisplayedText('');
         // Beat before transitioning to reinforcement
         setTimeout(() => {
           setPhase('reinforcement');
