@@ -1,5 +1,4 @@
 import JourneyBadge from '@/components/JourneyBadge';
-import OnboardingProgress from './components/OnboardingProgress';
 import { AppColors } from '@/constants/theme';
 import { SOUL_NAME_OPTIONS, useOnboarding } from '@/lib/contexts/OnboardingContext';
 import * as Haptics from 'expo-haptics';
@@ -8,6 +7,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import AvatarOrb from './components/AvatarOrb';
 import NameSelector from './components/NameSelector';
+import OnboardingProgress from './components/OnboardingProgress';
 
 // Typing speed in milliseconds per character
 const TYPING_SPEED = 40;
@@ -16,7 +16,7 @@ const HAPTIC_FREQUENCY = 2;
 
 // Caption data for new users (streamlined for pacing)
 const newUserCaptions = [
-  { text: 'Your Soul. Peace and connection.', pauseAfter: 700 },
+  { text: 'Your Soul.\nPeace and connection.', pauseAfter: 700 },
   { text: 'What shall you call it?', pauseAfter: 0 },
 ];
 
@@ -30,14 +30,14 @@ const resetUserCaptions = [
 const nameComments: Record<string, string> = {
   'Bodhi': 'Bodhi... Awakened. Aware. Ready.',
   'Lotus': 'Ah, Lotus. Beauty rising from the depths.',
-  'Tofu': 'Tofu... Pure and ever-adaptable.',
+  'Tofu': 'Tofu... delicious.',
 };
 
 // Name descriptions
 const nameDescriptions: Record<string, string> = {
-  'Bodhi': 'Enlightened and free',
-  'Lotus': 'Rising from the depths',
-  'Tofu': 'Pure and adaptable',
+  'Bodhi': 'The enlightened and free',
+  'Lotus': 'The flower with heart',
+  'Tofu': 'Yummy yum',
 };
 
 type Phase = 'intro' | 'naming' | 'comment' | 'complete';

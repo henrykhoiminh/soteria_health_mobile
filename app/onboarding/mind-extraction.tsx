@@ -16,7 +16,7 @@ const HAPTIC_FREQUENCY = 2;
 
 // Caption data (streamlined for pacing)
 const introCaptions = [
-  { text: 'Your Mind. Focus and clarity.', pauseAfter: 700 },
+  { text: 'Your Mind.\nFocus and clarity.', pauseAfter: 700 },
   { text: 'What shall you name them?', pauseAfter: 0 },
 ];
 
@@ -24,14 +24,14 @@ const introCaptions = [
 const nameComments: Record<string, string> = {
   'Theo': 'Theo... A mind that questions everything. Perfect.',
   'Mina': 'Ah, Mina. Sharp as a blade, yet gentle.',
-  'Mochi': 'Mochi... Soft on the outside, resilient within.',
+  'Mochi': 'Mochi... What a cute little baby.',
 };
 
 // Name descriptions
 const nameDescriptions: Record<string, string> = {
   'Theo': 'The thoughtful thinker',
-  'Mina': 'Sharp and intuitive',
-  'Mochi': 'Soft yet resilient',
+  'Mina': 'The sharp and intuitive',
+  'Mochi': 'The cute and curious',
 };
 
 type Phase = 'intro' | 'naming' | 'comment' | 'complete';

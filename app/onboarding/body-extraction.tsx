@@ -1,5 +1,4 @@
 import JourneyBadge from '@/components/JourneyBadge';
-import OnboardingProgress from './components/OnboardingProgress';
 import { AppColors } from '@/constants/theme';
 import { BODY_NAME_OPTIONS, useOnboarding } from '@/lib/contexts/OnboardingContext';
 import * as Haptics from 'expo-haptics';
@@ -8,6 +7,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import AvatarOrb from './components/AvatarOrb';
 import NameSelector from './components/NameSelector';
+import OnboardingProgress from './components/OnboardingProgress';
 
 // Typing speed in milliseconds per character
 const TYPING_SPEED = 40;
@@ -16,28 +16,28 @@ const HAPTIC_FREQUENCY = 2;
 
 // Caption data for new users (streamlined for pacing)
 const bodyCaptions = [
-  { text: 'Your Body. Strength and movement.', pauseAfter: 700 },
-  { text: 'What shall you call it?', pauseAfter: 0 },
+  { text: 'Your Body.\nStrength and movement.', pauseAfter: 700 },
+  { text: 'What shall you call this one?', pauseAfter: 0 },
 ];
 
 // Caption data for reset users
 const resetUserCaptions = [
   { text: 'Your Body. Ready to begin again.', pauseAfter: 700 },
-  { text: "What shall you call it this time?", pauseAfter: 0 },
+  { text: "What shall you call them this time?", pauseAfter: 0 },
 ];
 
 // Comments for each name
 const nameComments: Record<string, string> = {
   'Atlas': 'Atlas... Built to carry the weight of worlds.',
   'Paz': 'Ah, Paz. Strength through stillness.',
-  'Miguel': 'Miguel... A warrior\'s heart beats within.',
+  'Miguel': 'Miguel... this one has fire.',
 };
 
 // Name descriptions
 const nameDescriptions: Record<string, string> = {
-  'Atlas': 'Bearer of strength',
-  'Paz': 'Calm and grounded',
-  'Miguel': 'Warrior spirit',
+  'Atlas': 'The bearer of strength',
+  'Paz': 'The calm and grounded',
+  'Miguel': 'The wild card',
 };
 
 type Phase = 'intro' | 'naming' | 'comment' | 'complete';
