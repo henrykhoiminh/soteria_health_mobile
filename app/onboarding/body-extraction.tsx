@@ -26,12 +26,12 @@ const resetUserCaptions = [
   { text: "What shall you call it this time?", pauseAfter: 0 },
 ];
 
-// Comment options after name selection
-const nameComments = [
-  (name: string) => `${name}... Strong and resilient.`,
-  (name: string) => `Ah, ${name}. A vessel of great power.`,
-  (name: string) => `${name}. Your body will carry you far.`,
-];
+// Comments for each name
+const nameComments: Record<string, string> = {
+  'Atlas': 'Atlas... Built to carry the weight of worlds.',
+  'Paz': 'Ah, Paz. Strength through stillness.',
+  'Miguel': 'Miguel... A warrior\'s heart beats within.',
+};
 
 // Name descriptions
 const nameDescriptions: Record<string, string> = {
@@ -59,7 +59,6 @@ export default function BodyExtractionScreen() {
   const continueButtonScale = useRef(new Animated.Value(0.8)).current;
   const typingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const charIndexRef = useRef(0);
-  const commentIndexRef = useRef(Math.floor(Math.random() * nameComments.length));
 
   const captions = isResetFlow
     ? resetUserCaptions
@@ -184,7 +183,7 @@ export default function BodyExtractionScreen() {
   useEffect(() => {
     if (phase !== 'comment') return;
 
-    const comment = nameComments[commentIndexRef.current](data.bodyName);
+    const comment = nameComments[data.bodyName] || `${data.bodyName}... A fine choice.`;
 
     startTyping(comment, () => {
       // After comment, show continue button
@@ -324,7 +323,7 @@ export default function BodyExtractionScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0A0F',
+    backgroundColor: AppColors.background,
   },
   badgeContainer: {
     paddingTop: 16,

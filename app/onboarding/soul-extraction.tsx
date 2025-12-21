@@ -26,12 +26,12 @@ const resetUserCaptions = [
   { text: 'What will you call it now?', pauseAfter: 0 },
 ];
 
-// Comment options after name selection
-const nameComments = [
-  (name: string) => `${name}... A beautiful essence.`,
-  (name: string) => `Ah, ${name}. Full of warmth and light.`,
-  (name: string) => `${name}. Your soul will guide you well.`,
-];
+// Comments for each name
+const nameComments: Record<string, string> = {
+  'Bodhi': 'Bodhi... Awakened. Aware. Ready.',
+  'Lotus': 'Ah, Lotus. Beauty rising from the depths.',
+  'Tofu': 'Tofu... Pure and ever-adaptable.',
+};
 
 // Name descriptions
 const nameDescriptions: Record<string, string> = {
@@ -59,7 +59,6 @@ export default function SoulExtractionScreen() {
   const continueButtonScale = useRef(new Animated.Value(0.8)).current;
   const typingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const charIndexRef = useRef(0);
-  const commentIndexRef = useRef(Math.floor(Math.random() * nameComments.length));
 
   const captions = isResetFlow ? resetUserCaptions : newUserCaptions;
   const isValid = data.soulName.trim().length > 0;
@@ -182,7 +181,7 @@ export default function SoulExtractionScreen() {
   useEffect(() => {
     if (phase !== 'comment') return;
 
-    const comment = nameComments[commentIndexRef.current](data.soulName);
+    const comment = nameComments[data.soulName] || `${data.soulName}... A fine choice.`;
 
     startTyping(comment, () => {
       // After comment, show continue button
@@ -328,7 +327,7 @@ export default function SoulExtractionScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0A0F',
+    backgroundColor: AppColors.background,
   },
   badgeContainer: {
     paddingTop: 16,

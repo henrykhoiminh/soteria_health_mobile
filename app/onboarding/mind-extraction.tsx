@@ -20,18 +20,18 @@ const introCaptions = [
   { text: 'What shall you name them?', pauseAfter: 0 },
 ];
 
-// Comment options after name selection
-const nameComments = [
-  (name: string) => `${name}... A powerful choice.`,
-  (name: string) => `Ah, ${name}. I sense great potential.`,
-  (name: string) => `${name}. Your mind will serve you well.`,
-];
+// Comments for each name
+const nameComments: Record<string, string> = {
+  'Theo': 'Theo... A mind that questions everything. Perfect.',
+  'Mina': 'Ah, Mina. Sharp as a blade, yet gentle.',
+  'Mochi': 'Mochi... Soft on the outside, resilient within.',
+};
 
 // Name descriptions
 const nameDescriptions: Record<string, string> = {
-  'Theo': 'The thougtful thinker',
-  'Mina': 'The sharp and intuitive',
-  'Mochi': 'The cutest little thing',
+  'Theo': 'The thoughtful thinker',
+  'Mina': 'Sharp and intuitive',
+  'Mochi': 'Soft yet resilient',
 };
 
 type Phase = 'intro' | 'naming' | 'comment' | 'complete';
@@ -53,7 +53,6 @@ export default function MindExtractionScreen() {
   const continueButtonScale = useRef(new Animated.Value(0.8)).current;
   const typingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const charIndexRef = useRef(0);
-  const commentIndexRef = useRef(Math.floor(Math.random() * nameComments.length));
 
   const isValid = data.mindName.trim().length > 0;
 
@@ -175,7 +174,7 @@ export default function MindExtractionScreen() {
   useEffect(() => {
     if (phase !== 'comment') return;
 
-    const comment = nameComments[commentIndexRef.current](data.mindName);
+    const comment = nameComments[data.mindName] || `${data.mindName}... A fine choice.`;
 
     startTyping(comment, () => {
       // After comment, show continue button
@@ -315,7 +314,7 @@ export default function MindExtractionScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0A0F',
+    backgroundColor: AppColors.background,
   },
   badgeContainer: {
     paddingTop: 16,

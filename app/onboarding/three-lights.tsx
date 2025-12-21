@@ -354,7 +354,7 @@ export default function ThreeLightsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0A0F',
+    backgroundColor: AppColors.background,
   },
   content: {
     flex: 1,
