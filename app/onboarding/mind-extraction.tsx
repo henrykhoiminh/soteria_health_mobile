@@ -330,9 +330,11 @@ const styles = StyleSheet.create({
   orbContainer: {
     marginBottom: 32,
     alignItems: 'center',
+    minHeight: 200, // Fixed height to prevent layout shift
   },
   nameDescription: {
-    marginTop: 8,
+    position: 'absolute',
+    bottom: 0,
     fontSize: 14,
     fontStyle: 'italic',
     color: 'rgba(255, 255, 255, 0.6)',
@@ -340,7 +342,7 @@ const styles = StyleSheet.create({
   },
   captionContainer: {
     width: '100%',
-    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    backgroundColor: AppColors.surface,
     borderRadius: 16,
     padding: 20,
     minHeight: 80,
@@ -348,7 +350,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 32,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: AppColors.borderLight,
   },
   captionText: {
     fontSize: 20,
