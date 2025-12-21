@@ -32,7 +32,7 @@ export default function ResetWelcomeScreen() {
     }
   }, [profile]);
 
-  const firstName = profile?.first_name || 'Traveler';
+  const firstName = profile?.first_name || 'Friend';
 
   const narrativeLines = [
     `${firstName}.`,
@@ -91,7 +91,7 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   presenceContainer: {
-    marginBottom: 32,
+    marginBottom: 64,
   },
   textContainer: {
     width: '100%',

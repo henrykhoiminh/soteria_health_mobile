@@ -17,19 +17,17 @@ const HAPTIC_FREQUENCY = 2;
 
 // Caption data for new users
 const newUserCaptions = [
-  { text: 'Then it begins.', pauseAfter: 1200 },
-  { text: 'Your world awaits.', pauseAfter: 1200 },
-  { text: '{mindName}, {bodyName}, and {soulName} are ready.', pauseAfter: 1200 },
-  { text: 'So am I.', pauseAfter: 1200 },
+  { text: 'Then it begins.', pauseAfter: 700 },
+  { text: '{mindName}, {bodyName}, and {soulName} are ready.', pauseAfter: 700 },
+  { text: 'So am I.', pauseAfter: 700 },
   { text: "Let's build something beautiful together.", pauseAfter: 0 },
 ];
 
 // Caption data for reset users
 const resetUserCaptions = [
-  { text: 'Then we begin again.', pauseAfter: 1200 },
-  { text: 'Same world. Fresh start.', pauseAfter: 1200 },
-  { text: '{mindName}, {bodyName}, and {soulName} remember you.', pauseAfter: 1200 },
-  { text: "And I'm still here.", pauseAfter: 1200 },
+  { text: 'Then we begin again.', pauseAfter: 700 },
+  { text: '{mindName}, {bodyName}, and {soulName} remember you.', pauseAfter: 700 },
+  { text: "And I'm still here.", pauseAfter: 600 },
   { text: "Let's go.", pauseAfter: 0 },
 ];
 
@@ -264,12 +262,13 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
     alignItems: 'center',
     padding: 24,
+    paddingBottom: 80,
   },
   presenceContainer: {
-    marginBottom: 48,
+    marginBottom: 64,
   },
   captionContainer: {
     width: '100%',

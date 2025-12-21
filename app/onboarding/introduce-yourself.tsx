@@ -28,9 +28,9 @@ export default function IntroduceYourselfScreen() {
 
   // Caption data - avatars acknowledge the user by name
   const captions = [
-    { text: `${data.mindName}, ${data.bodyName}, and ${data.soulName}.`, pauseAfter: 1000 },
-    { text: "They're yours now.", pauseAfter: 1200 },
-    { text: `And they already know your name, ${data.firstName}.`, pauseAfter: 1200 },
+    { text: `${data.mindName}, ${data.bodyName}, and ${data.soulName}.`, pauseAfter: 700 },
+    { text: "They're yours now.", pauseAfter: 700 },
+    { text: `And ${data.firstName}, they already know your name.`, pauseAfter: 800 },
     { text: "Together, you'll build something extraordinary.", pauseAfter: 0 },
   ];
 
@@ -180,9 +180,10 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
     alignItems: 'center',
     padding: 24,
+    paddingBottom: 80,
   },
   orbsContainer: {
     flexDirection: 'row',

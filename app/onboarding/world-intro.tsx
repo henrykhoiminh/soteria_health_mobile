@@ -15,20 +15,19 @@ const TYPING_SPEED = 40;
 const HAPTIC_FREQUENCY = 2;
 
 // Caption data with text and pause duration after typing completes
-// The community lines (index 5-7) will stay on screen together
 const captions = [
-  { text: 'Let me show you this place.', pauseAfter: 1000 },
-  { text: 'A space where humans learn to care for themselves —', pauseAfter: 1100 },
-  { text: 'mind, body, and soul.', pauseAfter: 1500 },
-  { text: 'You are not alone here.', pauseAfter: 1200 },
+  { text: 'Let me show you this place.', pauseAfter: 600 },
+  { text: 'A space where humans learn to care for themselves —', pauseAfter: 700 },
+  { text: 'mind, body, and soul.', pauseAfter: 800 },
+  { text: 'You are not alone here.', pauseAfter: 700 },
 
   // Accumulating community beats
-  { text: 'Others walk these paths with you.', pauseAfter: 1000, accumulate: true },
-  { text: 'They share practices.', pauseAfter: 1000, accumulate: true },
-  { text: 'They form Circles.', pauseAfter: 1200, accumulate: true },
-  { text: 'They support one another.', pauseAfter: 1500, accumulate: true },
+  { text: 'Others walk with you.', pauseAfter: 500, accumulate: true },
+  { text: 'They share practices.', pauseAfter: 500, accumulate: true },
+  { text: 'They form Circles.', pauseAfter: 500, accumulate: true },
+  { text: 'They support one another.', pauseAfter: 800, accumulate: true },
 
-  // Bridge to next screen (streamlined - removed authority lines)
+  // Bridge to next screen
   { text: 'Ready to see what you carry?', pauseAfter: 0 },
 ];
 
@@ -209,9 +208,10 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
     alignItems: 'center',
     padding: 24,
+    paddingBottom: 80,
   },
   presenceContainer: {
     marginBottom: 96,

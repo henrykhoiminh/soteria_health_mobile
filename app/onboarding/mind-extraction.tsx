@@ -14,11 +14,9 @@ const TYPING_SPEED = 40;
 // Haptic frequency - trigger haptic every N characters
 const HAPTIC_FREQUENCY = 2;
 
-// Caption data
+// Caption data (streamlined for pacing)
 const captions = [
-  { text: 'This is your Mind.', pauseAfter: 800 },
-  { text: 'Your thoughts. Your focus.', pauseAfter: 1000 },
-  { text: 'Yours has carried you this far.', pauseAfter: 1200 },
+  { text: 'Your Mind. Focus and clarity.', pauseAfter: 700 },
   { text: 'What shall you call it?', pauseAfter: 0 },
 ];
 
@@ -188,9 +186,10 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
     alignItems: 'center',
     padding: 24,
+    paddingBottom: 80,
   },
   orbContainer: {
     marginBottom: 32,

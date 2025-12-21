@@ -1107,6 +1107,30 @@ npx expo start --ios
 
 ## Recent Updates
 
+### Dashboard Tutorial Onboarding (Work in Progress)
+- 🚧 **Interactive Dashboard Tutorial:**
+  - Replaced abstract narrative screens (world-intro, three-lights, the-offer) with dashboard preview
+  - Full-screen dashboard with dark overlay and spotlight effect
+  - Soteria floats around guiding users through key sections
+  - Tutorial steps: intro → avatars → harmony → stats → transition
+  - Spotlight effect reveals highlighted sections with gold border
+  - 75% dark overlay dims non-highlighted areas
+  - Floating Soteria with bobbing animation pointing at highlighted content
+  - Dialogue box at bottom with typewriter effect
+
+- **New Files Created:**
+  - `app/onboarding/dashboard-tutorial.tsx` - Main tutorial screen with 5-step flow
+  - `app/onboarding/components/TutorialDashboard.tsx` - Full-screen dashboard with spotlight overlay
+  - `app/onboarding/components/FloatingSoteriaGuide.tsx` - Animated floating Soteria orb
+  - `lib/utils/tutorial-mock-data.ts` - Mock data for dashboard preview
+
+- **Navigation Flow Updated:**
+  - Old: finding-soteria → world-intro → three-lights → the-offer → mind-extraction
+  - New: finding-soteria → dashboard-tutorial → mind-extraction
+  - DevNavigation updated to reflect new 11-screen flow (was 13)
+
+- **Status:** Work in progress - may explore alternative approaches
+
 ### Onboarding Flow & Design System (Latest)
 - ✅ **Primary Button Visibility Fix:**
   - Fixed critical accessibility issue with primary buttons

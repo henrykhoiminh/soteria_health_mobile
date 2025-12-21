@@ -16,13 +16,13 @@ const HAPTIC_FREQUENCY = 2;
 
 // Caption data for new users (streamlined for pacing)
 const newUserCaptions = [
-  { text: 'Your Soul. Peace and connection.', pauseAfter: 1000 },
+  { text: 'Your Soul. Peace and connection.', pauseAfter: 700 },
   { text: 'What shall you call it?', pauseAfter: 0 },
 ];
 
 // Caption data for reset users
 const resetUserCaptions = [
-  { text: 'Your Soul. Patient as ever.', pauseAfter: 1000 },
+  { text: 'Your Soul. Patient as ever.', pauseAfter: 700 },
   { text: 'What will you call it now?', pauseAfter: 0 },
 ];
 
@@ -199,9 +199,10 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
     alignItems: 'center',
     padding: 24,
+    paddingBottom: 80,
   },
   orbContainer: {
     marginBottom: 32,

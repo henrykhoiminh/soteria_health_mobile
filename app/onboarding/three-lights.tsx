@@ -16,26 +16,21 @@ const HAPTIC_FREQUENCY = 2;
 
 // Caption data with text, pause duration, and optional highlight for orbs
 // highlight: 'Mind' | 'Body' | 'Soul' | 'all' | null
-const captions: Array<{ 
-  text: string; 
-  pauseAfter: number; 
-  highlight?: 'Mind' | 'Body' | 'Soul' | 'all' | null 
+const captions: Array<{
+  text: string;
+  pauseAfter: number;
+  highlight?: 'Mind' | 'Body' | 'Soul' | 'all' | null
 }> = [
-  { text: 'Now.', pauseAfter: 800 },
-  { text: 'Let me show you what you carry.', pauseAfter: 1200 },
-  { text: 'Within you are three lights.', pauseAfter: 1500, highlight: 'all' },
+  { text: 'Within you are three lights.', pauseAfter: 800, highlight: 'all' },
 
-  { text: 'Your Mind — focus, clarity, thought.', pauseAfter: 1500, highlight: 'Mind' },
-  { text: 'Your Body — strength, movement, energy.', pauseAfter: 1500, highlight: 'Body' },
-  { text: 'Your Soul — peace, joy, connection.', pauseAfter: 1500, highlight: 'Soul' },
+  { text: 'Mind — focus, clarity, thought.', pauseAfter: 800, highlight: 'Mind' },
+  { text: 'Body — strength, movement, energy.', pauseAfter: 800, highlight: 'Body' },
+  { text: 'Soul — peace, joy, connection.', pauseAfter: 800, highlight: 'Soul' },
 
-  { text: 'Together, they form your Light.', pauseAfter: 1200, highlight: 'all' },
-  { text: 'Every human here carries it.', pauseAfter: 1000 },
-  { text: 'Few learn how to tend it.', pauseAfter: 1400 },
-
-  { text: 'When nurtured, it glows.', pauseAfter: 1200, highlight: 'all' },
-  { text: 'When neglected, it fades.', pauseAfter: 1200 },
-  { text: 'That part is simple.', pauseAfter: 0 },
+  { text: 'Together, they form your Light.', pauseAfter: 700, highlight: 'all' },
+  { text: 'Few learn how to tend it.', pauseAfter: 700 },
+  { text: 'When nurtured, it glows.', pauseAfter: 600, highlight: 'all' },
+  { text: 'When neglected, it fades.', pauseAfter: 0 },
 ];
 
 
@@ -204,9 +199,10 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
     alignItems: 'center',
     padding: 24,
+    paddingBottom: 80,
   },
   orbsContainer: {
     flexDirection: 'row',

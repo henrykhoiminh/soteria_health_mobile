@@ -17,16 +17,13 @@ const HAPTIC_FREQUENCY = 2;
 
 // Caption data with text and pause duration after typing completes
 const captions = [
-  { text: "Here is what I do.", pauseAfter: 1000 },
-  { text: 'I can pull these three from within you,', pauseAfter: 1000 },
-  { text: 'and give them shape.', pauseAfter: 1200 },
-  { text: 'Little companions.', pauseAfter: 1200 },
-  { text: 'Reflections of your being.', pauseAfter: 1200 },
-  { text: 'You will care for them.', pauseAfter: 1000 },
-  { text: 'Complete the routines, and they thrive.', pauseAfter: 1200 },
-  { text: 'Ignore them?', pauseAfter: 1200 },
-  { text: "They will fade...", pauseAfter: 1500 },
-  { text: 'Do you wish to meet them?', pauseAfter: 0 },
+  { text: 'I can give these three lights shape.', pauseAfter: 700 },
+  { text: 'Little companions.', pauseAfter: 600 },
+  { text: 'Reflections of you.', pauseAfter: 700 },
+  { text: 'You will care for them.', pauseAfter: 600 },
+  { text: 'Complete routines, they thrive.', pauseAfter: 600 },
+  { text: 'Ignore them, they fade.', pauseAfter: 800 },
+  { text: 'Ready to meet them?', pauseAfter: 0 },
 ];
 
 // Screen 6: The Offer
@@ -181,9 +178,10 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
     alignItems: 'center',
     padding: 24,
+    paddingBottom: 80,
   },
   visualContainer: {
     alignItems: 'center',

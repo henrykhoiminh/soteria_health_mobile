@@ -2,12 +2,13 @@ import { AppColors } from '@/constants/theme';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, Pressable, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 // Screen 1: Value Prop
 export default function ValuePropScreen() {
   const router = useRouter();
   const [showButton, setShowButton] = useState(false);
+  const [skipped, setSkipped] = useState(false);
 
   // Animation values
   const headlineOpacity = useRef(new Animated.Value(0)).current;
@@ -17,44 +18,63 @@ export default function ValuePropScreen() {
   const buttonOpacity = useRef(new Animated.Value(0)).current;
   const buttonScale = useRef(new Animated.Value(0.8)).current;
 
+  const skipToEnd = () => {
+    if (showButton) return; // Already complete
+    setSkipped(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    // Immediately show everything
+    headlineOpacity.setValue(1);
+    headlineTranslateY.setValue(0);
+    subheadlineOpacity.setValue(1);
+    subheadlineTranslateY.setValue(0);
+    buttonOpacity.setValue(1);
+    buttonScale.setValue(1);
+    setShowButton(true);
+  };
+
   useEffect(() => {
+    if (skipped) return;
+
     // Sequence: headline fades in, then subheadline, then button pops
     const animationSequence = async () => {
-      // Wait a moment before starting
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Brief pause before starting
+      await new Promise(resolve => setTimeout(resolve, 300));
 
-      // Fade in headline (2 seconds)
+      // Fade in headline (1 second)
       Animated.parallel([
         Animated.timing(headlineOpacity, {
           toValue: 1,
-          duration: 2000,
+          duration: 1000,
           useNativeDriver: true,
         }),
         Animated.timing(headlineTranslateY, {
           toValue: 0,
-          duration: 2000,
+          duration: 1000,
           useNativeDriver: true,
         }),
       ]).start();
 
-      // Wait 1.5 seconds, then fade in subheadline
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Wait 0.8 seconds, then fade in subheadline
+      await new Promise(resolve => setTimeout(resolve, 800));
+      if (skipped) return;
 
       Animated.parallel([
         Animated.timing(subheadlineOpacity, {
           toValue: 1,
-          duration: 1000,
+          duration: 800,
           useNativeDriver: true,
         }),
         Animated.timing(subheadlineTranslateY, {
           toValue: 0,
-          duration: 1000,
+          duration: 800,
           useNativeDriver: true,
         }),
       ]).start();
 
-      // Wait 2.5 seconds after subheadline, then pop in button with haptic
-      await new Promise(resolve => setTimeout(resolve, 2500));
+      // Wait 1.2 seconds after subheadline, then pop in button with haptic
+      await new Promise(resolve => setTimeout(resolve, 1200));
+      if (skipped) return;
 
       setShowButton(true);
 
@@ -64,7 +84,7 @@ export default function ValuePropScreen() {
       Animated.parallel([
         Animated.timing(buttonOpacity, {
           toValue: 1,
-          duration: 400,
+          duration: 300,
           useNativeDriver: true,
         }),
         Animated.spring(buttonScale, {
@@ -77,7 +97,7 @@ export default function ValuePropScreen() {
     };
 
     animationSequence();
-  }, []);
+  }, [skipped]);
 
   const handleStart = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -86,7 +106,7 @@ export default function ValuePropScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
+      <Pressable style={styles.content} onPress={skipToEnd}>
         {/* Unified width container for visual alignment */}
         <View style={styles.textContainer}>
           <Animated.Text
@@ -112,7 +132,7 @@ export default function ValuePropScreen() {
             Built through mind, body, and soul.
           </Animated.Text>
 
-          {/* Button in the middle, below the text - always rendered to preserve layout */}
+          {/* Button in the middle, below the text */}
           <Animated.View
             style={[
               styles.buttonContainer,
@@ -131,7 +151,7 @@ export default function ValuePropScreen() {
             </TouchableOpacity>
           </Animated.View>
         </View>
-      </View>
+      </Pressable>
     </SafeAreaView>
   );
 }

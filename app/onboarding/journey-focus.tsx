@@ -80,7 +80,7 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   presenceContainer: {
-    marginBottom: 32,
+    marginBottom: 64,
   },
   question: {
     fontSize: 28,

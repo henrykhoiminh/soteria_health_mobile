@@ -31,8 +31,8 @@ export default function TravelerNameScreen() {
 
   // Caption data - ask for username (streamlined for pacing)
   const captions = [
-    { text: 'One last thing.', pauseAfter: 1000 },
-    { text: 'What should other travelers call you?', pauseAfter: 0 },
+    { text: 'One last thing.', pauseAfter: 600 },
+    { text: 'What should others call you?', pauseAfter: 0 },
   ];
 
   const isValid = data.username.trim().length >= 3 && isAvailable === true;
@@ -187,7 +187,7 @@ export default function TravelerNameScreen() {
                   autoFocus={true}
                 />
                 <Text style={styles.helperText}>
-                  This is how other travelers will know you
+                  This is how others will know you
                 </Text>
 
                 {/* Status indicators */}
@@ -240,12 +240,13 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
     alignItems: 'center',
     padding: 24,
+    paddingBottom: 80,
   },
   presenceContainer: {
-    marginBottom: 24,
+    marginBottom: 48,
   },
   captionContainer: {
     width: '100%',

@@ -6,35 +6,35 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Animated, KeyboardAvoidingView, Platform, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Animated, Keyboard, KeyboardAvoidingView, Platform, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import OnboardingButton from './components/OnboardingButton';
 import OnboardingProgress from './components/OnboardingProgress';
 import SoteriaPresence from './components/SoteriaPresence';
 
 // Phase 1: Initial mystery - Soteria notices the user (two-part dialogue)
 const mysteryCaptions = [
-  { text: 'Well, well...', pauseAfter: 1500 },
+  { text: 'Well, well...', pauseAfter: 800 },
   { text: 'Who do we have here?', pauseAfter: 0 },
 ];
 
 // Phase 3: After user enters name - Soteria introduces herself
 const introCaptions = [
-  { text: 'I am Soteria.', pauseAfter: 1200 },
-  { text: 'I have guided many before you.', pauseAfter: 1500 },
-  { text: 'So... tell me, human.', pauseAfter: 1200 },
+  { text: 'I am Soteria.', pauseAfter: 700 },
+  { text: 'I have guided many before you.', pauseAfter: 800 },
+  { text: 'Tell me, human.', pauseAfter: 600 },
   { text: 'What is it you seek?', pauseAfter: 0 },
 ];
 
 // Welcome captions after journey selection
 const preventionWelcomeCaptions = [
-  { text: 'You chose preparation over repair.', pauseAfter: 1200 },
-  { text: 'Wise.', pauseAfter: 800 },
+  { text: 'Preparation over repair.', pauseAfter: 600 },
+  { text: 'Wise.', pauseAfter: 500 },
   { text: 'Welcome.', pauseAfter: 0 },
 ];
 
 const recoveryWelcomeCaptions = [
-  { text: 'You chose to come back stronger.', pauseAfter: 1200 },
-  { text: 'That takes courage.', pauseAfter: 1000 },
+  { text: 'Coming back stronger.', pauseAfter: 600 },
+  { text: 'That takes courage.', pauseAfter: 600 },
   { text: 'Welcome.', pauseAfter: 0 },
 ];
 
@@ -60,6 +60,7 @@ export default function FindingSoteriaScreen() {
   const [showButton, setShowButton] = useState(false);
   const [showSkip, setShowSkip] = useState(false);
   const [showNameInputs, setShowNameInputs] = useState(false);
+  const [reinforcementComplete, setReinforcementComplete] = useState(false);
 
   // Animation refs
   const choicesOpacity = useRef(new Animated.Value(0)).current;
@@ -67,6 +68,7 @@ export default function FindingSoteriaScreen() {
   const badgeOpacity = useRef(new Animated.Value(0)).current;
   const badgeScale = useRef(new Animated.Value(0.8)).current;
   const inputsOpacity = useRef(new Animated.Value(0)).current;
+  const inputsTranslateY = useRef(new Animated.Value(20)).current;
 
   const typingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const charIndexRef = useRef(0);
@@ -133,7 +135,7 @@ export default function FindingSoteriaScreen() {
     };
   }, []);
 
-  // Mystery phase - cycle through mystery captions then show name inputs
+  // Mystery phase - cycle through mystery captions then show name modal
   useEffect(() => {
     if (phase !== 'mystery') return;
 
@@ -148,16 +150,25 @@ export default function FindingSoteriaScreen() {
           }, currentCaption.pauseAfter);
           typingRef.current = nextTimer;
         } else {
-          // All mystery captions complete - show name inputs
+          // All mystery captions complete - show inputs
           setTimeout(() => {
             setShowNameInputs(true);
             setPhase('name-entry');
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            Animated.timing(inputsOpacity, {
-              toValue: 1,
-              duration: 400,
-              useNativeDriver: true,
-            }).start();
+
+            // Fade in inputs
+            Animated.parallel([
+              Animated.timing(inputsOpacity, {
+                toValue: 1,
+                duration: 300,
+                useNativeDriver: true,
+              }),
+              Animated.timing(inputsTranslateY, {
+                toValue: 0,
+                duration: 300,
+                useNativeDriver: true,
+              }),
+            ]).start();
           }, 800);
         }
       });
@@ -167,29 +178,30 @@ export default function FindingSoteriaScreen() {
       clearTimeout(startTimer);
       if (typingRef.current) clearTimeout(typingRef.current);
     };
-  }, [phase, mysteryIndex, startTyping, inputsOpacity]);
-
-  // Show submit button when name is valid
-  useEffect(() => {
-    if (phase === 'name-entry' && isNameValid && !showButton) {
-      setShowButton(true);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    }
-  }, [phase, isNameValid, showButton]);
+  }, [phase, mysteryIndex, startTyping]);
 
   // Reinforcement phase - show personalized message
   useEffect(() => {
     if (phase !== 'reinforcement') return;
 
-    const reinforcementMessage = `${data.firstName}... I sense something very special about you.`;
+    // Ensure button is hidden and reinforcement not complete
+    setShowButton(false);
+    setReinforcementComplete(false);
 
-    startTyping(reinforcementMessage, () => {
-      // After typing, show "Who are you?" button
-      setTimeout(() => {
-        setShowButton(true);
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      }, 1200);
-    });
+    const reinforcementMessage = `${data.firstName}...\n I sense great courage in you.`;
+
+    // Small delay before starting to type
+    const startDelay = setTimeout(() => {
+      startTyping(reinforcementMessage, () => {
+        // After typing completes, pause then show "Who are you?" button
+        setTimeout(() => {
+          setReinforcementComplete(true);
+          setShowButton(true);
+        }, 1000);
+      });
+    }, 500);
+
+    return () => clearTimeout(startDelay);
   }, [phase, data.firstName, startTyping]);
 
   // Intro phase - cycle through intro captions
@@ -265,16 +277,31 @@ export default function FindingSoteriaScreen() {
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setShowButton(false);
-    setShowNameInputs(false);
 
-    // Fade out inputs
-    Animated.timing(inputsOpacity, {
-      toValue: 0,
-      duration: 300,
-      useNativeDriver: true,
-    }).start(() => {
-      setPhase('reinforcement');
-    });
+    // Dismiss keyboard first
+    Keyboard.dismiss();
+
+    // Wait for keyboard to dismiss, then fade out inputs
+    setTimeout(() => {
+      Animated.parallel([
+        Animated.timing(inputsOpacity, {
+          toValue: 0,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+        Animated.timing(inputsTranslateY, {
+          toValue: 20,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        setShowNameInputs(false);
+        // Beat before transitioning to reinforcement
+        setTimeout(() => {
+          setPhase('reinforcement');
+        }, 300);
+      });
+    }, 200);
   };
 
   // Handle "Who are you?" button - proceed to intro
@@ -334,16 +361,15 @@ export default function FindingSoteriaScreen() {
   };
 
   const handleContinue = () => {
-    router.push('/onboarding/world-intro');
+    router.push('/onboarding/dashboard-tutorial');
   };
 
   // Get button label and action based on phase
   const getButtonConfig = () => {
-    if (phase === 'name-entry') {
-      return { label: 'Continue', onPress: handleNameSubmit, visible: showButton && isNameValid };
-    }
+    // name-entry phase uses modal button, not OnboardingButton
     if (phase === 'reinforcement') {
-      return { label: 'Who are you?', onPress: handleAskWhoAreYou, visible: showButton };
+      // Only show "Who are you?" after reinforcement dialogue is complete
+      return { label: 'Who are you?', onPress: handleAskWhoAreYou, visible: reinforcementComplete && showButton };
     }
     if (phase === 'complete') {
       return { label: 'Continue', onPress: handleContinue, visible: showButton };
@@ -388,39 +414,58 @@ export default function FindingSoteriaScreen() {
             onPress={handleTapToSpeed}
             activeOpacity={1}
           >
-            <Text style={[
-              styles.captionText,
-              phase === 'reinforcement' && styles.reinforcementText
-            ]}>
+            <Text style={styles.captionText}>
               {displayedText}
               {isTyping && <Text style={styles.cursor}>|</Text>}
             </Text>
           </TouchableOpacity>
 
-          {/* Name inputs - shown during name-entry phase */}
-          {(phase === 'mystery' || phase === 'name-entry') && (
-            <Animated.View style={[styles.inputsContainer, { opacity: inputsOpacity }]}>
-              {showNameInputs && (
-                <>
-                  <TextInput
-                    style={styles.input}
-                    value={data.firstName}
-                    onChangeText={setFirstName}
-                    placeholder="First Name"
-                    placeholderTextColor="rgba(255, 255, 255, 0.4)"
-                    autoCapitalize="words"
-                    autoFocus={true}
-                  />
-                  <TextInput
-                    style={styles.input}
-                    value={data.lastName}
-                    onChangeText={setLastName}
-                    placeholder="Last Name"
-                    placeholderTextColor="rgba(255, 255, 255, 0.4)"
-                    autoCapitalize="words"
-                  />
-                </>
-              )}
+          {/* Name inputs - inline, appears when Soteria shrinks */}
+          {showNameInputs && (
+            <Animated.View
+              style={[
+                styles.inputsContainer,
+                {
+                  opacity: inputsOpacity,
+                  transform: [{ translateY: inputsTranslateY }],
+                },
+              ]}
+            >
+              <TextInput
+                style={styles.input}
+                value={data.firstName}
+                onChangeText={setFirstName}
+                placeholder="First Name"
+                placeholderTextColor="rgba(255, 255, 255, 0.4)"
+                autoCapitalize="words"
+                autoFocus={true}
+              />
+              <TextInput
+                style={styles.input}
+                value={data.lastName}
+                onChangeText={setLastName}
+                placeholder="Last Name"
+                placeholderTextColor="rgba(255, 255, 255, 0.4)"
+                autoCapitalize="words"
+              />
+
+              <TouchableOpacity
+                style={[
+                  styles.submitButton,
+                  !isNameValid && styles.submitButtonDisabled,
+                ]}
+                onPress={handleNameSubmit}
+                disabled={!isNameValid}
+              >
+                <Text
+                  style={[
+                    styles.submitButtonText,
+                    !isNameValid && styles.submitButtonTextDisabled,
+                  ]}
+                >
+                  Introduce Yourself
+                </Text>
+              </TouchableOpacity>
             </Animated.View>
           )}
 
@@ -497,9 +542,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
+    paddingBottom: 20,
   },
   presenceContainer: {
-    marginBottom: 32,
+    marginBottom: 64,
   },
   badgeContainer: {
     marginBottom: 32,
@@ -507,7 +553,7 @@ const styles = StyleSheet.create({
   },
   captionContainer: {
     width: '100%',
-    minHeight: 80,
+    minHeight: 70,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -518,11 +564,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: 20,
   },
-  reinforcementText: {
-    fontSize: 22,
-    fontStyle: 'italic',
-    lineHeight: 32,
-  },
   cursor: {
     color: AppColors.primary,
     fontWeight: '300',
@@ -530,18 +571,39 @@ const styles = StyleSheet.create({
   inputsContainer: {
     width: '100%',
     maxWidth: 300,
-    gap: 12,
-    marginTop: 24,
+    gap: 10,
+    marginTop: 8,
+    alignItems: 'center',
   },
   input: {
+    width: '100%',
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: 'rgba(255, 255, 255, 0.15)',
     borderRadius: 12,
     padding: 16,
     fontSize: 18,
     color: '#FFFFFF',
     textAlign: 'center',
+  },
+  submitButton: {
+    width: '100%',
+    backgroundColor: AppColors.primary,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  submitButtonDisabled: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  submitButtonText: {
+    color: AppColors.primaryText,
+    fontSize: 17,
+    fontWeight: '600',
+  },
+  submitButtonTextDisabled: {
+    color: 'rgba(255, 255, 255, 0.4)',
   },
   choicesContainer: {
     width: '100%',

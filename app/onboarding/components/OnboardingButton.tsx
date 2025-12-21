@@ -19,20 +19,26 @@ export default function OnboardingButton({
   variant = 'primary',
 }: OnboardingButtonProps) {
   const opacity = useRef(new Animated.Value(0)).current;
-  const scale = useRef(new Animated.Value(0.9)).current;
+  const scale = useRef(new Animated.Value(0.8)).current;
 
   useEffect(() => {
     if (visible) {
+      // Reset scale for pop effect
+      scale.setValue(0.8);
+
+      // Haptic feedback when button pops in
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
       Animated.parallel([
         Animated.timing(opacity, {
           toValue: 1,
-          duration: 400,
+          duration: 300,
           useNativeDriver: true,
         }),
         Animated.spring(scale, {
           toValue: 1,
-          friction: 6,
-          tension: 80,
+          friction: 4,
+          tension: 100,
           useNativeDriver: true,
         }),
       ]).start();

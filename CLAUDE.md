@@ -1012,7 +1012,78 @@ calculateConsecutiveBalancedDays(userId: string): Promise<{
   - `app/onboarding/traveler-name.tsx` - Removed redundant name caption
   - 25+ additional files for button text color updates
 
+### Session 24 (Latest - Dashboard Tutorial Onboarding)
+- **Dashboard Tutorial Implementation (Work in Progress):**
+  - Replaced abstract narrative screens (world-intro, three-lights, the-offer) with interactive dashboard tutorial
+  - Goal: Show users the actual dashboard layout during onboarding with guided tour
+  - Status: Initial implementation complete, may explore alternative approaches
+
+- **New Files Created:**
+  - `app/onboarding/dashboard-tutorial.tsx` - Main tutorial screen with 5-step state machine
+  - `app/onboarding/components/TutorialDashboard.tsx` - Full-screen dashboard with spotlight overlay
+  - `app/onboarding/components/FloatingSoteriaGuide.tsx` - Animated floating Soteria orb
+  - `lib/utils/tutorial-mock-data.ts` - Mock data for dashboard preview (avatar states, harmony, stats)
+
+- **Tutorial Flow (5 Steps):**
+  | Step | Focus | Soteria Position | Highlight |
+  |------|-------|------------------|-----------|
+  | intro | Black screen | Center | None |
+  | avatars | Avatars section | Bottom-center (points up) | Avatars |
+  | harmony | Harmony button | Left (points right) | Harmony |
+  | stats | Stats section | Bottom-center (points up) | Stats |
+  | transition | Black screen | Center | None |
+
+- **TutorialDashboard Component:**
+  - Full-screen dashboard layout matching actual app
+  - Uses `onLayout` to dynamically measure section positions
+  - Spotlight effect using 4 dark overlay boxes positioned around highlighted area
+  - Gold border with glow effect around spotlighted section
+  - 75% opacity dark overlay dims non-highlighted areas
+
+- **FloatingSoteriaGuide Component:**
+  - Animated floating Soteria orb with spring physics
+  - Positions: top-left, top-right, bottom-left, bottom-right, center, left, right, bottom-center
+  - Bobbing animation in pointing direction (up, down, left, right)
+  - z-index 500 to float above overlay (z-index 10)
+  - Pulsing and glow animations for visual interest
+
+- **Navigation Flow Updated:**
+  - Old: finding-soteria → world-intro → three-lights → the-offer → mind-extraction
+  - New: finding-soteria → dashboard-tutorial → mind-extraction
+  - `app/onboarding/_layout.tsx` - Added dashboard-tutorial, removed old screens
+  - `app/onboarding/components/DevNavigation.tsx` - Updated to 11 screens (was 13)
+
+- **Dialogue System:**
+  - Typewriter effect with haptic feedback (40ms per character)
+  - Dialogue box with semi-transparent background at bottom of screen
+  - Step indicator dots showing progress through tutorial
+  - Tap to skip typing, auto-advance between dialogue lines
+
+- **Mock Data (`lib/utils/tutorial-mock-data.ts`):**
+  ```typescript
+  TUTORIAL_MOCK_DATA = {
+    avatarStates: [
+      { category: 'Mind', lightState: 'Glowing', name: 'Mind' },
+      { category: 'Body', lightState: 'Awakening', name: 'Body' },
+      { category: 'Soul', lightState: 'Sleepy', name: 'Soul' },
+    ],
+    harmonyStatus: { consecutiveBalancedDays: 3, daysUntilHarmony: 4 },
+    stats: { current_streak: 5, harmony_streak: 0, total_routines: 24 },
+  }
+  ```
+
+- **Deprecated Screens (Still in codebase, not in navigation):**
+  - `app/onboarding/world-intro.tsx`
+  - `app/onboarding/three-lights.tsx`
+  - `app/onboarding/the-offer.tsx`
+
+- **Alternative Approaches to Consider:**
+  - Simpler tooltip-based tutorial (less immersive but more lightweight)
+  - Video walkthrough instead of interactive tutorial
+  - Skip tutorial entirely and use contextual hints in actual dashboard
+  - Progressive disclosure - reveal features as user engages with app
+
 ---
 
-**Last Updated:** 2025-12-15
+**Last Updated:** 2025-12-21
 **Current Version:** Expo SDK 54, React Native 0.76+

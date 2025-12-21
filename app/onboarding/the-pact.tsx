@@ -16,31 +16,25 @@ const HAPTIC_FREQUENCY = 2;
 
 // Caption data for new users
 const newUserCaptions = [
-  { text: "Alright, {firstName}. Here's the deal.", pauseAfter: 1200 },
-  { text: "I've built this world.", pauseAfter: 1000 },
-  { text: 'Curated the routines.', pauseAfter: 1000 },
-  { text: 'Gathered the travelers.', pauseAfter: 1200 },
-  { text: "But I can't do your work for you.", pauseAfter: 1200 },
-  { text: 'A few minutes a day.', pauseAfter: 1000 },
-  { text: 'Show up for {mindName}, {bodyName}, and {soulName}.', pauseAfter: 1200 },
-  { text: "Explore what I've built. Join a Circle. Share what works.", pauseAfter: 1200 },
-  { text: "Do that, and you'll build a pain-free life.", pauseAfter: 1000 },
-  { text: 'Not overnight. Not perfectly.', pauseAfter: 1000 },
-  { text: 'But steadily.', pauseAfter: 1200 },
+  { text: "Alright, {firstName}. Here's the deal.", pauseAfter: 700 },
+  { text: "I've built this world.", pauseAfter: 600 },
+  { text: "But I can't do your work for you.", pauseAfter: 700 },
+  { text: 'A few minutes a day.', pauseAfter: 600 },
+  { text: 'Show up for {mindName}, {bodyName}, and {soulName}.', pauseAfter: 700 },
+  { text: "Do that, and you'll build a pain-free life.", pauseAfter: 700 },
+  { text: 'Not overnight. But steadily.', pauseAfter: 700 },
   { text: 'Can you commit to that?', pauseAfter: 0 },
 ];
 
 // Caption data for reset users
 const resetUserCaptions = [
-  { text: '{firstName}.', pauseAfter: 1000 },
-  { text: "Starting over isn't failure.", pauseAfter: 1200 },
-  { text: "It's a choice.", pauseAfter: 1000 },
-  { text: 'The same deal as before:', pauseAfter: 1000 },
-  { text: 'I guide. You show up.', pauseAfter: 1000 },
-  { text: 'A few minutes a day.', pauseAfter: 1000 },
-  { text: 'Small rituals. Consistent care.', pauseAfter: 1200 },
-  { text: "You've done this before.", pauseAfter: 1000 },
-  { text: "You know what's possible.", pauseAfter: 1200 },
+  { text: '{firstName}.', pauseAfter: 600 },
+  { text: "Starting over isn't failure.", pauseAfter: 600 },
+  { text: "It's a choice.", pauseAfter: 700 },
+  { text: 'The same deal as before:', pauseAfter: 600 },
+  { text: 'I guide. You show up.', pauseAfter: 600 },
+  { text: 'A few minutes a day.', pauseAfter: 500 },
+  { text: 'Small rituals. Consistent care.', pauseAfter: 700 },
   { text: 'Ready to do it again?', pauseAfter: 0 },
 ];
 
@@ -208,12 +202,13 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
     alignItems: 'center',
     padding: 24,
+    paddingBottom: 80,
   },
   presenceContainer: {
-    marginBottom: 48,
+    marginBottom: 64,
   },
   captionContainer: {
     width: '100%',

@@ -28,12 +28,12 @@ export default function TheBondScreen() {
 
   // Caption data - dynamically includes companion and user names
   const captions = [
-    { text: `${data.mindName}, ${data.bodyName}, and ${data.soulName}.`, pauseAfter: 1000 },
-    { text: `Now bonded to ${data.firstName}.`, pauseAfter: 1200 },
-    { text: "They're connected — to each other, and to you.", pauseAfter: 1200 },
-    { text: 'When one thrives, the others feel it.', pauseAfter: 1000 },
-    { text: 'When one struggles, they all notice.', pauseAfter: 1200 },
-    { text: "That's not a flaw.", pauseAfter: 1000 },
+    { text: `${data.mindName}, ${data.bodyName}, and ${data.soulName}.`, pauseAfter: 600 },
+    { text: `Now bonded to ${data.firstName}.`, pauseAfter: 700 },
+    { text: "They're connected — to each other, and to you.", pauseAfter: 700 },
+    { text: 'When one thrives, the others feel it.', pauseAfter: 600 },
+    { text: 'When one struggles, they all notice.', pauseAfter: 700 },
+    { text: "That's not a flaw.", pauseAfter: 600 },
     { text: "That's how you're designed.", pauseAfter: 0 },
   ];
 
@@ -180,9 +180,10 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
     alignItems: 'center',
     padding: 24,
+    paddingBottom: 80,
   },
   orbsContainer: {
     flexDirection: 'row',
