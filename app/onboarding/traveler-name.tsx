@@ -1,23 +1,25 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, StyleSheet, SafeAreaView, TouchableOpacity, Text, TextInput, KeyboardAvoidingView, Platform, ActivityIndicator, Animated } from 'react-native';
-import { useRouter } from 'expo-router';
-import * as Haptics from 'expo-haptics';
-import SoteriaPresence from './components/SoteriaPresence';
 import JourneyBadge from '@/components/JourneyBadge';
-import OnboardingProgress from './components/OnboardingProgress';
+import { AppColors } from '@/constants/theme';
 import { useOnboarding, USERNAME_MAX_LENGTH } from '@/lib/contexts/OnboardingContext';
 import { checkUsernameAvailability } from '@/lib/utils/username';
-import { AppColors } from '@/constants/theme';
+import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
+import * as ImagePicker from 'expo-image-picker';
+import { useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Animated, Image, Keyboard, KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import OnboardingProgress from './components/OnboardingProgress';
+import SoteriaPresence from './components/SoteriaPresence';
 
 // Typing speed in milliseconds per character
 const TYPING_SPEED = 40;
 // Haptic frequency - trigger haptic every N characters
 const HAPTIC_FREQUENCY = 2;
 
-// Screen 11: Traveler Name (Username)
+// Screen 11: Traveler Name (Username & Profile Picture)
 export default function TravelerNameScreen() {
   const router = useRouter();
-  const { data, setUsername } = useOnboarding();
+  const { data, setUsername, setProfilePictureUri } = useOnboarding();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [displayedText, setDisplayedText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -25,16 +27,67 @@ export default function TravelerNameScreen() {
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isAvailable, setIsAvailable] = useState<boolean | null>(null);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
   const inputOpacity = useRef(new Animated.Value(0)).current;
   const typingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const charIndexRef = useRef(0);
 
+  // Keyboard visibility listener
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const keyboardShowListener = Keyboard.addListener(showEvent, () => {
+      setKeyboardVisible(true);
+    });
+    const keyboardHideListener = Keyboard.addListener(hideEvent, () => {
+      setKeyboardVisible(false);
+    });
+
+    return () => {
+      keyboardShowListener.remove();
+      keyboardHideListener.remove();
+    };
+  }, []);
+
+  // Handle image picker
+  const handlePickImage = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Required',
+          'Please allow access to your photo library to add a profile picture.'
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setProfilePictureUri(result.assets[0].uri);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
+    } catch (err) {
+      console.error('Error picking image:', err);
+      Alert.alert('Error', 'Failed to pick image. Please try again.');
+    }
+  };
+
   // Caption data - ask for username (streamlined for pacing)
   const captions = [
     { text: 'One last thing.', pauseAfter: 600 },
-    { text: 'What should others call you?', pauseAfter: 0 },
+    { text: 'You can find and connect with others also building pain-free lives.', pauseAfter: 600 },
+    { text: 'Make it easy for them to find you with a portrait and title.', pauseAfter: 0 },
   ];
 
+  // Username must be valid; profile picture is optional
   const isValid = data.username.trim().length >= 3 && isAvailable === true;
 
   // Typewriter effect
@@ -134,7 +187,7 @@ export default function TravelerNameScreen() {
   const handleContinue = () => {
     if (isValid) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      router.push('/onboarding/the-bond');
+      router.push('/onboarding/the-pact');
     }
   };
 
@@ -152,12 +205,23 @@ export default function TravelerNameScreen() {
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
-        <View style={styles.content}>
-          {/* Soteria presence */}
-          <View style={styles.presenceContainer}>
-            <SoteriaPresence size="small" intensity="low" />
-          </View>
+        <ScrollView
+          contentContainerStyle={[
+            styles.scrollContent,
+            // Center content when keyboard is hidden, align to end when keyboard is visible
+            keyboardVisible ? styles.scrollContentKeyboard : styles.scrollContentCentered,
+          ]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Soteria presence - hide when keyboard is visible */}
+          {!keyboardVisible && (
+            <View style={styles.presenceContainer}>
+              <SoteriaPresence size="small" intensity="low" />
+            </View>
+          )}
 
           {/* Caption text - typewriter effect */}
           <View style={styles.captionContainer}>
@@ -167,48 +231,75 @@ export default function TravelerNameScreen() {
             </Text>
           </View>
 
-          {/* Username input - fades in after typing */}
+          {/* Profile Picture & Username - fades in after typing */}
           <Animated.View style={[styles.inputContainer, { opacity: inputOpacity }]}>
             {showInput && (
               <>
-                <TextInput
-                  style={[
-                    styles.input,
-                    error && styles.inputError,
-                    isAvailable && styles.inputValid,
-                  ]}
-                  value={data.username}
-                  onChangeText={handleUsernameChange}
-                  placeholder="username"
-                  placeholderTextColor="rgba(255, 255, 255, 0.4)"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  maxLength={USERNAME_MAX_LENGTH}
-                  autoFocus={true}
-                />
-                <Text style={styles.helperText}>
-                  This is how others will know you
-                </Text>
-
-                {/* Status indicators */}
-                <View style={styles.statusContainer}>
-                  {checking && (
-                    <View style={styles.statusRow}>
-                      <ActivityIndicator size="small" color={AppColors.primary} />
-                      <Text style={styles.statusText}>Checking availability...</Text>
+                {/* Profile Picture */}
+                <TouchableOpacity
+                  style={styles.avatarContainer}
+                  onPress={handlePickImage}
+                  activeOpacity={0.8}
+                >
+                  {data.profilePictureUri ? (
+                    <Image
+                      source={{ uri: data.profilePictureUri }}
+                      style={styles.avatarImage}
+                    />
+                  ) : (
+                    <View style={styles.avatarPlaceholder}>
+                      <Ionicons name="person" size={40} color="rgba(255, 255, 255, 0.4)" />
                     </View>
                   )}
-                  {error && (
-                    <Text style={styles.errorText}>{error}</Text>
-                  )}
-                  {isAvailable && !checking && (
-                    <Text style={styles.successText}>Username is available!</Text>
-                  )}
+                  <View style={styles.cameraIconContainer}>
+                    <Ionicons name="camera" size={16} color="#FFFFFF" />
+                  </View>
+                </TouchableOpacity>
+                <Text style={styles.avatarHelperText}>
+                  Tap to add a photo (optional)
+                </Text>
+
+                {/* Username Input */}
+                <View style={styles.usernameSection}>
+                  <TextInput
+                    style={[
+                      styles.input,
+                      error && styles.inputError,
+                      isAvailable && styles.inputValid,
+                    ]}
+                    value={data.username}
+                    onChangeText={handleUsernameChange}
+                    placeholder="username"
+                    placeholderTextColor="rgba(255, 255, 255, 0.4)"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    maxLength={USERNAME_MAX_LENGTH}
+                    autoFocus={true}
+                  />
+                  <Text style={styles.helperText}>
+                    This helps friends find you
+                  </Text>
+
+                  {/* Status indicators */}
+                  <View style={styles.statusContainer}>
+                    {checking && (
+                      <View style={styles.statusRow}>
+                        <ActivityIndicator size="small" color={AppColors.primary} />
+                        <Text style={styles.statusText}>Checking availability...</Text>
+                      </View>
+                    )}
+                    {error && (
+                      <Text style={styles.errorText}>{error}</Text>
+                    )}
+                    {isAvailable && !checking && (
+                      <Text style={styles.successText}>Username is available!</Text>
+                    )}
+                  </View>
                 </View>
               </>
             )}
           </Animated.View>
-        </View>
+        </ScrollView>
 
         {/* Continue button */}
         <View style={styles.footer}>
@@ -238,19 +329,26 @@ const styles = StyleSheet.create({
   keyboardView: {
     flex: 1,
   },
-  content: {
-    flex: 1,
-    justifyContent: 'flex-end',
+  scrollContent: {
+    flexGrow: 1,
     alignItems: 'center',
-    padding: 24,
-    paddingBottom: 80,
+    paddingHorizontal: 24,
+  },
+  scrollContentCentered: {
+    justifyContent: 'center',
+    paddingVertical: 24,
+  },
+  scrollContentKeyboard: {
+    justifyContent: 'flex-end',
+    paddingTop: 16,
+    paddingBottom: 8,
   },
   presenceContainer: {
-    marginBottom: 48,
+    marginBottom: 32,
   },
   captionContainer: {
     width: '100%',
-    minHeight: 80,
+    minHeight: 60,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 24,
@@ -270,7 +368,56 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 300,
     alignItems: 'center',
-    minHeight: 140,
+  },
+  // Profile Picture Styles
+  avatarContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    marginBottom: 8,
+    position: 'relative',
+  },
+  avatarPlaceholder: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    borderStyle: 'dashed',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 2,
+    borderColor: AppColors.primary,
+  },
+  cameraIconContainer: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: AppColors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: AppColors.background,
+  },
+  avatarHelperText: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.5)',
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  // Username Section
+  usernameSection: {
+    width: '100%',
+    alignItems: 'center',
   },
   input: {
     width: '100%',
@@ -296,8 +443,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   statusContainer: {
-    marginTop: 12,
-    minHeight: 24,
+    marginTop: 8,
+    minHeight: 20,
   },
   statusRow: {
     flexDirection: 'row',
@@ -317,8 +464,9 @@ const styles = StyleSheet.create({
     color: '#34C759',
   },
   footer: {
-    padding: 24,
-    paddingBottom: 40,
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 32,
   },
   button: {
     backgroundColor: AppColors.primary,

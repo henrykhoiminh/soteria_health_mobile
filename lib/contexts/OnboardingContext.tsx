@@ -15,6 +15,7 @@ export interface OnboardingData {
   firstName: string;
   lastName: string;
   username: string;
+  profilePictureUri: string | null;
 
   // Initial wellness check-in (during extraction)
   mindScore: number;
@@ -31,6 +32,7 @@ const defaultOnboardingData: OnboardingData = {
   firstName: '',
   lastName: '',
   username: '',
+  profilePictureUri: null,
   mindScore: 0,
   bodyScore: 0,
   soulScore: 0,
@@ -52,6 +54,7 @@ interface OnboardingContextType {
   setFirstName: (name: string) => void;
   setLastName: (name: string) => void;
   setUsername: (username: string) => void;
+  setProfilePictureUri: (uri: string | null) => void;
   setMindScore: (score: number) => void;
   setBodyScore: (score: number) => void;
   setSoulScore: (score: number) => void;
@@ -104,6 +107,10 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
     setData(prev => ({ ...prev, username: username }));
   }, []);
 
+  const setProfilePictureUri = useCallback((uri: string | null) => {
+    setData(prev => ({ ...prev, profilePictureUri: uri }));
+  }, []);
+
   const setMindScore = useCallback((score: number) => {
     setData(prev => ({ ...prev, mindScore: score }));
   }, []);
@@ -151,6 +158,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
         setFirstName,
         setLastName,
         setUsername,
+        setProfilePictureUri,
         setMindScore,
         setBodyScore,
         setSoulScore,

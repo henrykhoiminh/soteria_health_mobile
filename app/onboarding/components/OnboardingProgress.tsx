@@ -22,7 +22,7 @@ export const ONBOARDING_SEGMENTS = [
   },
   {
     name: 'Bond',
-    steps: ['the-bond', 'the-pact', 'the-beginning'],
+    steps: ['the-pact', 'the-beginning'],
   },
 ] as const;
 

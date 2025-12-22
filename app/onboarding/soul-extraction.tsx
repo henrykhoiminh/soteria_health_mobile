@@ -222,10 +222,10 @@ export default function SoulExtractionScreen() {
   const handleContinue = () => {
     if (isValid) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      // For reset flow, skip to the bond screen
+      // For reset flow, skip to the pact screen
       // For new users, go to introduce yourself
       if (isResetFlow) {
-        router.push('/onboarding/the-bond');
+        router.push('/onboarding/the-pact');
       } else {
         router.push('/onboarding/introduce-yourself');
       }

@@ -24,7 +24,6 @@ export default function OnboardingLayout() {
           <Stack.Screen name="soul-extraction" />
           <Stack.Screen name="introduce-yourself" />
           <Stack.Screen name="traveler-name" />
-          <Stack.Screen name="the-bond" />
           <Stack.Screen name="the-pact" />
           <Stack.Screen name="the-beginning" />
 

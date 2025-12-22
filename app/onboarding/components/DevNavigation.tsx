@@ -13,9 +13,8 @@ const SCREEN_ORDER = [
   { path: '/onboarding/soul-extraction', label: '6. Soul Extraction' },
   { path: '/onboarding/introduce-yourself', label: '7. Introduce Yourself' },
   { path: '/onboarding/traveler-name', label: '8. Username' },
-  { path: '/onboarding/the-bond', label: '9. The Bond' },
-  { path: '/onboarding/the-pact', label: '10. The Pact' },
-  { path: '/onboarding/the-beginning', label: '11. The Beginning' },
+  { path: '/onboarding/the-pact', label: '9. The Pact' },
+  { path: '/onboarding/the-beginning', label: '10. The Beginning' },
 ];
 
 // Set to false to hide dev navigation
