@@ -1,13 +1,15 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, StyleSheet, SafeAreaView, Text } from 'react-native';
-import { useRouter } from 'expo-router';
-import * as Haptics from 'expo-haptics';
-import SoteriaPresence from './components/SoteriaPresence';
 import JourneyBadge from '@/components/JourneyBadge';
+import { AppColors } from '@/constants/theme';
+import { useAuth } from '@/lib/contexts/AuthContext';
+import { useOnboarding } from '@/lib/contexts/OnboardingContext';
+import { supabase } from '@/lib/supabase/client';
+import * as Haptics from 'expo-haptics';
+import { useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Alert, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import OnboardingButton from './components/OnboardingButton';
 import OnboardingProgress from './components/OnboardingProgress';
-import { useOnboarding } from '@/lib/contexts/OnboardingContext';
-import { AppColors } from '@/constants/theme';
+import SoteriaPresence from './components/SoteriaPresence';
 
 // Typing speed in milliseconds per character
 const TYPING_SPEED = 40;
@@ -16,37 +18,30 @@ const HAPTIC_FREQUENCY = 2;
 
 // Caption data for new users
 const newUserCaptions = [
-  { text: "Alright, {firstName}. Here's the deal.", pauseAfter: 700 },
-  { text: "I've built this world.", pauseAfter: 600 },
-  { text: "But I can't do your work for you.", pauseAfter: 700 },
-  { text: 'A few minutes a day.', pauseAfter: 600 },
-  { text: 'Show up for {mindName}, {bodyName}, and {soulName}.', pauseAfter: 700 },
-  { text: "Do that, and you'll build a pain-free life.", pauseAfter: 700 },
-  { text: 'Not overnight. But steadily.', pauseAfter: 700 },
-  { text: 'Can you commit to that?', pauseAfter: 0 },
+  { text: "{firstName}, you have already taken the first step.", pauseAfter: 800 },
+  { text: "That's more than most will ever do.", pauseAfter: 600 },
+  { text: "Let's build your pain-free life.", pauseAfter: 0 },
 ];
 
 // Caption data for reset users
 const resetUserCaptions = [
   { text: '{firstName}.', pauseAfter: 600 },
-  { text: "Starting over isn't failure.", pauseAfter: 600 },
-  { text: "It's a choice.", pauseAfter: 700 },
-  { text: 'The same deal as before:', pauseAfter: 600 },
-  { text: 'I guide. You show up.', pauseAfter: 600 },
-  { text: 'A few minutes a day.', pauseAfter: 500 },
-  { text: 'Small rituals. Consistent care.', pauseAfter: 700 },
-  { text: 'Ready to do it again?', pauseAfter: 0 },
+  { text: 'Ready to try again?', pauseAfter: 0 },
 ];
 
-// Screen 13: The Pact
+// Screen 9: The Pact (Final Screen)
 export default function ThePactScreen() {
   const router = useRouter();
-  const { data, isResetFlow } = useOnboarding();
+  const { data, isResetFlow, resetOnboarding } = useOnboarding();
+  const { user, refreshProfile } = useAuth();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [displayedText, setDisplayedText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [allComplete, setAllComplete] = useState(false);
   const [showSkip, setShowSkip] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [welcomeName, setWelcomeName] = useState('');
   const typingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const charIndexRef = useRef(0);
 
@@ -65,7 +60,7 @@ export default function ThePactScreen() {
     text: replacePlaceholders(c.text),
   }));
 
-  const buttonText = isResetFlow ? "Let's go" : "I'm in";
+  const buttonText = isResetFlow ? "Let's go" : "I'm ready";
 
   // Typewriter effect
   const startTyping = useCallback((text: string, onComplete: () => void) => {
@@ -133,9 +128,90 @@ export default function ThePactScreen() {
     };
   }, [currentIndex, startTyping]);
 
+  const saveOnboardingData = async () => {
+    if (!user) {
+      Alert.alert('Error', 'User not found. Please try again.');
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      // Build the profile update
+      const profileUpdate: Record<string, unknown> = {
+        // Journey focus
+        journey_focus: data.journeyFocus,
+        journey_started_at: new Date().toISOString(),
+
+        // Avatar names
+        mind_name: data.mindName.trim(),
+        body_name: data.bodyName.trim(),
+        soul_name: data.soulName.trim(),
+
+        // Onboarding complete
+        onboarding_completed: true,
+        onboarding_completed_at: new Date().toISOString(),
+      };
+
+      // Only set first/last name and username for new users (not reset flow)
+      if (!isResetFlow) {
+        profileUpdate.first_name = data.firstName.trim();
+        profileUpdate.last_name = data.lastName.trim();
+        profileUpdate.username = data.username.trim().toLowerCase();
+
+        // Save profile picture if provided
+        if (data.profilePictureUri) {
+          profileUpdate.profile_picture_url = data.profilePictureUri;
+        }
+      }
+
+      // Update profile
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update(profileUpdate)
+        .eq('id', user.id);
+
+      if (profileError) {
+        console.error('Profile update error:', profileError);
+        throw profileError;
+      }
+
+      // Refresh the auth context with new profile data
+      await refreshProfile();
+
+      // Reset the onboarding context
+      resetOnboarding();
+
+      setSaved(true);
+
+      // Navigate to main app after a brief moment
+      setTimeout(() => {
+        router.replace('/(tabs)');
+      }, 1500);
+    } catch (error) {
+      console.error('Error saving onboarding data:', error);
+      Alert.alert(
+        'Error',
+        'Failed to save your data. Please try again.',
+        [
+          {
+            text: 'Retry',
+            onPress: () => {
+              setSaving(false);
+              saveOnboardingData();
+            },
+          },
+        ]
+      );
+      setSaving(false);
+    }
+  };
+
   const handleCommit = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    router.push('/onboarding/the-beginning');
+    // Store name before saving (context gets reset during save)
+    setWelcomeName(data.firstName);
+    saveOnboardingData();
   };
 
   const handleSkip = () => {
@@ -145,6 +221,21 @@ export default function ThePactScreen() {
     setAllComplete(true);
     setDisplayedText(captions[captions.length - 1].text);
   };
+
+  // Show welcome screen while saving in background
+  if (saving || saved) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.savingContent}>
+          <View style={styles.presenceContainer}>
+            <SoteriaPresence size="large" intensity="high" />
+          </View>
+
+          <Text style={styles.welcomeText}>Welcome, {welcomeName}.</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -207,6 +298,12 @@ const styles = StyleSheet.create({
     padding: 24,
     paddingBottom: 80,
   },
+  savingContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
   presenceContainer: {
     marginBottom: 64,
   },
@@ -226,5 +323,11 @@ const styles = StyleSheet.create({
   cursor: {
     color: AppColors.primary,
     fontWeight: '300',
+  },
+  welcomeText: {
+    fontSize: 24,
+    color: AppColors.primary,
+    fontWeight: '600',
+    textAlign: 'center',
   },
 });

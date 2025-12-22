@@ -14,7 +14,6 @@ const SCREEN_ORDER = [
   { path: '/onboarding/introduce-yourself', label: '7. Introduce Yourself' },
   { path: '/onboarding/traveler-name', label: '8. Username' },
   { path: '/onboarding/the-pact', label: '9. The Pact' },
-  { path: '/onboarding/the-beginning', label: '10. The Beginning' },
 ];
 
 // Set to false to hide dev navigation

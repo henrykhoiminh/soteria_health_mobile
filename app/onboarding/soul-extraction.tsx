@@ -17,13 +17,13 @@ const HAPTIC_FREQUENCY = 2;
 // Caption data for new users (streamlined for pacing)
 const newUserCaptions = [
   { text: 'Your Soul.\nPeace and connection.', pauseAfter: 700 },
-  { text: 'What shall you call it?', pauseAfter: 0 },
+  { text: 'What shall you call them?', pauseAfter: 0 },
 ];
 
 // Caption data for reset users
 const resetUserCaptions = [
   { text: 'Your Soul. Patient as ever.', pauseAfter: 700 },
-  { text: 'What will you call it now?', pauseAfter: 0 },
+  { text: 'What will you call them now?', pauseAfter: 0 },
 ];
 
 // Comments for each name

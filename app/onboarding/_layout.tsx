@@ -25,7 +25,6 @@ export default function OnboardingLayout() {
           <Stack.Screen name="introduce-yourself" />
           <Stack.Screen name="traveler-name" />
           <Stack.Screen name="the-pact" />
-          <Stack.Screen name="the-beginning" />
 
           {/* Reset User Flow Screens */}
           <Stack.Screen name="reset-welcome" />
