@@ -81,3 +81,7 @@ The project follows the standard Expo Router file structure.
 ### Database Migrations
 
 Database migrations are located in the `sql/` directory. They should be run in the Supabase SQL Editor in the order specified in the `README.md` file.
+
+---
+
+**Agent Focus:** Primarily help with animation design and builds.

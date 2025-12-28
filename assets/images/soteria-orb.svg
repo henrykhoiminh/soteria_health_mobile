@@ -1,0 +1,26 @@
+<svg width="300" height="300" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="heartGlow" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+      <stop offset="0%" style="stop-color:rgb(255,244,220);stop-opacity:1" />
+      <stop offset="60%" style="stop-color:rgb(255,210,160);stop-opacity:0.7" />
+      <stop offset="100%" style="stop-color:rgb(255,180,100);stop-opacity:0" />
+    </radialGradient>
+  </defs>
+
+  <g id="soteria-orb-character">
+    <!-- The main glow effect for the central orb -->
+    <circle id="heart-orb-glow" cx="150" cy="150" r="75" fill="url(#heartGlow)" />
+    
+    <!-- The solid core of the central orb -->
+    <circle id="heart-orb-core" cx="150" cy="150" r="40" fill="rgb(255, 244, 220)" />
+
+    <!-- Satellite Orb: Mind (Blue) -->
+    <circle id="mind-orb" cx="150" cy="50" r="15" fill="rgb(120, 190, 255)" />
+    
+    <!-- Satellite Orb: Body (Green) -->
+    <circle id="body-orb" cx="235" cy="200" r="15" fill="rgb(120, 220, 170)" />
+    
+    <!-- Satellite Orb: Soul (Purple) -->
+    <circle id="soul-orb" cx="65" cy="200" r="15" fill="rgb(210, 160, 255)" />
+  </g>
+</svg>
