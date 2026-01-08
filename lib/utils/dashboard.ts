@@ -159,18 +159,31 @@ export async function getRoutineById(routineId: string): Promise<Routine | null>
 
   if (error) throw error
 
-  // Map profile data to creator fields
-  if (data) {
-    const routine = data as any
-    return {
-      ...routine,
-      creator_name: routine.profiles?.full_name,
-      creator_username: routine.profiles?.username,
-      creator_avatar: routine.profiles?.profile_picture_url,
-    }
+  if (!data) return null
+
+  const routine = data as any
+
+  // Fetch source routine info separately (self-joins can be unreliable in Supabase)
+  let sourceRoutineName: string | null = null
+  let sourceRoutineIsOfficial: boolean = false
+  if (routine.source_routine_id) {
+    const { data: sourceData } = await supabase
+      .from('routines')
+      .select('name, author_type')
+      .eq('id', routine.source_routine_id)
+      .single()
+    sourceRoutineName = sourceData?.name || null
+    sourceRoutineIsOfficial = sourceData?.author_type === 'official'
   }
 
-  return data
+  return {
+    ...routine,
+    creator_name: routine.profiles?.full_name,
+    creator_username: routine.profiles?.username,
+    creator_avatar: routine.profiles?.profile_picture_url,
+    source_routine_name: sourceRoutineName,
+    source_routine_is_official: sourceRoutineIsOfficial,
+  }
 }
 
 export async function completeRoutine(userId: string, routineId: string, category: RoutineCategory) {

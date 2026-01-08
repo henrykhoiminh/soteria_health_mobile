@@ -37,7 +37,7 @@ export default function DraggableExerciseList({
 
   return (
     <View style={styles.container}>
-      {isEditMode && exercises.length > 1 && (
+      {exercises.length > 1 && (
         <TouchableOpacity
           style={[styles.reorderModeButton, reorderMode && styles.reorderModeButtonActive]}
           onPress={() => {
@@ -137,7 +137,7 @@ function ExerciseCard({
         )}
 
         {/* Default mode: Show edit time and delete buttons */}
-        {!reorderMode && isEditMode && (
+        {!reorderMode && (
           <>
             <TouchableOpacity
               onPress={() => onEdit(exercise)}
@@ -152,13 +152,6 @@ function ExerciseCard({
               <Ionicons name="trash-outline" size={24} color={AppColors.destructive} />
             </TouchableOpacity>
           </>
-        )}
-
-        {/* Non-edit mode: Show remove button */}
-        {!isEditMode && (
-          <TouchableOpacity onPress={() => onRemove(exercise.id)}>
-            <Ionicons name="close-circle" size={24} color={AppColors.destructive} />
-          </TouchableOpacity>
         )}
       </View>
     </View>

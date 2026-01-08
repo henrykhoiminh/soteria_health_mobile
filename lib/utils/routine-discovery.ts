@@ -98,6 +98,7 @@ export async function getSavedRoutines(userId: string): Promise<Routine[]> {
         save_count,
         author_type,
         official_author,
+        source_routine_id,
         profiles (
           full_name,
           username,
@@ -118,14 +119,31 @@ export async function getSavedRoutines(userId: string): Promise<Routine[]> {
     .map((item: any) => item.routines)
     .filter((routine: any) => routine !== null);
 
-  // Add is_saved flag and map profile data
-  return routines.map((routine: any) => ({
-    ...routine,
-    is_saved: true,
-    creator_name: routine.profiles?.full_name,
-    creator_username: routine.profiles?.username,
-    creator_avatar: routine.profiles?.profile_picture_url,
-  }));
+  // For saved routines with a source, we need to fetch the source name separately
+  // since nested self-joins through another table are complex in Supabase
+  const routinesWithSource = await Promise.all(
+    routines.map(async (routine: any) => {
+      let sourceName = null;
+      if (routine.source_routine_id) {
+        const { data: sourceData } = await supabase
+          .from('routines')
+          .select('name')
+          .eq('id', routine.source_routine_id)
+          .single();
+        sourceName = sourceData?.name || null;
+      }
+      return {
+        ...routine,
+        is_saved: true,
+        creator_name: routine.profiles?.full_name,
+        creator_username: routine.profiles?.username,
+        creator_avatar: routine.profiles?.profile_picture_url,
+        source_routine_name: sourceName,
+      };
+    })
+  );
+
+  return routinesWithSource;
 }
 
 // =====================================================
@@ -165,6 +183,7 @@ function buildDiscoverQuery(
       author_type,
       official_author,
       is_advanced,
+      source_routine_id,
       profiles (
         full_name,
         username,
@@ -306,6 +325,25 @@ export async function getDiscoverRoutines(
       });
     }
 
+    // Batch fetch source routine names (self-joins can be unreliable in Supabase)
+    const sourceRoutineIds = [...new Set(
+      routines
+        .map((r: any) => r.source_routine_id)
+        .filter((id: string | null) => id !== null)
+    )];
+
+    let sourceRoutineNames: Map<string, string> = new Map();
+    if (sourceRoutineIds.length > 0) {
+      const { data: sourceRoutines } = await supabase
+        .from('routines')
+        .select('id, name')
+        .in('id', sourceRoutineIds);
+
+      (sourceRoutines || []).forEach((sr: any) => {
+        sourceRoutineNames.set(sr.id, sr.name);
+      });
+    }
+
     // Process and format routines
     let processedRoutines = routines.map((routine: any) => {
       const badges = calculateBadges(routine);
@@ -340,6 +378,11 @@ export async function getDiscoverRoutines(
         creator_name: routine.profiles?.full_name,
         creator_username: routine.profiles?.username,
         creator_avatar: routine.profiles?.profile_picture_url,
+        // Source routine tracking for "Remix" feature
+        source_routine_id: routine.source_routine_id || null,
+        source_routine_name: routine.source_routine_id
+          ? sourceRoutineNames.get(routine.source_routine_id) || null
+          : null,
       };
     });
 
@@ -385,6 +428,7 @@ export async function getUserCustomRoutines(userId: string): Promise<Routine[]> 
       save_count,
       author_type,
       official_author,
+      source_routine_id,
       profiles (
         full_name,
         username,
@@ -400,17 +444,34 @@ export async function getUserCustomRoutines(userId: string): Promise<Routine[]> 
     throw new Error('Failed to load custom routines');
   }
 
-  return (data || []).map((routine: any) => ({
-    ...routine,
-    is_saved: false, // User's own routines don't show as "saved"
-    badge_popular: routine.completion_count > 100,
-    badge_trending: false,
-    badge_new: (new Date().getTime() - new Date(routine.created_at).getTime()) / (1000 * 60 * 60 * 24) <= 7,
-    badge_official: false,
-    creator_name: routine.profiles?.full_name,
-    creator_username: routine.profiles?.username,
-    creator_avatar: routine.profiles?.profile_picture_url,
-  }));
+  // Fetch source routine names separately (self-joins can be unreliable in Supabase)
+  const routinesWithSource = await Promise.all(
+    (data || []).map(async (routine: any) => {
+      let sourceName = null;
+      if (routine.source_routine_id) {
+        const { data: sourceData } = await supabase
+          .from('routines')
+          .select('name')
+          .eq('id', routine.source_routine_id)
+          .single();
+        sourceName = sourceData?.name || null;
+      }
+      return {
+        ...routine,
+        is_saved: false,
+        badge_popular: routine.completion_count > 100,
+        badge_trending: false,
+        badge_new: (new Date().getTime() - new Date(routine.created_at).getTime()) / (1000 * 60 * 60 * 24) <= 7,
+        badge_official: false,
+        creator_name: routine.profiles?.full_name,
+        creator_username: routine.profiles?.username,
+        creator_avatar: routine.profiles?.profile_picture_url,
+        source_routine_name: sourceName,
+      };
+    })
+  );
+
+  return routinesWithSource;
 }
 
 /**

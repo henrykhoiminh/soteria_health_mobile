@@ -94,6 +94,10 @@ export interface Routine {
   creator_avatar?: string
   // Harmony gating
   is_advanced?: boolean // Advanced routines require Harmony to access
+  // Source routine tracking (Clone & Customize feature)
+  source_routine_id?: string | null // ID of routine this was customized from (null = original)
+  source_routine_name?: string // Name of source routine (populated via join for display)
+  source_routine_is_official?: boolean // Whether the source routine is official
 }
 
 // Routine Discovery Types
@@ -257,6 +261,9 @@ export interface RoutineBuilderData {
   benefits?: string[] // Array of benefit strings (max 4, each 5-100 chars)
   // Harmony gating - only health team can set this
   is_advanced?: boolean // Advanced routines require Harmony to access
+  // Source routine tracking (Clone & Customize feature)
+  source_routine_id?: string | null // ID of routine this was customized from
+  source_exercises?: Exercise[] // Original exercises for change validation
 }
 
 // Journey Goals Types

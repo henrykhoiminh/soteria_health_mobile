@@ -4,10 +4,50 @@ import {
   JourneyFocus,
   JourneyFocusOption,
   RoutineBuilderData,
+  RoutineBuilderExercise,
   RoutineCategory,
   RoutineDifficulty
 } from '@/types'
 import { recordActivity } from './social'
+
+/**
+ * Compare exercises between source and new routine to detect meaningful changes.
+ * Returns true if there are changes to exercises (not just metadata).
+ *
+ * Changes that count:
+ * - Exercise added or removed (different count)
+ * - Exercise order changed (different name at same position)
+ * - Exercise duration changed
+ * - Different exercise (by name) at same position
+ */
+export function hasExerciseChanges(
+  sourceExercises: Exercise[],
+  newExercises: RoutineBuilderExercise[]
+): boolean {
+  // Different number of exercises = changed
+  if (sourceExercises.length !== newExercises.length) {
+    return true
+  }
+
+  // Compare each exercise by name and duration (order matters)
+  for (let i = 0; i < sourceExercises.length; i++) {
+    const source = sourceExercises[i]
+    const newEx = newExercises[i]
+
+    // Different exercise at this position = changed
+    if (source.name !== newEx.name) {
+      return true
+    }
+
+    // Different duration = changed
+    if (source.duration_seconds !== newEx.duration_seconds) {
+      return true
+    }
+  }
+
+  // No meaningful changes detected
+  return false
+}
 
 /**
  * Fetch all unique exercises from existing routines to populate the exercise library
@@ -72,12 +112,26 @@ async function getUserFullName(userId: string): Promise<string> {
 
 /**
  * Create and publish a custom routine or official routine (for Health Team)
+ * Supports "Clone & Customize" feature via source_routine_id
+ *
+ * @param userId - User creating the routine
+ * @param routineData - Routine data including optional source_routine_id and source_exercises
+ * @param isOfficialRoutine - Whether to create as official (Health Team only)
+ * @throws Error if customizing from source but no changes were made
  */
 export async function publishCustomRoutine(
   userId: string,
   routineData: RoutineBuilderData,
   isOfficialRoutine = false
 ): Promise<string> {
+  // Validate changes if this is a customization from an existing routine
+  if (routineData.source_routine_id && routineData.source_exercises) {
+    const hasChanges = hasExerciseChanges(routineData.source_exercises, routineData.exercises)
+    if (!hasChanges) {
+      throw new Error('CUSTOMIZATION_NO_CHANGES')
+    }
+  }
+
   // Convert journey focus from "Both" to array format
   let journeyFocusArray: JourneyFocus[]
   if (routineData.journeyFocus === 'Both') {
@@ -129,6 +183,8 @@ export async function publishCustomRoutine(
       body_parts: routineData.body_parts || [],
       // Harmony gating - only health team can set this
       is_advanced: shouldCreateOfficial ? (routineData.is_advanced || false) : false,
+      // Source tracking for "Clone & Customize" feature
+      source_routine_id: routineData.source_routine_id || null,
     })
     .select('id')
     .single()
@@ -142,6 +198,8 @@ export async function publishCustomRoutine(
       routine_id: data.id,
       routine_name: routineData.name,
       category: routineData.category,
+      // Include source info if this was a customization
+      ...(routineData.source_routine_id && { customized_from: routineData.source_routine_id }),
     })
   } catch (activityError) {
     // Don't fail the creation if activity recording fails

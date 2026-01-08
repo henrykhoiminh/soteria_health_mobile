@@ -67,6 +67,12 @@ export default function RoutineDetailScreen() {
     router.push(`/(tabs)/builder?editId=${routine.id}`);
   };
 
+  const handleCustomizeRoutine = () => {
+    if (!routine) return;
+    // Navigate to builder with customizeId to pre-populate with this routine's data
+    router.push(`/(tabs)/builder?customizeId=${routine.id}`);
+  };
+
   const handleDeleteRoutine = () => {
     if (!routine || !user) return;
 
@@ -175,6 +181,27 @@ export default function RoutineDetailScreen() {
             />
           </View>
 
+          {/* Source Attribution - Remix feature */}
+          {routine.source_routine_name && routine.source_routine_id && (
+            <View style={styles.sourceSection}>
+              <Text style={styles.authorLabel}>Remixed from</Text>
+              <TouchableOpacity
+                style={styles.sourceLink}
+                onPress={() => router.push(`/routines/${routine.source_routine_id}`)}
+              >
+                <Text style={styles.sourceLinkText}>
+                  {routine.source_routine_name}
+                </Text>
+                {routine.source_routine_is_official && (
+                  <View style={styles.officialBadge}>
+                    <Ionicons name="checkmark-circle" size={14} color="#10B981" />
+                    <Text style={styles.officialBadgeText}>Official</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            </View>
+          )}
+
           <View style={styles.infoRow}>
             <View style={styles.infoItem}>
               <Ionicons name="time-outline" size={20} color={AppColors.textSecondary} />
@@ -231,16 +258,27 @@ export default function RoutineDetailScreen() {
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      {/* Footer with Start Button */}
+      {/* Footer with Start and Customize Buttons */}
       <View style={styles.footer}>
         <TouchableOpacity
           style={styles.startButton}
           onPress={handleStartRoutine}
           disabled={!user}
         >
-          <Ionicons name="play" size={24} color={AppColors.textPrimary} />
+          <Ionicons name="play" size={24} color={AppColors.primaryText} />
           <Text style={styles.startButtonText}>Start Routine</Text>
         </TouchableOpacity>
+
+        {/* Customize Button - allows users to create their own version */}
+        {user && (
+          <TouchableOpacity
+            style={styles.customizeButton}
+            onPress={handleCustomizeRoutine}
+          >
+            <Ionicons name="copy-outline" size={20} color={AppColors.primary} />
+            <Text style={styles.customizeButtonText}>Remix This Routine</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -354,6 +392,33 @@ const styles = StyleSheet.create({
     color: AppColors.textSecondary,
     lineHeight: 24,
     marginBottom: 16,
+  },
+  sourceSection: {
+    marginBottom: 20,
+  },
+  sourceLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  sourceLinkText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: AppColors.primary,
+  },
+  officialBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+  },
+  officialBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#10B981',
   },
   authorSection: {
     marginBottom: 20,
@@ -472,8 +537,25 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   startButtonText: {
-    color: AppColors.textPrimary,
+    color: AppColors.primaryText,
     fontSize: 18,
+    fontWeight: '600',
+  },
+  customizeButton: {
+    backgroundColor: 'transparent',
+    borderRadius: 12,
+    padding: 14,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: AppColors.primary,
+  },
+  customizeButtonText: {
+    color: AppColors.primary,
+    fontSize: 16,
     fontWeight: '600',
   },
   advancedBadge: {

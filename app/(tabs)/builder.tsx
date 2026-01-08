@@ -57,7 +57,7 @@ type BuildMode = 'select' | 'routine' | 'exercise';
 export default function RoutineBuilderScreen() {
   const { user, profile } = useAuth();
   const router = useRouter();
-  const { editId } = useLocalSearchParams<{ editId?: string }>();
+  const { editId, customizeId } = useLocalSearchParams<{ editId?: string; customizeId?: string }>();
 
   const [buildMode, setBuildMode] = useState<BuildMode>('select');
   const [currentStep, setCurrentStep] = useState<BuilderStep>('exercises');
@@ -70,6 +70,8 @@ export default function RoutineBuilderScreen() {
   const [checkingHealthTeam, setCheckingHealthTeam] = useState(true); // Loading state for health team check
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [selectedRoutineType, setSelectedRoutineType] = useState<'official' | 'community' | null>(null);
+  const [isCustomizeMode, setIsCustomizeMode] = useState(false);
+  const [sourceRoutineName, setSourceRoutineName] = useState<string | null>(null);
 
   // Exercise library state
   const [exerciseEditorVisible, setExerciseEditorVisible] = useState(false);
@@ -94,16 +96,18 @@ export default function RoutineBuilderScreen() {
     checkHealthTeamStatus();
     if (editId) {
       loadRoutineForEditing(editId);
+    } else if (customizeId) {
+      loadRoutineForCustomization(customizeId);
     }
-  }, [editId]);
+  }, [editId, customizeId]);
 
-  // Reset to mode selection when tab gains focus (unless editing)
+  // Reset to mode selection when tab gains focus (unless editing or customizing)
   useFocusEffect(
     useCallback(() => {
-      if (!editId) {
+      if (!editId && !customizeId) {
         setBuildMode('select');
       }
-    }, [editId])
+    }, [editId, customizeId])
   );
 
   const checkHealthTeamStatus = async () => {
@@ -115,8 +119,8 @@ export default function RoutineBuilderScreen() {
     const healthTeamStatus = await isHealthTeamMember(user.id);
     setIsHealthTeam(healthTeamStatus);
 
-    // Only skip mode selection when editing a specific routine
-    if (editId) {
+    // Skip mode selection when editing or customizing a specific routine
+    if (editId || customizeId) {
       setBuildMode('routine');
     }
     // All users see mode selection screen first
@@ -220,6 +224,70 @@ export default function RoutineBuilderScreen() {
     }
   };
 
+  /**
+   * Load a routine for customization (Clone & Customize feature)
+   * Pre-populates builder with source routine data but creates a NEW routine
+   */
+  const loadRoutineForCustomization = async (routineId: string) => {
+    try {
+      setLoading(true);
+      const routine = await getRoutineById(routineId);
+
+      if (!routine || !user) {
+        Alert.alert('Error', 'Routine not found');
+        return;
+      }
+
+      // Convert routine to builder format
+      const journeyFocus: JourneyFocusOption =
+        routine.journey_focus.length === 2
+          ? 'Both'
+          : (routine.journey_focus[0] as JourneyFocusOption);
+
+      // Create exercises with new temp IDs
+      const exercises: RoutineBuilderExercise[] = routine.exercises.map((ex, index) => ({
+        ...ex,
+        id: `${Date.now()}-${index}`,
+      }));
+
+      // Store the original exercises for change validation
+      const sourceExercises = routine.exercises.map(ex => ({ ...ex }));
+
+      setRoutineData({
+        name: '', // Clear name - user must provide new name
+        description: '', // Clear description - user should customize
+        category: routine.category,
+        difficulty: routine.difficulty,
+        journeyFocus,
+        exercises,
+        body_parts: routine.body_parts || [],
+        benefits: routine.benefits || [],
+        is_advanced: false, // Reset - only health team can set this
+        // Source tracking for validation
+        source_routine_id: routineId,
+        source_exercises: sourceExercises,
+      });
+
+      setIsCustomizeMode(true);
+      setSourceRoutineName(routine.name);
+      setIsEditMode(false); // This is a NEW routine, not editing
+      setEditingRoutineId(null);
+      setCurrentStep('exercises');
+
+      // Show info about customization
+      Alert.alert(
+        'Customize Routine',
+        `You're creating a new routine based on "${routine.name}".\n\nMake at least one change to the exercises (add, remove, reorder, or change duration) to save your customized version.`,
+        [{ text: 'Got it' }]
+      );
+    } catch (error) {
+      console.error('Error loading routine for customization:', error);
+      Alert.alert('Error', 'Failed to load routine');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleReset = () => {
     Alert.alert(
       'Start Over?',
@@ -242,6 +310,9 @@ export default function RoutineBuilderScreen() {
               is_advanced: false,
             });
             setCurrentStep('exercises');
+            // Clear customization state
+            setIsCustomizeMode(false);
+            setSourceRoutineName(null);
           },
         },
       ]
@@ -499,14 +570,27 @@ export default function RoutineBuilderScreen() {
                   is_advanced: false,
                 });
                 setCurrentStep('exercises');
+                // Clear customization state
+                setIsCustomizeMode(false);
+                setSourceRoutineName(null);
               },
             },
           ]
         );
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error publishing/updating routine:', error);
-      Alert.alert('Error', `Failed to ${isEditMode ? 'update' : 'publish'} routine. Please try again.`);
+
+      // Handle specific error for customization without changes
+      if (error?.message === 'CUSTOMIZATION_NO_CHANGES') {
+        Alert.alert(
+          'No Changes Made',
+          'To create a customized routine, you need to make at least one change to the exercises.\n\nTry:\n• Adding or removing an exercise\n• Changing an exercise duration\n• Reordering the exercises',
+          [{ text: 'OK' }]
+        );
+      } else {
+        Alert.alert('Error', `Failed to ${isEditMode ? 'update' : 'publish'} routine. Please try again.`);
+      }
     } finally {
       setLoading(false);
       setShowPublishModal(false);

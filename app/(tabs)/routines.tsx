@@ -514,6 +514,7 @@ function RoutineCard({
   compact,
   isInHarmony = false,
 }: RoutineCardProps) {
+  const router = useRouter();
   const isLocked = routine.is_advanced && !isInHarmony;
 
   const handlePress = () => {
@@ -574,6 +575,21 @@ function RoutineCard({
           </View>
         )}
       </View>
+
+      {/* Source Attribution - Clone & Customize feature */}
+      {!compact && routine.source_routine_name && routine.source_routine_id && (
+        <TouchableOpacity
+          style={styles.sourceLink}
+          onPress={(e) => {
+            e.stopPropagation();
+            router.push(`/routines/${routine.source_routine_id}`);
+          }}
+        >
+          <Text style={styles.sourceLinkText}>
+            Based on {routine.source_routine_name}
+          </Text>
+        </TouchableOpacity>
+      )}
 
       {/* Description */}
       {!compact && (
@@ -1228,6 +1244,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: AppColors.textSecondary,
     marginBottom: 8,
+  },
+  sourceLink: {
+    marginBottom: 6,
+  },
+  sourceLinkText: {
+    fontSize: 12,
+    color: AppColors.textTertiary,
+    fontStyle: 'italic',
   },
   authorBadgeContainer: {
     marginBottom: 10,
