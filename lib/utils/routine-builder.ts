@@ -119,7 +119,7 @@ export async function publishCustomRoutine(
       is_custom: !shouldCreateOfficial, // Official routines are not custom
       author_type: shouldCreateOfficial ? 'official' : 'community',
       official_author: officialAuthor,
-      is_public: shouldCreateOfficial ? true : undefined, // Official routines always public
+      is_public: true, // All routines are public by default (can be made private later)
       created_by: userId,
       completion_count: 0,
       benefits: routineData.benefits || [], // Array of benefit strings

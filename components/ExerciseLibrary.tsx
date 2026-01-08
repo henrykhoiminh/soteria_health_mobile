@@ -15,6 +15,8 @@ import {
   TextInput,
   ActivityIndicator,
   Alert,
+  Modal,
+  ScrollView,
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import type { ExerciseLibraryItem, RoutineCategory, RoutineDifficulty } from '../types'
@@ -30,6 +32,10 @@ interface ExerciseLibraryProps {
   allowSelection?: boolean
   allowEditing?: boolean
   allowDeleting?: boolean
+  /** Current user ID - needed to determine edit/delete permissions */
+  userId?: string
+  /** Whether current user is health_team or admin */
+  isHealthTeam?: boolean
 }
 
 export default function ExerciseLibrary({
@@ -41,13 +47,35 @@ export default function ExerciseLibrary({
   allowSelection = true,
   allowEditing = false,
   allowDeleting = false,
+  userId,
+  isHealthTeam = false,
 }: ExerciseLibraryProps) {
+
+  /**
+   * Check if user can edit/delete a specific exercise
+   * - Health team/admin can edit any exercise
+   * - Regular users can only edit exercises they created (not official ones)
+   */
+  const canModifyExercise = (exercise: ExerciseLibraryItem): boolean => {
+    if (isHealthTeam) {
+      return true // Health team can edit anything
+    }
+    // Regular users can only edit their own non-official exercises
+    return !exercise.is_official && exercise.created_by === userId
+  }
+
   const [exercises, setExercises] = useState<ExerciseLibraryItem[]>([])
   const [filteredExercises, setFilteredExercises] = useState<ExerciseLibraryItem[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<RoutineCategory | undefined>(category)
   const [selectedDifficulty, setSelectedDifficulty] = useState<RoutineDifficulty | undefined>()
+  const [selectedOwnership, setSelectedOwnership] = useState<'all' | 'official' | 'mine' | 'community'>('all')
+
+  // Dropdown modal state
+  const [categoryModalVisible, setCategoryModalVisible] = useState(false)
+  const [difficultyModalVisible, setDifficultyModalVisible] = useState(false)
+  const [ownershipModalVisible, setOwnershipModalVisible] = useState(false)
 
   // Load exercises
   useEffect(() => {
@@ -74,8 +102,25 @@ export default function ExerciseLibrary({
       filtered = filtered.filter((ex) => ex.difficulty === selectedDifficulty)
     }
 
+    // Ownership filter
+    if (selectedOwnership !== 'all') {
+      filtered = filtered.filter((ex) => {
+        switch (selectedOwnership) {
+          case 'official':
+            return ex.is_official === true
+          case 'mine':
+            return ex.created_by === userId
+          case 'community':
+            // Community = all non-official exercises (including user's own)
+            return !ex.is_official
+          default:
+            return true
+        }
+      })
+    }
+
     setFilteredExercises(filtered)
-  }, [exercises, searchQuery, selectedDifficulty])
+  }, [exercises, searchQuery, selectedDifficulty, selectedOwnership, userId])
 
   const loadExercises = async () => {
     setLoading(true)
@@ -127,80 +172,89 @@ export default function ExerciseLibrary({
     'Advanced',
   ]
 
-  const renderExerciseCard = ({ item }: { item: ExerciseLibraryItem }) => (
-    <TouchableOpacity
-      style={styles.exerciseCard}
-      onPress={() => allowSelection && onSelectExercise?.(item)}
-      disabled={!allowSelection}
-    >
-      <View style={styles.exerciseHeader}>
-        <View style={styles.exerciseInfo}>
-          <Text style={styles.exerciseName}>{item.name}</Text>
-          <Text style={styles.exerciseDescription} numberOfLines={2}>
-            {item.description}
-          </Text>
-        </View>
-        {(allowEditing || allowDeleting) && (
-          <View style={styles.actionButtons}>
-            {allowEditing && onEditExercise && (
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={() => onEditExercise(item)}
-              >
-                <Ionicons name="create-outline" size={24} color={AppColors.primary} />
-              </TouchableOpacity>
-            )}
-            {allowDeleting && (
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={() => handleDeleteExercise(item)}
-              >
-                <Ionicons name="trash-outline" size={24} color={AppColors.destructive} />
-              </TouchableOpacity>
-            )}
-          </View>
-        )}
-      </View>
+  const renderExerciseCard = ({ item }: { item: ExerciseLibraryItem }) => {
+    const canModify = canModifyExercise(item)
+    const showEditButton = allowEditing && canModify && onEditExercise
+    const showDeleteButton = allowDeleting && canModify
 
-      <View style={styles.exerciseMeta}>
-        <View style={styles.metaRow}>
-          <View style={[styles.badge, styles.categoryBadge]}>
-            <Text style={styles.badgeText}>{item.category}</Text>
+    return (
+      <TouchableOpacity
+        style={styles.exerciseCard}
+        onPress={() => allowSelection && onSelectExercise?.(item)}
+        disabled={!allowSelection}
+      >
+        <View style={styles.exerciseHeader}>
+          <View style={styles.exerciseInfo}>
+            <Text style={styles.exerciseName}>{item.name}</Text>
+            <Text style={styles.exerciseDescription} numberOfLines={2}>
+              {item.description}
+            </Text>
           </View>
-          <View style={[styles.badge, styles.difficultyBadge]}>
-            <Text style={styles.badgeText}>{item.difficulty}</Text>
+          {(showEditButton || showDeleteButton) && (
+            <View style={styles.actionButtons}>
+              {showEditButton && (
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={() => onEditExercise(item)}
+                >
+                  <Ionicons name="create-outline" size={24} color={AppColors.primary} />
+                </TouchableOpacity>
+              )}
+              {showDeleteButton && (
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={() => handleDeleteExercise(item)}
+                >
+                  <Ionicons name="trash-outline" size={24} color={AppColors.destructive} />
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+        </View>
+
+        <View style={styles.exerciseMeta}>
+          {/* Author indicator - first */}
+          {item.is_official ? (
+            <View style={styles.officialBadge}>
+              <Ionicons name="checkmark-circle" size={12} color={AppColors.success} />
+              <Text style={styles.officialText}>Official</Text>
+            </View>
+          ) : item.created_by ? (
+            <View style={styles.communityBadge}>
+              <Text style={styles.communityText}>
+                {item.created_by === userId ? 'You' : 'Community'}
+              </Text>
+            </View>
+          ) : null}
+          {/* Category - second */}
+          <View style={[styles.categoryBadge, getCategoryStyle(item.category)]}>
+            <Text style={styles.categoryText}>{item.category}</Text>
           </View>
+          {/* Duration - third */}
           <View style={styles.durationContainer}>
-            <Ionicons name="time-outline" size={16} color={AppColors.textSecondary} />
+            <Ionicons name="time-outline" size={14} color={AppColors.textSecondary} />
             <Text style={styles.durationText}>
               {Math.floor(item.default_duration_seconds / 60)}:
               {String(item.default_duration_seconds % 60).padStart(2, '0')}
             </Text>
           </View>
         </View>
+      </TouchableOpacity>
+    )
+  }
 
-        {item.is_official && (
-          <View style={styles.officialBadge}>
-            <Ionicons name="checkmark-circle" size={16} color={AppColors.success} />
-            <Text style={styles.officialText}>Official</Text>
-          </View>
-        )}
-
-        {item.body_parts && item.body_parts.length > 0 && (
-          <View style={styles.tagsContainer}>
-            {item.body_parts.slice(0, 3).map((part, index) => (
-              <View key={index} style={styles.tag}>
-                <Text style={styles.tagText}>{part}</Text>
-              </View>
-            ))}
-            {item.body_parts.length > 3 && (
-              <Text style={styles.moreText}>+{item.body_parts.length - 3} more</Text>
-            )}
-          </View>
-        )}
-      </View>
-    </TouchableOpacity>
-  )
+  const getCategoryStyle = (cat: RoutineCategory) => {
+    switch (cat) {
+      case 'Mind':
+        return { backgroundColor: AppColors.mind + '20' }
+      case 'Body':
+        return { backgroundColor: AppColors.body + '20' }
+      case 'Soul':
+        return { backgroundColor: AppColors.soul + '20' }
+      default:
+        return { backgroundColor: AppColors.primary + '20' }
+    }
+  }
 
   return (
     <View style={styles.container}>
@@ -214,60 +268,60 @@ export default function ExerciseLibrary({
           onChangeText={setSearchQuery}
           placeholderTextColor={AppColors.textSecondary}
         />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity onPress={() => setSearchQuery('')}>
+            <Ionicons name="close-circle" size={20} color={AppColors.textSecondary} />
+          </TouchableOpacity>
+        )}
       </View>
 
-      {/* Category Filter */}
-      {!category && (
-        <View style={styles.filterRow}>
-          <Text style={styles.filterLabel}>Category:</Text>
-          <View style={styles.filterButtons}>
-            {categories.map((cat) => (
-              <TouchableOpacity
-                key={cat || 'all'}
-                style={[
-                  styles.filterButton,
-                  selectedCategory === cat && styles.filterButtonActive,
-                ]}
-                onPress={() => setSelectedCategory(cat)}
-              >
-                <Text
-                  style={[
-                    styles.filterButtonText,
-                    selectedCategory === cat && styles.filterButtonTextActive,
-                  ]}
-                >
-                  {cat || 'All'}
-                </Text>
-              </TouchableOpacity>
-            ))}
+      {/* Filter Dropdowns */}
+      <View style={styles.filtersRow}>
+        {/* Created By Dropdown */}
+        <TouchableOpacity
+          style={styles.dropdown}
+          onPress={() => setOwnershipModalVisible(true)}
+        >
+          <Text style={styles.dropdownLabel}>Created By</Text>
+          <View style={styles.dropdownValue}>
+            <Text style={styles.dropdownValueText}>
+              {selectedOwnership === 'all' ? 'All' :
+               selectedOwnership === 'official' ? 'Official' :
+               selectedOwnership === 'mine' ? 'My Exercises' : 'Community'}
+            </Text>
+            <Ionicons name="chevron-down" size={16} color={AppColors.textSecondary} />
           </View>
-        </View>
-      )}
+        </TouchableOpacity>
 
-      {/* Difficulty Filter */}
-      <View style={styles.filterRow}>
-        <Text style={styles.filterLabel}>Difficulty:</Text>
-        <View style={styles.filterButtons}>
-          {difficulties.map((diff) => (
-            <TouchableOpacity
-              key={diff || 'all'}
-              style={[
-                styles.filterButton,
-                selectedDifficulty === diff && styles.filterButtonActive,
-              ]}
-              onPress={() => setSelectedDifficulty(diff)}
-            >
-              <Text
-                style={[
-                  styles.filterButtonText,
-                  selectedDifficulty === diff && styles.filterButtonTextActive,
-                ]}
-              >
-                {diff || 'All'}
+        {/* Category Dropdown */}
+        {!category && (
+          <TouchableOpacity
+            style={styles.dropdown}
+            onPress={() => setCategoryModalVisible(true)}
+          >
+            <Text style={styles.dropdownLabel}>Category</Text>
+            <View style={styles.dropdownValue}>
+              <Text style={styles.dropdownValueText}>
+                {selectedCategory || 'All'}
               </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+              <Ionicons name="chevron-down" size={16} color={AppColors.textSecondary} />
+            </View>
+          </TouchableOpacity>
+        )}
+
+        {/* Difficulty Dropdown */}
+        <TouchableOpacity
+          style={styles.dropdown}
+          onPress={() => setDifficultyModalVisible(true)}
+        >
+          <Text style={styles.dropdownLabel}>Difficulty</Text>
+          <View style={styles.dropdownValue}>
+            <Text style={styles.dropdownValueText}>
+              {selectedDifficulty || 'All'}
+            </Text>
+            <Ionicons name="chevron-down" size={16} color={AppColors.textSecondary} />
+          </View>
+        </TouchableOpacity>
       </View>
 
       {/* Results Count */}
@@ -296,6 +350,146 @@ export default function ExerciseLibrary({
           }
         />
       )}
+
+      {/* Category Modal */}
+      <Modal
+        visible={categoryModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setCategoryModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setCategoryModalVisible(false)}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Select Category</Text>
+            <ScrollView>
+              {categories.map((cat) => (
+                <TouchableOpacity
+                  key={cat || 'all'}
+                  style={[
+                    styles.modalOption,
+                    selectedCategory === cat && styles.modalOptionActive,
+                  ]}
+                  onPress={() => {
+                    setSelectedCategory(cat)
+                    setCategoryModalVisible(false)
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.modalOptionText,
+                      selectedCategory === cat && styles.modalOptionTextActive,
+                    ]}
+                  >
+                    {cat || 'All Categories'}
+                  </Text>
+                  {selectedCategory === cat && (
+                    <Ionicons name="checkmark" size={20} color={AppColors.primary} />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Difficulty Modal */}
+      <Modal
+        visible={difficultyModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDifficultyModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setDifficultyModalVisible(false)}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Select Difficulty</Text>
+            <ScrollView>
+              {difficulties.map((diff) => (
+                <TouchableOpacity
+                  key={diff || 'all'}
+                  style={[
+                    styles.modalOption,
+                    selectedDifficulty === diff && styles.modalOptionActive,
+                  ]}
+                  onPress={() => {
+                    setSelectedDifficulty(diff)
+                    setDifficultyModalVisible(false)
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.modalOptionText,
+                      selectedDifficulty === diff && styles.modalOptionTextActive,
+                    ]}
+                  >
+                    {diff || 'All Difficulties'}
+                  </Text>
+                  {selectedDifficulty === diff && (
+                    <Ionicons name="checkmark" size={20} color={AppColors.primary} />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Ownership Modal */}
+      <Modal
+        visible={ownershipModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setOwnershipModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setOwnershipModalVisible(false)}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Created By</Text>
+            <ScrollView>
+              {([
+                { value: 'all', label: 'All Exercises' },
+                { value: 'official', label: 'Official' },
+                { value: 'mine', label: 'My Exercises' },
+                { value: 'community', label: 'Community' },
+              ] as const).map((option) => (
+                <TouchableOpacity
+                  key={option.value}
+                  style={[
+                    styles.modalOption,
+                    selectedOwnership === option.value && styles.modalOptionActive,
+                  ]}
+                  onPress={() => {
+                    setSelectedOwnership(option.value)
+                    setOwnershipModalVisible(false)
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.modalOptionText,
+                      selectedOwnership === option.value && styles.modalOptionTextActive,
+                    ]}
+                  >
+                    {option.label}
+                  </Text>
+                  {selectedOwnership === option.value && (
+                    <Ionicons name="checkmark" size={20} color={AppColors.primary} />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   )
 }
@@ -311,7 +505,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    marginBottom: 16,
+    marginBottom: 12,
     gap: 8,
   },
   searchInput: {
@@ -319,39 +513,36 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: AppColors.textPrimary,
   },
-  filterRow: {
-    marginBottom: 16,
-  },
-  filterLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: AppColors.textPrimary,
-    marginBottom: 8,
-  },
-  filterButtons: {
+  filtersRow: {
     flexDirection: 'row',
-    gap: 8,
     flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
   },
-  filterButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+  dropdown: {
+    minWidth: 100,
+    flexGrow: 1,
+    flexBasis: '30%',
     backgroundColor: AppColors.surface,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: AppColors.borderLight,
+    padding: 10,
   },
-  filterButtonActive: {
-    backgroundColor: AppColors.primary,
-    borderColor: AppColors.primary,
-  },
-  filterButtonText: {
-    fontSize: 14,
+  dropdownLabel: {
+    fontSize: 12,
     color: AppColors.textSecondary,
+    marginBottom: 4,
   },
-  filterButtonTextActive: {
-    color: AppColors.primaryText,
-    fontWeight: '600',
+  dropdownValue: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  dropdownValueText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: AppColors.textPrimary,
   },
   resultsCount: {
     fontSize: 14,
@@ -377,7 +568,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   exerciseName: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     color: AppColors.textPrimary,
     marginBottom: 4,
@@ -396,25 +587,16 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   exerciseMeta: {
-    gap: 8,
-  },
-  metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 12,
   },
-  badge: {
-    paddingHorizontal: 12,
+  categoryBadge: {
+    paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
   },
-  categoryBadge: {
-    backgroundColor: AppColors.primary + '20',
-  },
-  difficultyBadge: {
-    backgroundColor: AppColors.textSecondary + '20',
-  },
-  badgeText: {
+  categoryText: {
     fontSize: 12,
     fontWeight: '600',
     color: AppColors.textPrimary,
@@ -425,39 +607,36 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   durationText: {
-    fontSize: 14,
+    fontSize: 13,
     color: AppColors.textSecondary,
   },
   officialBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    backgroundColor: AppColors.success + '15',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
   },
   officialText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     color: AppColors.success,
   },
-  tagsContainer: {
+  communityBadge: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
     alignItems: 'center',
-  },
-  tag: {
-    backgroundColor: AppColors.borderLight,
+    gap: 4,
+    backgroundColor: AppColors.textSecondary + '15',
     paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
   },
-  tagText: {
+  communityText: {
     fontSize: 11,
+    fontWeight: '500',
     color: AppColors.textSecondary,
-  },
-  moreText: {
-    fontSize: 11,
-    color: AppColors.textSecondary,
-    fontStyle: 'italic',
   },
   loadingContainer: {
     flex: 1,
@@ -479,5 +658,47 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: AppColors.textSecondary,
     marginTop: 4,
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalContent: {
+    backgroundColor: AppColors.surface,
+    borderRadius: 16,
+    width: '100%',
+    maxWidth: 320,
+    maxHeight: '50%',
+    padding: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: AppColors.textPrimary,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  modalOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
+  modalOptionActive: {
+    backgroundColor: AppColors.primary + '15',
+  },
+  modalOptionText: {
+    fontSize: 16,
+    color: AppColors.textPrimary,
+  },
+  modalOptionTextActive: {
+    color: AppColors.primary,
+    fontWeight: '600',
   },
 })

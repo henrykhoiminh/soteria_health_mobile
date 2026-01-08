@@ -5,23 +5,38 @@
  * Used by health team members
  */
 
-import React, { useState, useEffect } from 'react'
+import { Ionicons } from '@expo/vector-icons'
+import { ResizeMode, Video } from 'expo-av'
+import * as ImagePicker from 'expo-image-picker'
+import React, { useEffect, useState } from 'react'
+
+// Video compression is only available in development builds, not Expo Go
+let VideoCompressor: any = null
+try {
+  VideoCompressor = require('react-native-compressor').Video
+} catch {
+  // react-native-compressor not available (Expo Go)
+  console.log('Video compression not available - using Expo Go')
+}
 import {
-  View,
-  Text,
-  StyleSheet,
+  ActivityIndicator,
+  Alert,
   Modal,
   ScrollView,
+  StyleSheet,
+  Text,
   TextInput,
   TouchableOpacity,
-  Alert,
-  ActivityIndicator,
+  View,
 } from 'react-native'
-import { Ionicons } from '@expo/vector-icons'
-import type { ExerciseLibraryItem, RoutineCategory, RoutineDifficulty, BodyRegion } from '../types'
-import { createExercise, updateExercise } from '../lib/utils/exercises'
-import { UPPER_BODY_AREAS, LOWER_BODY_AREAS } from '../types'
 import { AppColors } from '../constants/theme'
+import {
+  uploadExerciseVideo,
+  validateFileSize,
+} from '../lib/utils/exercise-media'
+import { createExercise, updateExercise } from '../lib/utils/exercises'
+import type { BodyRegion, ExerciseLibraryItem, RoutineCategory, RoutineDifficulty } from '../types'
+import { LOWER_BODY_AREAS, UPPER_BODY_AREAS } from '../types'
 
 interface ExerciseEditorModalProps {
   visible: boolean
@@ -56,6 +71,14 @@ export default function ExerciseEditorModal({
   const [bodyPartsModalVisible, setBodyPartsModalVisible] = useState(false)
   const [bodyRegionFilter, setBodyRegionFilter] = useState<BodyRegion>('All')
 
+  // Demo video state
+  const [demoVideoUri, setDemoVideoUri] = useState<string | null>(null)
+  const [demoVideoSizeMB, setDemoVideoSizeMB] = useState<number | null>(null)
+  const [existingVideoUrl, setExistingVideoUrl] = useState<string | null>(null)
+  const [uploadingVideo, setUploadingVideo] = useState(false)
+  const [compressingVideo, setCompressingVideo] = useState(false)
+  const [compressionProgress, setCompressionProgress] = useState(0)
+
   const isEditing = !!exercise
 
   // Load exercise data when editing
@@ -74,6 +97,10 @@ export default function ExerciseEditorModal({
       setTags(exercise.tags || [])
       setIsOfficial(exercise.is_official)
       setRequiresEquipment(exercise.requires_equipment)
+      // Load existing demo video URL
+      setExistingVideoUrl(exercise.demo_video_url || null)
+      setDemoVideoUri(null)
+      setDemoVideoSizeMB(null)
     } else {
       // Reset for new exercise
       setName('')
@@ -88,6 +115,10 @@ export default function ExerciseEditorModal({
       setTagInput('')
       setIsOfficial(isHealthTeam)
       setRequiresEquipment(false)
+      // Reset demo video
+      setDemoVideoUri(null)
+      setDemoVideoSizeMB(null)
+      setExistingVideoUrl(null)
     }
   }, [exercise, isHealthTeam])
 
@@ -122,6 +153,25 @@ export default function ExerciseEditorModal({
     setSaving(true)
 
     try {
+      // Generate a temp ID for new exercises (will be replaced by actual ID after creation)
+      const tempId = isEditing && exercise ? exercise.id : `new-${Date.now()}`
+
+      // Upload new video if selected
+      let finalVideoUrl = existingVideoUrl
+
+      if (demoVideoUri) {
+        setUploadingVideo(true)
+        try {
+          finalVideoUrl = await uploadExerciseVideo(tempId, demoVideoUri)
+        } catch (uploadError: any) {
+          Alert.alert('Upload Error', uploadError.message || 'Failed to upload video')
+          setSaving(false)
+          setUploadingVideo(false)
+          return
+        }
+        setUploadingVideo(false)
+      }
+
       const exerciseData = {
         name: name.trim(),
         description: description.trim(),
@@ -134,6 +184,7 @@ export default function ExerciseEditorModal({
         is_official: isOfficial,
         is_public: true,
         requires_equipment: requiresEquipment,
+        demo_video_url: finalVideoUrl || undefined,
       }
 
       let result
@@ -160,6 +211,7 @@ export default function ExerciseEditorModal({
       )
     } finally {
       setSaving(false)
+      setUploadingVideo(false)
     }
   }
 
@@ -195,6 +247,163 @@ export default function ExerciseEditorModal({
 
   const removeTag = (tag: string) => {
     setTags(tags.filter((t) => t !== tag))
+  }
+
+  // Process video after selection (shared by record and library pick)
+  const processSelectedVideo = async (originalUri: string) => {
+    try {
+      // Check original file size
+      const originalValidation = await validateFileSize(originalUri, 500) // Allow checking up to 500MB
+      const originalSizeMB = originalValidation.sizeMB
+
+      // If video is over 30MB and compression is available, compress it
+      if (originalSizeMB > 30 && VideoCompressor) {
+        setCompressingVideo(true)
+        setCompressionProgress(0)
+
+        try {
+          const compressedUri = await VideoCompressor.compress(
+            originalUri,
+            {
+              compressionMethod: 'auto',
+              maxSize: 720, // Max dimension 720p for demo videos
+              minimumFileSizeForCompress: 10, // Only compress if over 10MB
+            },
+            (progress: number) => {
+              setCompressionProgress(progress)
+            }
+          )
+
+          setCompressingVideo(false)
+
+          // Validate compressed file size
+          const validation = await validateFileSize(compressedUri, 100)
+          if (!validation.valid) {
+            Alert.alert(
+              'Video Still Too Large',
+              `After compression, the video is ${validation.sizeMB.toFixed(1)}MB (was ${originalSizeMB.toFixed(1)}MB).\n\nPlease record a shorter video.`
+            )
+            return
+          }
+
+          setDemoVideoUri(compressedUri)
+          setDemoVideoSizeMB(validation.sizeMB)
+
+          // Show compression result
+          if (originalSizeMB > validation.sizeMB * 1.5) {
+            Alert.alert(
+              'Video Compressed',
+              `Reduced from ${originalSizeMB.toFixed(1)}MB to ${validation.sizeMB.toFixed(1)}MB`
+            )
+          }
+        } catch (compressionError) {
+          setCompressingVideo(false)
+          console.error('Compression error:', compressionError)
+          Alert.alert('Compression Failed', 'Could not compress the video. Please try a different video.')
+        }
+      } else {
+        // Video compression not available or video is small enough - use as-is
+        const validation = await validateFileSize(originalUri, 100)
+        if (!validation.valid) {
+          const message = VideoCompressor
+            ? `Your video is ${validation.sizeMB.toFixed(1)}MB but the maximum allowed size is 100MB.\n\nPlease select a shorter or lower resolution video.`
+            : `Your video is ${validation.sizeMB.toFixed(1)}MB but the maximum allowed size is 100MB.\n\nVideo compression requires a development build. Please select a smaller video or run: eas build --profile development-device --platform ios`
+          Alert.alert('Video Too Large', message)
+          return
+        }
+        setDemoVideoUri(originalUri)
+        setDemoVideoSizeMB(validation.sizeMB)
+      }
+    } catch (error) {
+      setCompressingVideo(false)
+      console.error('Error processing video:', error)
+      Alert.alert('Error', 'Failed to process video')
+    }
+  }
+
+  // Record video with camera
+  const handleRecordVideo = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync()
+
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Required',
+          'Please allow access to your camera to record demo videos.'
+        )
+        return
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['videos'],
+        allowsEditing: false,
+        quality: 0.8,
+        videoMaxDuration: 120, // 2 minute max for demo videos
+      })
+
+      if (!result.canceled && result.assets[0]) {
+        await processSelectedVideo(result.assets[0].uri)
+      }
+    } catch (error) {
+      console.error('Error recording video:', error)
+      Alert.alert('Error', 'Failed to record video')
+    }
+  }
+
+  // Pick video from library
+  const handlePickFromLibrary = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
+
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Required',
+          'Please allow access to your photo library to add demo videos.'
+        )
+        return
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['videos'],
+        allowsEditing: false,
+        quality: 0.8,
+      })
+
+      if (!result.canceled && result.assets[0]) {
+        await processSelectedVideo(result.assets[0].uri)
+      }
+    } catch (error) {
+      console.error('Error picking video:', error)
+      Alert.alert('Error', 'Failed to select video')
+    }
+  }
+
+  // Show video source options
+  const handleAddVideo = () => {
+    Alert.alert(
+      'Add Demo Video',
+      'Choose how to add a video',
+      [
+        {
+          text: 'Record Video',
+          onPress: handleRecordVideo,
+        },
+        {
+          text: 'Choose from Library',
+          onPress: handlePickFromLibrary,
+        },
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+      ]
+    )
+  }
+
+  const handleRemoveVideo = () => {
+    setDemoVideoUri(null)
+    setDemoVideoSizeMB(null)
+    setExistingVideoUrl(null)
   }
 
   const getFilteredBodyParts = () => {
@@ -261,6 +470,73 @@ export default function ExerciseEditorModal({
               numberOfLines={2}
               maxLength={200}
             />
+          </View>
+
+          {/* Demo Video */}
+          <View style={styles.section}>
+            <Text style={styles.label}>Demo Video</Text>
+            <Text style={styles.helperText}>
+              Add a video to demonstrate this exercise (max 100MB)
+            </Text>
+
+            <View style={styles.mediaRow}>
+              {demoVideoUri || existingVideoUrl ? (
+                <View style={styles.mediaPreviewContainer}>
+                  <Video
+                    source={{ uri: demoVideoUri || existingVideoUrl || '' }}
+                    style={styles.videoPreview}
+                    resizeMode={ResizeMode.COVER}
+                    shouldPlay={false}
+                    isMuted
+                    useNativeControls={false}
+                  />
+                  <View style={styles.videoPlayIcon}>
+                    <Ionicons name="play-circle" size={40} color="rgba(255,255,255,0.9)" />
+                  </View>
+                  <TouchableOpacity
+                    style={styles.removeMediaButton}
+                    onPress={handleRemoveVideo}
+                  >
+                    <Ionicons name="close-circle" size={24} color={AppColors.destructive} />
+                  </TouchableOpacity>
+                  {uploadingVideo && (
+                    <View style={styles.mediaUploadingOverlay}>
+                      <ActivityIndicator size="small" color={AppColors.primary} />
+                      <Text style={styles.uploadingText}>Uploading...</Text>
+                    </View>
+                  )}
+                  {demoVideoSizeMB && !uploadingVideo && (
+                    <View style={styles.videoSizeBadge}>
+                      <Text style={styles.videoSizeText}>{demoVideoSizeMB.toFixed(1)}MB</Text>
+                    </View>
+                  )}
+                </View>
+              ) : compressingVideo ? (
+                <View style={styles.compressionContainer}>
+                  <ActivityIndicator size="large" color={AppColors.primary} />
+                  <Text style={styles.compressionText}>Compressing video...</Text>
+                  <View style={styles.compressionProgressBar}>
+                    <View
+                      style={[
+                        styles.compressionProgressFill,
+                        { width: `${Math.round(compressionProgress * 100)}%` },
+                      ]}
+                    />
+                  </View>
+                  <Text style={styles.compressionPercent}>
+                    {Math.round(compressionProgress * 100)}%
+                  </Text>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={styles.mediaPickerButton}
+                  onPress={handleAddVideo}
+                >
+                  <Ionicons name="videocam-outline" size={24} color={AppColors.primary} />
+                  <Text style={styles.mediaPickerText}>Add Video</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
 
           {/* Instructions */}
@@ -819,5 +1095,119 @@ const styles = StyleSheet.create({
   modalOptionTextActive: {
     color: AppColors.primary,
     fontWeight: '600',
+  },
+  // Media picker styles
+  helperText: {
+    fontSize: 14,
+    color: AppColors.textSecondary,
+    marginBottom: 16,
+  },
+  mediaRow: {
+    marginBottom: 16,
+  },
+  mediaPickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: AppColors.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: AppColors.borderLight,
+    borderStyle: 'dashed',
+    paddingVertical: 24,
+  },
+  mediaPickerText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: AppColors.primary,
+  },
+  mediaPreviewContainer: {
+    position: 'relative',
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: AppColors.surface,
+  },
+  videoPreview: {
+    width: '100%',
+    height: 180,
+    borderRadius: 12,
+    backgroundColor: AppColors.background,
+  },
+  videoPlayIcon: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    marginTop: -20,
+    marginLeft: -20,
+  },
+  removeMediaButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 12,
+  },
+  mediaUploadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 12,
+  },
+  uploadingText: {
+    color: AppColors.textPrimary,
+    fontSize: 14,
+    marginTop: 8,
+  },
+  videoSizeBadge: {
+    position: 'absolute',
+    bottom: 8,
+    left: 8,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  videoSizeText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  compressionContainer: {
+    backgroundColor: AppColors.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: AppColors.borderLight,
+    padding: 24,
+    alignItems: 'center',
+  },
+  compressionText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: AppColors.textPrimary,
+    marginTop: 12,
+    marginBottom: 16,
+  },
+  compressionProgressBar: {
+    width: '100%',
+    height: 8,
+    backgroundColor: AppColors.borderLight,
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  compressionProgressFill: {
+    height: '100%',
+    backgroundColor: AppColors.primary,
+    borderRadius: 4,
+  },
+  compressionPercent: {
+    fontSize: 14,
+    color: AppColors.textSecondary,
+    marginTop: 8,
   },
 })

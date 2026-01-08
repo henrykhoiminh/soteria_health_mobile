@@ -34,6 +34,7 @@ export interface Exercise {
   instructions: string
   duration_seconds: number
   demo_image_url?: string
+  demo_video_url?: string
 }
 
 // Exercise Library Item (full database model)

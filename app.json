@@ -8,7 +8,11 @@
     "scheme": "soteriahealthmobile",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.henrykhoiminh.soteria-health-mobile",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -34,11 +38,19 @@
           }
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      "react-native-compressor"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": false
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "9a13a30a-2598-428a-93eb-c3d5a7627222"
+      }
+    },
+    "owner": "henrykhoiminh"
   }
 }

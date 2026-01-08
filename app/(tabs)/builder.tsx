@@ -29,8 +29,8 @@ import {
   BodyRegion,
 } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState, useRef } from 'react';
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -97,6 +97,15 @@ export default function RoutineBuilderScreen() {
     }
   }, [editId]);
 
+  // Reset to mode selection when tab gains focus (unless editing)
+  useFocusEffect(
+    useCallback(() => {
+      if (!editId) {
+        setBuildMode('select');
+      }
+    }, [editId])
+  );
+
   const checkHealthTeamStatus = async () => {
     if (!user) {
       setCheckingHealthTeam(false);
@@ -106,15 +115,11 @@ export default function RoutineBuilderScreen() {
     const healthTeamStatus = await isHealthTeamMember(user.id);
     setIsHealthTeam(healthTeamStatus);
 
-    // Only skip mode selection for non-health team users or when editing
-    if (!healthTeamStatus) {
-      // Regular users go straight to routine builder
-      setBuildMode('routine');
-    } else if (editId) {
-      // Health team editing a routine goes to routine builder
+    // Only skip mode selection when editing a specific routine
+    if (editId) {
       setBuildMode('routine');
     }
-    // Health team users not editing stay on mode selection ('select')
+    // All users see mode selection screen first
 
     setCheckingHealthTeam(false);
   };
@@ -538,6 +543,8 @@ export default function RoutineBuilderScreen() {
             }
             onNext={() => setCurrentStep('details')}
             isEditMode={isEditMode}
+            userId={user?.id}
+            isHealthTeam={isHealthTeam}
           />
         );
       case 'details':
@@ -580,8 +587,8 @@ export default function RoutineBuilderScreen() {
     );
   }
 
-  // Mode selection screen for health team
-  if (buildMode === 'select' && isHealthTeam && !editId) {
+  // Mode selection screen - available to all users
+  if (buildMode === 'select') {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
@@ -632,8 +639,8 @@ export default function RoutineBuilderScreen() {
     );
   }
 
-  // Exercise library management for health team
-  if (buildMode === 'exercise' && isHealthTeam) {
+  // Exercise library management - available to all users
+  if (buildMode === 'exercise') {
     return (
       <View style={styles.container}>
         {/* Header */}
@@ -665,6 +672,8 @@ export default function RoutineBuilderScreen() {
             allowEditing={true}
             allowDeleting={true}
             showOfficialOnly={false}
+            userId={user?.id}
+            isHealthTeam={isHealthTeam}
           />
         </View>
 
@@ -684,24 +693,26 @@ export default function RoutineBuilderScreen() {
     );
   }
 
-  return (
-    <GestureHandlerRootView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={handleExit} style={styles.headerButton}>
-          <Ionicons name="close" size={28} color={AppColors.textSecondary} />
-        </TouchableOpacity>
-        <Text style={styles.title}>
-          {isEditMode
-            ? isEditingOfficialRoutine
-              ? 'Edit Official Routine'
-              : 'Edit Routine'
-            : 'Routine Builder'}
-        </Text>
-        {!isEditMode && (
-          <TouchableOpacity onPress={handleReset} style={styles.headerButton}>
-            <Ionicons name="refresh" size={24} color={AppColors.primary} />
+  // Routine Builder - explicit check (not fallthrough)
+  if (buildMode === 'routine') {
+    return (
+      <GestureHandlerRootView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={handleExit} style={styles.headerButton}>
+            <Ionicons name="close" size={28} color={AppColors.textSecondary} />
           </TouchableOpacity>
-        )}
+          <Text style={styles.title}>
+            {isEditMode
+              ? isEditingOfficialRoutine
+                ? 'Edit Official Routine'
+                : 'Edit Routine'
+              : 'Routine Builder'}
+          </Text>
+          {!isEditMode && (
+            <TouchableOpacity onPress={handleReset} style={styles.headerButton}>
+              <Ionicons name="refresh" size={24} color={AppColors.primary} />
+            </TouchableOpacity>
+          )}
         {isEditMode && <View style={styles.headerButton} />}
       </View>
 
@@ -814,6 +825,55 @@ export default function RoutineBuilderScreen() {
         </View>
       </Modal>
     </GestureHandlerRootView>
+    );
+  }
+
+  // Fallback: If buildMode is unknown, show mode selection
+  // This ensures we never fall through to an unexpected state
+  return (
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <View style={styles.headerButton} />
+        <Text style={styles.title}>Build</Text>
+        <View style={styles.headerButton} />
+      </View>
+      <View style={styles.modeSelectionContainer}>
+        <Text style={styles.modeSelectionTitle}>What would you like to build?</Text>
+        <Text style={styles.modeSelectionSubtitle}>
+          Create new exercises for the library or build complete routines
+        </Text>
+        <TouchableOpacity
+          style={styles.modeCard}
+          onPress={() => setBuildMode('exercise')}
+        >
+          <View style={styles.modeIconContainer}>
+            <Ionicons name="fitness" size={48} color={AppColors.primary} />
+          </View>
+          <View style={styles.modeContent}>
+            <Text style={styles.modeTitle}>Exercise Library</Text>
+            <Text style={styles.modeDescription}>
+              Create and manage individual exercises that can be used in routines
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={24} color={AppColors.textSecondary} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.modeCard}
+          onPress={() => setBuildMode('routine')}
+        >
+          <View style={styles.modeIconContainer}>
+            <Ionicons name="list" size={48} color={AppColors.primary} />
+          </View>
+          <View style={styles.modeContent}>
+            <Text style={styles.modeTitle}>Routine Builder</Text>
+            <Text style={styles.modeDescription}>
+              Build complete routines by combining exercises together
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={24} color={AppColors.textSecondary} />
+        </TouchableOpacity>
+      </View>
+    </View>
   );
 }
 
@@ -824,12 +884,16 @@ function ExerciseSelectionStep({
   onUpdate,
   onNext,
   isEditMode,
+  userId,
+  isHealthTeam,
 }: {
   availableExercises: Exercise[];
   selectedExercises: RoutineBuilderExercise[];
   onUpdate: (exercises: RoutineBuilderExercise[]) => void;
   onNext: () => void;
   isEditMode?: boolean;
+  userId?: string;
+  isHealthTeam?: boolean;
 }) {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedLibraryExercise, setSelectedLibraryExercise] = useState<ExerciseLibraryItem | null>(null);
@@ -902,6 +966,7 @@ function ExerciseSelectionStep({
       instructions: selectedLibraryExercise.instructions,
       duration_seconds: totalSeconds,
       demo_image_url: selectedLibraryExercise.demo_image_url,
+      demo_video_url: selectedLibraryExercise.demo_video_url,
       id: `${Date.now()}-${Math.random()}`,
     };
 
@@ -1098,7 +1163,9 @@ function ExerciseSelectionStep({
                 onSelectExercise={handleSelectExerciseFromLibrary}
                 allowSelection={true}
                 allowEditing={false}
-                showOfficialOnly={true}
+                showOfficialOnly={false}
+                userId={userId}
+                isHealthTeam={isHealthTeam}
               />
             </View>
           )}

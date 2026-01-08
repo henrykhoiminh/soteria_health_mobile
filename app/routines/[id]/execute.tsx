@@ -15,6 +15,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Modal,
   Platform,
   ScrollView,
@@ -25,6 +26,7 @@ import {
   View,
 } from 'react-native';
 import LottieView from 'lottie-react-native';
+import { Video, ResizeMode } from 'expo-av';
 
 // Completion animation - add your Lottie JSON file to assets/animations/
 // Expected file: assets/animations/routine_complete.json
@@ -535,11 +537,32 @@ export default function ExecuteRoutineScreen() {
               contentContainerStyle={styles.modalContentContainer}
               showsVerticalScrollIndicator={false}
             >
-              {/* Placeholder for future video/image */}
-              <View style={styles.mediaPlaceholder}>
-                <Ionicons name="play-circle-outline" size={64} color={AppColors.textTertiary} />
-                <Text style={styles.mediaPlaceholderText}>Demonstration video coming soon</Text>
-              </View>
+              {/* Demo Video or Image */}
+              {currentExercise.demo_video_url ? (
+                <View style={styles.mediaContainer}>
+                  <Video
+                    source={{ uri: currentExercise.demo_video_url }}
+                    style={styles.demoVideo}
+                    resizeMode={ResizeMode.CONTAIN}
+                    useNativeControls
+                    isLooping
+                    shouldPlay={false}
+                  />
+                </View>
+              ) : currentExercise.demo_image_url ? (
+                <View style={styles.mediaContainer}>
+                  <Image
+                    source={{ uri: currentExercise.demo_image_url }}
+                    style={styles.demoImage}
+                    resizeMode="contain"
+                  />
+                </View>
+              ) : (
+                <View style={styles.mediaPlaceholder}>
+                  <Ionicons name="play-circle-outline" size={64} color={AppColors.textTertiary} />
+                  <Text style={styles.mediaPlaceholderText}>No demo available</Text>
+                </View>
+              )}
 
               {/* Instructions Section */}
               <View style={styles.instructionsSection}>
@@ -791,6 +814,23 @@ const styles = StyleSheet.create({
   },
   modalContentContainer: {
     paddingBottom: 24,
+  },
+  mediaContainer: {
+    margin: 24,
+    marginBottom: 16,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: AppColors.background,
+  },
+  demoVideo: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    backgroundColor: AppColors.background,
+  },
+  demoImage: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    backgroundColor: AppColors.background,
   },
   mediaPlaceholder: {
     backgroundColor: AppColors.surfaceSecondary,
