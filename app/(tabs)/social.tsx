@@ -38,6 +38,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Image,
   Modal,
   ScrollView,
   StyleSheet,
@@ -347,9 +348,14 @@ function FriendsTab({ userId, onRefresh }: { userId: string; onRefresh: () => vo
               <View key={user.id} style={styles.userCard}>
                 <View style={styles.userAvatar}>
                   {user.profile_picture_url ? (
-                    <Text style={styles.avatarText}>👤</Text>
+                    <Image
+                      source={{ uri: user.profile_picture_url }}
+                      style={styles.userAvatarImage}
+                    />
                   ) : (
-                    <Ionicons name="person" size={24} color={AppColors.textSecondary} />
+                    <Text style={styles.userAvatarText}>
+                      {user.first_name?.charAt(0).toUpperCase() || 'U'}
+                    </Text>
                   )}
                 </View>
                 <View style={styles.userInfo}>
@@ -406,14 +412,25 @@ function FriendsTab({ userId, onRefresh }: { userId: string; onRefresh: () => vo
           {pendingRequests.map((request) => (
             <View key={request.id} style={styles.requestCard}>
               <View style={styles.userAvatar}>
-                <Ionicons name="person" size={24} color={AppColors.textSecondary} />
+                {request.requester_profile.profile_picture_url ? (
+                  <Image
+                    source={{ uri: request.requester_profile.profile_picture_url }}
+                    style={styles.userAvatarImage}
+                  />
+                ) : (
+                  <Text style={styles.userAvatarText}>
+                    {request.requester_profile.first_name?.charAt(0).toUpperCase() || 'U'}
+                  </Text>
+                )}
               </View>
               <View style={styles.userInfo}>
                 <Text style={styles.userName}>
                   {getDisplayName(request.requester_profile)}
                 </Text>
-                {request.requester_profile.full_name && request.requester_profile.username && (
-                  <Text style={styles.userRealName}>{request.requester_profile.full_name}</Text>
+                {request.requester_profile.first_name && request.requester_profile.username && (
+                  <Text style={styles.userRealName}>
+                    {request.requester_profile.first_name}{request.requester_profile.last_name ? ` ${request.requester_profile.last_name}` : ''}
+                  </Text>
                 )}
                 <Text style={styles.userMeta}>
                   {new Date(request.created_at).toLocaleDateString()}
@@ -451,12 +468,23 @@ function FriendsTab({ userId, onRefresh }: { userId: string; onRefresh: () => vo
             return (
               <View key={friendship.id} style={styles.friendCard}>
                 <View style={styles.userAvatar}>
-                  <Ionicons name="person" size={24} color={AppColors.textSecondary} />
+                  {friend.profile_picture_url ? (
+                    <Image
+                      source={{ uri: friend.profile_picture_url }}
+                      style={styles.userAvatarImage}
+                    />
+                  ) : (
+                    <Text style={styles.userAvatarText}>
+                      {friend.first_name?.charAt(0).toUpperCase() || 'U'}
+                    </Text>
+                  )}
                 </View>
                 <View style={styles.userInfo}>
                   <Text style={styles.userName}>{getDisplayName(friend)}</Text>
-                  {friend.full_name && friend.username && (
-                    <Text style={styles.userRealName}>{friend.full_name}</Text>
+                  {friend.first_name && friend.username && (
+                    <Text style={styles.userRealName}>
+                      {friend.first_name}{friend.last_name ? ` ${friend.last_name}` : ''}
+                    </Text>
                   )}
                   <Text style={styles.userMeta}>
                     Friends since {new Date(friendship.accepted_at!).toLocaleDateString()}
@@ -464,7 +492,7 @@ function FriendsTab({ userId, onRefresh }: { userId: string; onRefresh: () => vo
                 </View>
                 <TouchableOpacity
                   style={styles.unfriendButton}
-                  onPress={() => handleUnfriend(friendship.id, friend.full_name || 'this user')}
+                  onPress={() => handleUnfriend(friendship.id, friend.first_name || 'this user')}
                 >
                   <Ionicons name="trash-outline" size={20} color={AppColors.destructive} />
                 </TouchableOpacity>
@@ -1011,13 +1039,20 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: AppColors.surfaceSecondary,
+    backgroundColor: AppColors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
+    overflow: 'hidden',
   },
-  avatarText: {
-    fontSize: 24,
+  userAvatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  userAvatarText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: AppColors.textPrimary,
   },
   userInfo: {
     flex: 1,

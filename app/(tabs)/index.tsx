@@ -1,14 +1,12 @@
 import Avatar from '@/components/Avatar';
 import CompletedRoutinesModal from '@/components/CompletedRoutinesModal';
 import HarmonyModal from '@/components/HarmonyModal';
-import JourneyBadge from '@/components/JourneyBadge';
 import JourneyFocusModal from '@/components/JourneyFocusModal';
 import PainProgressChart from '@/components/PainProgressChart';
 import RecommendedRoutineModal from '@/components/RecommendedRoutineModal';
 import UsernameSetupModal from '@/components/UsernameSetupModal';
 import { AppColors } from '@/constants/theme';
 import { useAuth } from '@/lib/contexts/AuthContext';
-import { calculateJourneyDays } from '@/lib/utils/auth';
 import { getRoutinesByCategory, getTodayProgress, getUniqueCompletedRoutines, getUserStats } from '@/lib/utils/dashboard';
 import { checkHarmonyRequirements } from '@/lib/utils/harmony';
 import { getPainCheckInHistory, getPainLevelInfo, getPainStatistics, getPainTrendInfo } from '@/lib/utils/pain-checkin';
@@ -252,10 +250,45 @@ export default function DashboardScreen() {
     );
   }
 
-  // Calculate journey days
-  const journeyDays = profile?.journey_started_at
-    ? calculateJourneyDays(profile.journey_started_at)
-    : 0;
+  // Generate dynamic subtitle based on companion states
+  const getDynamicSubtitle = (): string => {
+    if (avatarStates.length === 0) {
+      return "Let's get your first routine done!";
+    }
+
+    // Check which companions are incomplete (not Glowing or Radiant)
+    const incompleteCompanions = avatarStates.filter(
+      avatar => avatar.lightState !== 'Glowing' && avatar.lightState !== 'Radiant'
+    );
+
+    // Get companion name helper
+    const getCompanionName = (category: string): string => {
+      switch (category) {
+        case 'Mind': return profile?.mind_name || 'Mind';
+        case 'Body': return profile?.body_name || 'Body';
+        case 'Soul': return profile?.soul_name || 'Soul';
+        default: return category;
+      }
+    };
+
+    const incompleteCount = incompleteCompanions.length;
+
+    if (incompleteCount === 0) {
+      // All complete
+      return "Great job! All your companions have awakened. Keep it up!";
+    } else if (incompleteCount === 3) {
+      // None complete
+      return "Let's get your first routine done!";
+    } else if (incompleteCount === 1) {
+      // One remaining
+      const name = getCompanionName(incompleteCompanions[0].category);
+      return `Almost there! ${name} is waiting to awaken with the others!`;
+    } else {
+      // Two remaining
+      const names = incompleteCompanions.map(c => getCompanionName(c.category));
+      return `Looks like ${names[0]} and ${names[1]} still need some love!`;
+    }
+  };
 
   return (
     <>
@@ -415,9 +448,14 @@ export default function DashboardScreen() {
 
       <ScrollView style={styles.container}>
       <View style={styles.header}>
-        {/* Avatar and Badges Row */}
-        <View style={styles.avatarRow}>
-          <View style={styles.avatarContainer}>
+        {/* Compact Header Row: Avatar + Text */}
+        <View style={styles.headerRow}>
+          {/* Avatar with Journey Focus Badge */}
+          <TouchableOpacity
+            style={styles.avatarContainer}
+            onPress={() => profile?.journey_focus && setShowJourneyFocusModal(true)}
+            activeOpacity={0.7}
+          >
             <View style={[
               styles.avatar,
               (profile?.role === 'health_team' || profile?.role === 'admin') && styles.avatarHealthTeam
@@ -433,34 +471,36 @@ export default function DashboardScreen() {
                 </Text>
               )}
             </View>
-            {/* Health Team Shield Badge */}
+            {/* Journey Focus Badge (top-right) */}
+            {profile?.journey_focus && (
+              <View style={[
+                styles.journeyBadge,
+                { backgroundColor: profile.journey_focus === 'Recovery' ? AppColors.body : AppColors.mind }
+              ]}>
+                <Ionicons
+                  name={profile.journey_focus === 'Recovery' ? 'heart' : 'shield-checkmark'}
+                  size={14}
+                  color="#FFFFFF"
+                />
+              </View>
+            )}
+            {/* Health Team Shield Badge (bottom-right) */}
             {(profile?.role === 'health_team' || profile?.role === 'admin') && (
               <View style={styles.shieldBadge}>
                 <Ionicons name="shield-checkmark" size={16} color="#FFFFFF" />
               </View>
             )}
+          </TouchableOpacity>
+
+          {/* Greeting Text */}
+          <View style={styles.headerTextContainer}>
+            <Text style={styles.greeting}>
+              {profile?.role === 'health_team' || profile?.role === 'admin' ? 'Welcome back, ' : 'Hello, '}
+              {profile?.first_name || 'there'}
+            </Text>
+            <Text style={styles.subtitle}>{getDynamicSubtitle()}</Text>
           </View>
-
-          {/* Journey Badge */}
-          {profile?.journey_focus && (
-            <TouchableOpacity
-              onPress={() => setShowJourneyFocusModal(true)}
-              activeOpacity={0.7}
-            >
-              <JourneyBadge
-                focus={profile.journey_focus}
-                size="sm"
-                showLabel={true}
-              />
-            </TouchableOpacity>
-          )}
         </View>
-
-        <Text style={styles.greeting}>
-          {profile?.role === 'health_team' || profile?.role === 'admin' ? 'Welcome back, ' : 'Hello, '}
-          {profile?.first_name || 'there'}
-        </Text>
-        <Text style={styles.subtitle}>Check out your personalized routines below.</Text>
       </View>
 
       {/* Avatars Section */}
@@ -630,12 +670,17 @@ export default function DashboardScreen() {
                 }
               }}
             >
-              <View style={styles.activityIcon}>
-                <Ionicons
-                  name={getActivityIcon(activity.activityType)}
-                  size={20}
-                  color={AppColors.primary}
-                />
+              <View style={styles.activityAvatar}>
+                {activity.user.profile_picture_url ? (
+                  <Image
+                    source={{ uri: activity.user.profile_picture_url }}
+                    style={styles.activityAvatarImage}
+                  />
+                ) : (
+                  <Text style={styles.activityAvatarText}>
+                    {activity.user.first_name?.charAt(0).toUpperCase() || 'U'}
+                  </Text>
+                )}
               </View>
               <View style={styles.activityContent}>
                 <Text style={styles.activityText} numberOfLines={2}>
@@ -714,29 +759,6 @@ function StatCard({
   );
 }
 
-function getActivityIcon(type: string): any {
-  switch (type) {
-    case 'completed_routine':
-      return 'checkmark-circle';
-    case 'created_routine':
-      return 'add-circle';
-    case 'streak_milestone':
-      return 'flame';
-    case 'joined_circle':
-      return 'people';
-    case 'shared_routine':
-      return 'share-social';
-    case 'completed_circle_routine':
-      return 'checkmark-done-circle';
-    case 'added_routine_to_circle':
-      return 'add-circle-outline';
-    case 'routine_became_popular':
-      return 'flame';
-    default:
-      return 'radio-button-on';
-  }
-}
-
 function getTimeAgo(timestamp: string): string {
   const now = new Date();
   const past = new Date(timestamp);
@@ -768,19 +790,18 @@ const styles = StyleSheet.create({
     paddingTop: 100,
     backgroundColor: AppColors.surface,
   },
-  avatarRow: {
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginBottom: 16,
+    gap: 16,
   },
   avatarContainer: {
     position: 'relative',
   },
   avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     backgroundColor: AppColors.primary,
     justifyContent: 'center',
     alignItems: 'center',
@@ -790,13 +811,25 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: '#10B981',
   },
+  journeyBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: AppColors.surface,
+  },
   shieldBadge: {
     position: 'absolute',
     bottom: -2,
     right: -2,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     backgroundColor: '#10B981',
     justifyContent: 'center',
     alignItems: 'center',
@@ -808,19 +841,22 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   avatarText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: AppColors.textPrimary,
-  },
-  greeting: {
     fontSize: 28,
     fontWeight: 'bold',
     color: AppColors.textPrimary,
   },
+  headerTextContainer: {
+    flex: 1,
+  },
+  greeting: {
+    fontSize: 26,
+    fontWeight: 'bold',
+    color: AppColors.textPrimary,
+  },
   subtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: AppColors.textSecondary,
-    marginTop: 4,
+    marginTop: 2,
   },
   section: {
     marginTop: 16,
@@ -1001,14 +1037,24 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: AppColors.cardBorder,
   },
-  activityIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: AppColors.surface,
+  activityAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: AppColors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
+    overflow: 'hidden',
+  },
+  activityAvatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  activityAvatarText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: AppColors.textPrimary,
   },
   activityContent: {
     flex: 1,
