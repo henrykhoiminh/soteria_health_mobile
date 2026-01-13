@@ -306,7 +306,61 @@ lsof -ti:8081 | xargs kill -9
   - Skip tutorial entirely and use contextual hints in actual dashboard
   - Progressive disclosure - reveal features as user engages with app
 
+### Session 25 (Latest - Dashboard Header Redesign & Profile Pictures)
+- **Dashboard Header Compact Redesign (`app/(tabs)/index.tsx`):**
+  - Changed from vertical stacked layout to horizontal inline layout
+  - Profile picture (72px) on left with greeting text on right
+  - Removed separate JourneyBadge chip component from header
+  - More space-efficient design
+
+- **Journey Focus Badge Overlay:**
+  - Journey focus now shown as small colored circle badge on profile picture (top-right)
+  - Recovery: Red/body color with heart icon
+  - Injury Prevention: Blue/mind color with shield icon
+  - Tapping profile picture opens Journey Focus modal
+  - Health Team shield badge remains at bottom-right for health_team/admin users
+
+- **Dynamic Dashboard Subtitles:**
+  - Subtitle now changes based on companion (avatar) completion states
+  - `getDynamicSubtitle()` function checks `lightState` of each avatar
+  - Messages:
+    | State | Message |
+    |-------|---------|
+    | None complete | "Let's get your first routine done!" |
+    | 2 remaining | "Looks like {Body name} and {Soul name} still need some love!" |
+    | 1 remaining | "Almost there! {name} is waiting to awaken with the others!" |
+    | All complete | "Great job! All your companions have awakened. Keep it up!" |
+  - Uses custom companion names from profile (mind_name, body_name, soul_name)
+
+- **Friend Activity Cards - Profile Pictures:**
+  - Replaced activity type icons with user profile pictures
+  - Shows profile picture if available, or initial letter (gold background) as fallback
+  - Removed unused `getActivityIcon()` function
+  - More personal/social feel to the activity feed
+
+- **Social Tab - Profile Pictures (`app/(tabs)/social.tsx`):**
+  - Added profile pictures to all user cards:
+    - Search Results
+    - Pending Friend Requests
+    - My Friends list
+  - Shows profile picture if available, or initial letter fallback
+  - Added `Image` import and new styles: `userAvatarImage`, `userAvatarText`
+  - Fixed pre-existing TypeScript errors: replaced `full_name` with `first_name`/`last_name`
+
+- **Style Updates:**
+  - `headerRow` - New horizontal flex container for avatar + text
+  - `headerTextContainer` - Flex container for greeting text
+  - `journeyBadge` - 26px circular badge positioned top-right of avatar
+  - `avatar` - Increased from 56px to 72px
+  - `greeting` - Increased from 22px to 26px
+  - `activityAvatar`, `activityAvatarImage`, `activityAvatarText` - New styles for activity cards
+
+- **Cleanup:**
+  - Removed unused `JourneyBadge` import from dashboard
+  - Removed unused `calculateJourneyDays` import and variable
+  - Removed unused `getActivityIcon()` function
+
 ---
 
-**Last Updated:** 2025-12-21
+**Last Updated:** 2026-01-13
 **Current Version:** Expo SDK 54, React Native 0.76+
