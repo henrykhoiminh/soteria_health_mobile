@@ -306,7 +306,64 @@ lsof -ti:8081 | xargs kill -9
   - Skip tutorial entirely and use contextual hints in actual dashboard
   - Progressive disclosure - reveal features as user engages with app
 
-### Session 25 (Latest - Dashboard Header Redesign & Profile Pictures)
+### Session 26 (Latest - Onboarding UX Enhancements)
+- **Glass Panel Dialogue Box (BotW-Inspired):**
+  - Created `SoteriaDialogueBox` component with frosted glass effect using `expo-blur`
+  - Features: luminous gold edge glow, semi-transparent background, italicized text
+  - Applied to all onboarding screens replacing dark card dialogue boxes
+  - Props: `text`, `glowPosition` (top/bottom), `isTyping` (shows cursor)
+
+- **Character Summoning Animation:**
+  - Created `CharacterSummoningAnimation` component for dramatic character introductions
+  - Standard sequence (1.8s): screen dims → glow appears → sound → haptic pulses → character appears
+  - Dramatic sequence (9s, for Soteria): extended with aggressive 4-phase haptic escalation
+    - Phase 1 (1-3s): Heavy pulses + Warning notifications at 500ms intervals
+    - Phase 2 (3-5s): Rapid double-tap Heavy + Medium at 300ms intervals
+    - Phase 3 (5-6s): Aggressive rapid-fire Heavy impacts at 80ms intervals
+    - Phase 4 (6-6.5s): Maximum chaos - alternating Heavy + Error at 60ms intervals
+    - Finale (7.5s): Explosive burst of multiple Heavy impacts + Success notifications
+  - Used for Soteria, Mind, Body, and Soul introductions in onboarding
+
+- **Dashboard Updates:**
+  - Stats moved to headline section (replaced subtitle text)
+  - Inline stats: streak, routines, harmony counter with tooltips
+  - Dynamic header background based on completed routine categories
+    - Mind complete: Dark blue (#1E3A5F)
+    - Body complete: Dark red (#4A1F1F)
+    - Soul complete: Dark amber (#4A3A1F)
+    - All complete (Harmony): Gradient across all three colors
+  - Fixed harmony counter to use `consecutiveBalancedDays` field
+
+- **Social Tab Updates:**
+  - Moved "Create Circle" button to bottom as floating action button
+  - Fixed button text colors to use `AppColors.primaryText` (dark on gold)
+
+- **Routines Tab:**
+  - Added `SortModal` component for dropdown sort selection (Popular, Trending, Newest, Most Saved)
+  - Replaced click-to-cycle sorting with modal picker
+
+- **Key Files Created/Modified:**
+  - `app/onboarding/components/SoteriaDialogueBox.tsx` - New glass panel dialogue
+  - `app/onboarding/components/CharacterSummoningAnimation.tsx` - New summoning animation
+  - `app/(tabs)/index.tsx` - Stats in headline, dynamic header backgrounds
+  - `app/(tabs)/social.tsx` - Floating Create Circle button
+  - `app/(tabs)/routines.tsx` - Sort modal dropdown
+  - `constants/theme.ts` - Added headerMind, headerBody, headerSoul colors
+  - `lib/utils/audio.ts` - Audio playback (reverted to expo-av)
+  - Multiple onboarding screens - Applied new dialogue and summoning components
+
+- **Audio Issue (TODO - Next Session):**
+  - Attempted migration from `expo-av` to `expo-audio` but it broke sound playback
+  - Reverted back to `expo-av` for now
+  - **Next session:** Investigate audio implementation in the application
+    - Review `expo-av` vs `expo-audio` usage and best practices
+    - Test sound playback on both iOS and Android
+    - Ensure extraction_mystical.mp3 plays during summoning animation
+    - Consider audio initialization timing and component lifecycle
+
+---
+
+### Session 25 (Dashboard Header Redesign & Profile Pictures)
 - **Dashboard Header Compact Redesign (`app/(tabs)/index.tsx`):**
   - Changed from vertical stacked layout to horizontal inline layout
   - Profile picture (72px) on left with greeting text on right
@@ -362,5 +419,18 @@ lsof -ti:8081 | xargs kill -9
 
 ---
 
-**Last Updated:** 2026-01-13
+**Last Updated:** 2026-01-19
 **Current Version:** Expo SDK 54, React Native 0.76+
+
+## Known Issues & Pending Investigations
+
+### Audio Playback (High Priority - Next Session)
+- **Issue:** Audio playback for `extraction_mystical.mp3` during character summoning may not be working
+- **Background:** Attempted migration from `expo-av` to `expo-audio` broke sound; reverted to `expo-av`
+- **Files involved:** `lib/utils/audio.ts`, `assets/sounds/extraction_mystical.mp3`
+- **TODO:**
+  1. Test audio playback on physical iOS and Android devices
+  2. Review `expo-av` initialization and audio mode settings
+  3. Check if `playExtractionSound()` is being called at correct timing in summoning sequence
+  4. Consider preloading audio assets for better performance
+  5. Investigate if `expo-audio` is the recommended replacement and migration path

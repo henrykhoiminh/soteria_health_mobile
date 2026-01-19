@@ -1105,7 +1105,41 @@ npx expo start --ios
 - Verify image URL in database
 - Check storage bucket is public
 
+### Audio Playback Issues (Pending Investigation)
+- Sound playback uses `expo-av` (not `expo-audio`)
+- Test on physical devices (iOS and Android) - simulators may have audio issues
+- Ensure `initAudio()` is called before playing sounds
+- Check that sound files exist in `assets/sounds/` directory
+- Audio files: `count_down_beep.mp3`, `extraction_mystical.mp3`
+
 ## Recent Updates
+
+### Onboarding UX Enhancements (Latest)
+- ✅ **Glass Panel Dialogue Box:**
+  - BotW-inspired frosted glass speech bubbles with luminous gold edge
+  - Uses `expo-blur` for frosted glass effect
+  - Applied to all onboarding screens
+  - Italicized text with typing cursor indicator
+
+- ✅ **Character Summoning Animation:**
+  - Mystical summoning sequence for character introductions (Mind, Body, Soul, Soteria)
+  - Standard sequence (1.8s): screen dims → glow → sound → haptics → character reveals
+  - Dramatic sequence (9s, for Soteria): Extended with aggressive 4-phase haptic escalation
+  - Immersive haptic feedback building tension before character eruption
+
+- ✅ **Dashboard Stats Redesign:**
+  - Stats moved to headline section (inline with greeting)
+  - Streak, routines, and harmony counter with touch tooltips
+  - Dynamic header background based on completed categories
+  - Harmony gradient effect when all categories complete
+
+- ✅ **Social Tab:**
+  - Create Circle button moved to floating action button at bottom
+  - Fixed button text colors for accessibility (dark on gold)
+
+- 🔊 **Audio (TODO):**
+  - Extraction sound may need investigation on physical devices
+  - Currently using `expo-av` for audio playback
 
 ### Dashboard Tutorial Onboarding (Work in Progress)
 - 🚧 **Interactive Dashboard Tutorial:**
