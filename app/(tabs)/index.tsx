@@ -32,6 +32,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function DashboardScreen() {
   const { user, profile } = useAuth();
@@ -61,8 +62,53 @@ export default function DashboardScreen() {
   const [harmonyStatus, setHarmonyStatus] = useState<HarmonyStatus | null>(initialCache?.harmonyStatus || null);
   const [showHarmonyModal, setShowHarmonyModal] = useState(false);
   const [cacheUsed] = useState(!!initialCache); // Track if we initialized from cache
+  const [activeTooltip, setActiveTooltip] = useState<'streak' | 'harmony' | 'routines' | null>(null);
 
   const isHealthTeam = profile?.role === 'health_team' || profile?.role === 'admin';
+
+  /**
+   * Determines the header background based on completed avatar states.
+   * Returns an object with either a solid color or gradient configuration.
+   */
+  const getHeaderBackground = ():
+    | { type: 'solid'; color: string }
+    | { type: 'gradient'; colors: readonly [string, string, string]; start: { x: number; y: number }; end: { x: number; y: number } } => {
+    // Check which avatars are completed (Glowing or Radiant)
+    const completedCategories = avatarStates.filter(
+      state => state.lightState === 'Glowing' || state.lightState === 'Radiant'
+    );
+
+    // If no routines completed today, use neutral surface color
+    if (completedCategories.length === 0) {
+      return { type: 'solid' as const, color: AppColors.surface };
+    }
+
+    // If all three categories are complete (Harmony state), use gradient
+    if (completedCategories.length === 3) {
+      return {
+        type: 'gradient' as const,
+        colors: [AppColors.headerMind, AppColors.headerBody, AppColors.headerSoul] as const,
+        start: { x: 0, y: 0 },
+        end: { x: 1, y: 0 }, // Horizontal gradient
+      };
+    }
+
+    // Otherwise, use the most recently completed category's color
+    // Since avatarStates maintains order [Mind, Body, Soul], we'll take the last completed
+    const lastCompleted = completedCategories[completedCategories.length - 1];
+    const categoryColorMap = {
+      Mind: AppColors.headerMind,
+      Body: AppColors.headerBody,
+      Soul: AppColors.headerSoul,
+    };
+
+    return {
+      type: 'solid' as const,
+      color: categoryColorMap[lastCompleted.category as keyof typeof categoryColorMap],
+    };
+  };
+
+  const headerBackground = getHeaderBackground();
 
   useEffect(() => {
     // If we initialized from cache, clear it and skip the initial load
@@ -250,46 +296,6 @@ export default function DashboardScreen() {
     );
   }
 
-  // Generate dynamic subtitle based on companion states
-  const getDynamicSubtitle = (): string => {
-    if (avatarStates.length === 0) {
-      return "Let's get your first routine done!";
-    }
-
-    // Check which companions are incomplete (not Glowing or Radiant)
-    const incompleteCompanions = avatarStates.filter(
-      avatar => avatar.lightState !== 'Glowing' && avatar.lightState !== 'Radiant'
-    );
-
-    // Get companion name helper
-    const getCompanionName = (category: string): string => {
-      switch (category) {
-        case 'Mind': return profile?.mind_name || 'Mind';
-        case 'Body': return profile?.body_name || 'Body';
-        case 'Soul': return profile?.soul_name || 'Soul';
-        default: return category;
-      }
-    };
-
-    const incompleteCount = incompleteCompanions.length;
-
-    if (incompleteCount === 0) {
-      // All complete
-      return "Great job! All your companions have awakened. Keep it up!";
-    } else if (incompleteCount === 3) {
-      // None complete
-      return "Let's get your first routine done!";
-    } else if (incompleteCount === 1) {
-      // One remaining
-      const name = getCompanionName(incompleteCompanions[0].category);
-      return `Almost there! ${name} is waiting to awaken with the others!`;
-    } else {
-      // Two remaining
-      const names = incompleteCompanions.map(c => getCompanionName(c.category));
-      return `Looks like ${names[0]} and ${names[1]} still need some love!`;
-    }
-  };
-
   return (
     <>
       <UsernameSetupModal
@@ -447,9 +453,16 @@ export default function DashboardScreen() {
       </Modal>
 
       <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        {/* Compact Header Row: Avatar + Text */}
-        <View style={styles.headerRow}>
+      {/* Dynamic Header Background - Solid or Gradient based on completion */}
+      {headerBackground.type === 'gradient' ? (
+        <LinearGradient
+          colors={headerBackground.colors}
+          start={headerBackground.start}
+          end={headerBackground.end}
+          style={styles.header}
+        >
+          {/* Compact Header Row: Avatar + Text */}
+          <View style={styles.headerRow}>
           {/* Avatar with Journey Focus Badge */}
           <TouchableOpacity
             style={styles.avatarContainer}
@@ -498,10 +511,171 @@ export default function DashboardScreen() {
               {profile?.role === 'health_team' || profile?.role === 'admin' ? 'Welcome back, ' : 'Hello, '}
               {profile?.first_name || 'there'}
             </Text>
-            <Text style={styles.subtitle}>{getDynamicSubtitle()}</Text>
+
+            {/* Stats Row */}
+            <View style={styles.statsRow}>
+              {/* Current Streak */}
+              <TouchableOpacity
+                style={styles.statItem}
+                onPress={() => setActiveTooltip(activeTooltip === 'streak' ? null : 'streak')}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="flame" size={16} color={AppColors.primary} />
+                <Text style={styles.statValue}>{stats?.current_streak || 0}</Text>
+              </TouchableOpacity>
+
+              <View style={styles.statDivider} />
+
+              {/* Harmony Streak */}
+              <TouchableOpacity
+                style={styles.statItem}
+                onPress={() => setActiveTooltip(activeTooltip === 'harmony' ? null : 'harmony')}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="sparkles" size={16} color={AppColors.primary} />
+                <Text style={styles.statValue}>
+                  {harmonyStatus?.consecutiveBalancedDays || 0}
+                </Text>
+              </TouchableOpacity>
+
+              <View style={styles.statDivider} />
+
+              {/* Total Routines */}
+              <TouchableOpacity
+                style={styles.statItem}
+                onPress={handleShowCompletedRoutines}
+                onLongPress={() => setActiveTooltip(activeTooltip === 'routines' ? null : 'routines')}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="checkmark-circle" size={16} color={AppColors.primary} />
+                <Text style={styles.statValue}>{stats?.total_routines || 0}</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
-      </View>
+        </LinearGradient>
+      ) : (
+        <View style={[styles.header, { backgroundColor: headerBackground.color }]}>
+          {/* Compact Header Row: Avatar + Text */}
+          <View style={styles.headerRow}>
+          {/* Avatar with Journey Focus Badge */}
+          <TouchableOpacity
+            style={styles.avatarContainer}
+            onPress={() => profile?.journey_focus && setShowJourneyFocusModal(true)}
+            activeOpacity={0.7}
+          >
+            <View style={[
+              styles.avatar,
+              (profile?.role === 'health_team' || profile?.role === 'admin') && styles.avatarHealthTeam
+            ]}>
+              {profile?.profile_picture_url ? (
+                <Image
+                  source={{ uri: profile.profile_picture_url }}
+                  style={styles.avatarImage}
+                />
+              ) : (
+                <Text style={styles.avatarText}>
+                  {profile?.first_name?.charAt(0).toUpperCase() || 'U'}
+                </Text>
+              )}
+            </View>
+            {/* Journey Focus Badge (top-right) */}
+            {profile?.journey_focus && (
+              <View style={[
+                styles.journeyBadge,
+                { backgroundColor: profile.journey_focus === 'Recovery' ? AppColors.body : AppColors.mind }
+              ]}>
+                <Ionicons
+                  name={profile.journey_focus === 'Recovery' ? 'heart' : 'shield-checkmark'}
+                  size={14}
+                  color="#FFFFFF"
+                />
+              </View>
+            )}
+            {/* Health Team Shield Badge (bottom-right) */}
+            {(profile?.role === 'health_team' || profile?.role === 'admin') && (
+              <View style={styles.shieldBadge}>
+                <Ionicons name="shield-checkmark" size={16} color="#FFFFFF" />
+              </View>
+            )}
+          </TouchableOpacity>
+
+          {/* Greeting Text */}
+          <View style={styles.headerTextContainer}>
+            <Text style={styles.greeting}>
+              {profile?.role === 'health_team' || profile?.role === 'admin' ? 'Welcome back, ' : 'Hello, '}
+              {profile?.first_name || 'there'}
+            </Text>
+
+            {/* Stats Row */}
+            <View style={styles.statsRow}>
+              {/* Current Streak */}
+              <TouchableOpacity
+                style={styles.statItem}
+                onPress={() => setActiveTooltip(activeTooltip === 'streak' ? null : 'streak')}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="flame" size={16} color={AppColors.primary} />
+                <Text style={styles.statValue}>{stats?.current_streak || 0}</Text>
+              </TouchableOpacity>
+
+              <View style={styles.statDivider} />
+
+              {/* Harmony Streak */}
+              <TouchableOpacity
+                style={styles.statItem}
+                onPress={() => setActiveTooltip(activeTooltip === 'harmony' ? null : 'harmony')}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="sparkles" size={16} color={AppColors.primary} />
+                <Text style={styles.statValue}>
+                  {harmonyStatus?.consecutiveBalancedDays || 0}
+                </Text>
+              </TouchableOpacity>
+
+              <View style={styles.statDivider} />
+
+              {/* Total Routines */}
+              <TouchableOpacity
+                style={styles.statItem}
+                onPress={handleShowCompletedRoutines}
+                onLongPress={() => setActiveTooltip(activeTooltip === 'routines' ? null : 'routines')}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="checkmark-circle" size={16} color={AppColors.primary} />
+                <Text style={styles.statValue}>{stats?.total_routines || 0}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+        </View>
+      )}
+
+      {/* Stat Tooltip Modal */}
+      <Modal
+        visible={activeTooltip !== null}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setActiveTooltip(null)}
+      >
+        <TouchableOpacity
+          style={styles.tooltipOverlay}
+          activeOpacity={1}
+          onPress={() => setActiveTooltip(null)}
+        >
+          <View style={styles.tooltip}>
+            <Text style={styles.tooltipText}>
+              {activeTooltip === 'streak' &&
+                `Current streak: ${stats?.current_streak || 0} consecutive days with completed routines`}
+              {activeTooltip === 'harmony' &&
+                `Balanced days: ${harmonyStatus?.consecutiveBalancedDays || 0}/7 consecutive days with Mind, Body, and Soul routines`}
+              {activeTooltip === 'routines' &&
+                `Total routines completed: ${stats?.total_routines || 0}. Tap to view history.`}
+            </Text>
+            <Text style={styles.tooltipDismiss}>Tap anywhere to dismiss</Text>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       {/* Avatars Section */}
       <View style={styles.section}>
@@ -546,35 +720,6 @@ export default function DashboardScreen() {
               />
             );
           })}
-        </View>
-      </View>
-
-      {/* Stats */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Your Stats</Text>
-        <View style={styles.statsGrid}>
-          <StatCard
-            label="Current Streak"
-            value={stats?.current_streak || 0}
-            suffix="days"
-          />
-          <StatCard
-            label="Harmony Streak"
-            value={
-              harmonyStatus?.isInHarmony && harmonyStatus?.harmonyAchievedAt
-                ? Math.floor((Date.now() - new Date(harmonyStatus.harmonyAchievedAt).getTime()) / (1000 * 60 * 60 * 24))
-                : 0
-            }
-            suffix="days"
-            icon="sparkles"
-            iconColor="#F59E0B"
-          />
-          <StatCard
-            label="Total Routines"
-            value={stats?.total_routines || 0}
-            suffix=""
-            onPress={handleShowCompletedRoutines}
-          />
         </View>
       </View>
 
@@ -710,55 +855,6 @@ export default function DashboardScreen() {
   );
 }
 
-function StatCard({
-  label,
-  value,
-  suffix,
-  onPress,
-  icon,
-  iconColor
-}: {
-  label: string;
-  value: number;
-  suffix: string;
-  onPress?: () => void;
-  icon?: keyof typeof Ionicons.glyphMap;
-  iconColor?: string;
-}) {
-  const content = (
-    <>
-      <View style={styles.statValueRow}>
-        {icon && (
-          <Ionicons name={icon} size={20} color={iconColor || AppColors.primary} style={styles.statIcon} />
-        )}
-        <Text style={styles.statValue}>
-          {value}{suffix && <Text style={styles.statSuffix}> {suffix}</Text>}
-        </Text>
-      </View>
-      <Text style={styles.statLabel}>{label}</Text>
-      {onPress && (
-        <View style={styles.tapIndicator}>
-          <Ionicons name="chevron-forward" size={16} color={AppColors.textTertiary} />
-        </View>
-      )}
-    </>
-  );
-
-  if (onPress) {
-    return (
-      <TouchableOpacity style={styles.statCard} onPress={onPress} activeOpacity={0.7}>
-        {content}
-      </TouchableOpacity>
-    );
-  }
-
-  return (
-    <View style={styles.statCard}>
-      {content}
-    </View>
-  );
-}
-
 function getTimeAgo(timestamp: string): string {
   const now = new Date();
   const past = new Date(timestamp);
@@ -788,7 +884,7 @@ const styles = StyleSheet.create({
   header: {
     padding: 24,
     paddingTop: 100,
-    backgroundColor: AppColors.surface,
+    // backgroundColor applied dynamically based on completed categories
   },
   headerRow: {
     flexDirection: 'row',
@@ -853,10 +949,59 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: AppColors.textPrimary,
   },
-  subtitle: {
-    fontSize: 14,
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+    gap: 12,
+  },
+  statItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 2,
+  },
+  statValue: {
+    fontSize: 15,
+    fontWeight: '600',
     color: AppColors.textSecondary,
-    marginTop: 2,
+  },
+  statDivider: {
+    width: 1,
+    height: 14,
+    backgroundColor: AppColors.border,
+  },
+  tooltipOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  tooltip: {
+    backgroundColor: AppColors.surface,
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    marginHorizontal: 40,
+    borderWidth: 1,
+    borderColor: AppColors.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  tooltipText: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: AppColors.textPrimary,
+    textAlign: 'center',
+  },
+  tooltipDismiss: {
+    fontSize: 12,
+    color: AppColors.textTertiary,
+    textAlign: 'center',
+    marginTop: 12,
   },
   section: {
     marginTop: 16,
@@ -908,53 +1053,6 @@ const styles = StyleSheet.create({
     gap: 16,
     marginTop: 16,
     marginBottom: 16,
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  statCard: {
-    flex: 1,
-    padding: 16,
-    borderRadius: 12,
-    backgroundColor: AppColors.surfaceSecondary,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: AppColors.cardBorder,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  statValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: AppColors.textPrimary,
-  },
-  statValueRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  statIcon: {
-    marginRight: 4,
-  },
-  statSuffix: {
-    fontSize: 14,
-    color: AppColors.textSecondary,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: AppColors.textSecondary,
-    marginTop: 4,
-    textAlign: 'center',
-  },
-  tapIndicator: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
   },
   routineCard: {
     padding: 16,

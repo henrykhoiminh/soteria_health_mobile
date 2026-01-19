@@ -8,6 +8,8 @@ import { Animated, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from
 import AvatarOrb from './components/AvatarOrb';
 import NameSelector from './components/NameSelector';
 import OnboardingProgress from './components/OnboardingProgress';
+import SoteriaDialogueBox from './components/SoteriaDialogueBox';
+import CharacterSummoningAnimation from './components/CharacterSummoningAnimation';
 
 // Typing speed in milliseconds per character
 const TYPING_SPEED = 40;
@@ -52,6 +54,8 @@ export default function BodyExtractionScreen() {
   const [isTyping, setIsTyping] = useState(false);
   const [showSelector, setShowSelector] = useState(false);
   const [showContinue, setShowContinue] = useState(false);
+  const [showSummoning, setShowSummoning] = useState(true);
+  const [summoningComplete, setSummoningComplete] = useState(false);
   const selectorOpacity = useRef(new Animated.Value(0)).current;
   const nameButtonOpacity = useRef(new Animated.Value(0)).current;
   const nameButtonScale = useRef(new Animated.Value(0.8)).current;
@@ -146,9 +150,15 @@ export default function BodyExtractionScreen() {
     };
   }, []);
 
+  // Handle summoning animation complete
+  const handleSummoningComplete = () => {
+    setSummoningComplete(true);
+    setShowSummoning(false);
+  };
+
   // Intro phase - show intro captions then selector
   useEffect(() => {
-    if (phase !== 'intro') return;
+    if (phase !== 'intro' || !summoningComplete) return;
 
     const currentCaption = captions[currentIndex];
 
@@ -177,7 +187,7 @@ export default function BodyExtractionScreen() {
     return () => {
       if (typingRef.current) clearTimeout(typingRef.current);
     };
-  }, [phase, currentIndex, startTyping, selectorOpacity, captions]);
+  }, [phase, currentIndex, startTyping, selectorOpacity, captions, summoningComplete]);
 
   // Comment phase - show Soteria's comment on the name
   useEffect(() => {
@@ -230,6 +240,20 @@ export default function BodyExtractionScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Summoning animation for Body */}
+      {showSummoning && (
+        <CharacterSummoningAnimation
+          characterColor={AppColors.body}
+          onAnimationComplete={handleSummoningComplete}
+        >
+          <AvatarOrb
+            type="Body"
+            size="large"
+            animate={true}
+          />
+        </CharacterSummoningAnimation>
+      )}
+
       <OnboardingProgress currentStep="body-extraction" />
 
       {/* Journey badge at top */}
@@ -240,29 +264,34 @@ export default function BodyExtractionScreen() {
       )}
 
       <View style={styles.content}>
-        {/* Body orb - prominently displayed */}
-        <View style={styles.orbContainer}>
-          <AvatarOrb
-            type="Body"
-            size="large"
-            animate={true}
-            name={data.bodyName || undefined}
-            showName={data.bodyName.length > 0}
-          />
-          {data.bodyName && nameDescriptions[data.bodyName] && (
-            <Text style={styles.nameDescription}>
-              {nameDescriptions[data.bodyName]}
-            </Text>
-          )}
-        </View>
+        {/* Body orb - only show after summoning completes */}
+        {summoningComplete && (
+          <View style={styles.orbContainer}>
+            <AvatarOrb
+              type="Body"
+              size="large"
+              animate={true}
+              name={data.bodyName || undefined}
+              showName={data.bodyName.length > 0}
+            />
+            {data.bodyName && nameDescriptions[data.bodyName] && (
+              <Text style={styles.nameDescription}>
+                {nameDescriptions[data.bodyName]}
+              </Text>
+            )}
+          </View>
+        )}
 
-        {/* Caption text - typewriter effect */}
-        <View style={styles.captionContainer}>
-          <Text style={styles.captionText}>
-            {displayedText}
-            {isTyping && <Text style={styles.cursor}>|</Text>}
-          </Text>
-        </View>
+        {/* Caption text - only show after summoning */}
+        {summoningComplete && (
+          <View style={styles.dialogueBoxContainer}>
+            <SoteriaDialogueBox
+              text={displayedText}
+              glowPosition="top"
+              isTyping={isTyping}
+            />
+          </View>
+        )}
 
         {/* Name selector - fades in after typing */}
         <Animated.View style={[styles.selectorContainer, { opacity: selectorOpacity }]}>
@@ -349,28 +378,9 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.6)',
     textAlign: 'center',
   },
-  captionContainer: {
+  dialogueBoxContainer: {
     width: '100%',
-    backgroundColor: AppColors.surface,
-    borderRadius: 16,
-    padding: 20,
-    minHeight: 80,
-    justifyContent: 'center',
-    alignItems: 'center',
     marginBottom: 32,
-    borderWidth: 1,
-    borderColor: AppColors.borderLight,
-  },
-  captionText: {
-    fontSize: 20,
-    lineHeight: 30,
-    color: AppColors.textPrimary,
-    textAlign: 'center',
-    paddingHorizontal: 20,
-  },
-  cursor: {
-    color: AppColors.primary,
-    fontWeight: '300',
   },
   selectorContainer: {
     width: '100%',

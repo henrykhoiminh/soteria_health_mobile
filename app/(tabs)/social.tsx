@@ -592,17 +592,6 @@ function CirclesTab({ userId, onRefresh }: { userId: string; onRefresh: () => vo
         style={styles.tabContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
       >
-        {/* Create Circle Button */}
-        <View style={styles.section}>
-          <TouchableOpacity
-            style={styles.createButton}
-            onPress={() => setShowCreateModal(true)}
-          >
-            <Ionicons name="add-circle" size={24} color={AppColors.textPrimary} />
-            <Text style={styles.createButtonText}>Create Circle</Text>
-          </TouchableOpacity>
-        </View>
-
         {/* Pending Circle Invitations */}
         {pendingInvitations.length > 0 && (
           <View style={styles.section}>
@@ -715,6 +704,15 @@ function CirclesTab({ userId, onRefresh }: { userId: string; onRefresh: () => vo
 
         <View style={{ height: 100 }} />
       </ScrollView>
+
+      {/* Floating Create Circle Button */}
+      <TouchableOpacity
+        style={styles.floatingCreateButton}
+        onPress={() => setShowCreateModal(true)}
+      >
+        <Ionicons name="add-circle" size={28} color={AppColors.primaryText} />
+        <Text style={styles.floatingCreateButtonText}>Create Circle</Text>
+      </TouchableOpacity>
 
       {/* Create Circle Modal */}
       <CreateCircleModal
@@ -1098,7 +1096,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   acceptButtonText: {
-    color: AppColors.textPrimary,
+    color: AppColors.primaryText,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -1134,19 +1132,30 @@ const styles = StyleSheet.create({
     color: AppColors.textTertiary,
     textAlign: 'center',
   },
-  createButton: {
+  floatingCreateButton: {
+    position: 'absolute',
+    bottom: 24,
+    left: 16,
+    right: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: AppColors.primary,
-    borderRadius: 12,
-    padding: 16,
-    gap: 8,
+    borderRadius: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
-  createButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: AppColors.textPrimary,
+  floatingCreateButtonText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: AppColors.primaryText,
+    letterSpacing: 0.5,
   },
   circleCard: {
     flexDirection: 'row',
@@ -1192,7 +1201,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   joinButtonText: {
-    color: AppColors.textPrimary,
+    color: AppColors.primaryText,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -1229,7 +1238,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   acceptInviteButtonText: {
-    color: AppColors.textPrimary,
+    color: AppColors.primaryText,
     fontSize: 14,
     fontWeight: '600',
     textAlign: 'center',
@@ -1371,7 +1380,7 @@ const styles = StyleSheet.create({
   createModalButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: AppColors.textPrimary,
+    color: AppColors.primaryText,
   },
   errorText: {
     fontSize: 16,

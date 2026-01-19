@@ -7,6 +7,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Animated, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import AvatarOrb from './components/AvatarOrb';
 import OnboardingProgress from './components/OnboardingProgress';
+import SoteriaDialogueBox from './components/SoteriaDialogueBox';
 
 // Typing speed in milliseconds per character
 const TYPING_SPEED = 40;
@@ -147,11 +148,12 @@ export default function IntroduceYourselfScreen() {
         </View>
 
         {/* Caption text - typewriter effect */}
-        <View style={styles.captionContainer}>
-          <Text style={styles.captionText}>
-            {displayedText}
-            {isTyping && <Text style={styles.cursor}>|</Text>}
-          </Text>
+        <View style={styles.dialogueBoxContainer}>
+          <SoteriaDialogueBox
+            text={displayedText}
+            glowPosition="top"
+            isTyping={isTyping}
+          />
         </View>
       </View>
 
@@ -211,27 +213,8 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     textTransform: 'uppercase',
   },
-  captionContainer: {
+  dialogueBoxContainer: {
     width: '100%',
-    backgroundColor: AppColors.surface,
-    borderRadius: 16,
-    padding: 20,
-    minHeight: 80,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: AppColors.borderLight,
-  },
-  captionText: {
-    fontSize: 20,
-    lineHeight: 30,
-    color: AppColors.textPrimary,
-    textAlign: 'center',
-    paddingHorizontal: 20,
-  },
-  cursor: {
-    color: AppColors.primary,
-    fontWeight: '300',
   },
   footer: {
     position: 'absolute',

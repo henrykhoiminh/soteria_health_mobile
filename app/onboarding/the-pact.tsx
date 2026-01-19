@@ -9,6 +9,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import OnboardingButton from './components/OnboardingButton';
 import OnboardingProgress from './components/OnboardingProgress';
+import SoteriaDialogueBox from './components/SoteriaDialogueBox';
 import SoteriaPresence from './components/SoteriaPresence';
 
 // Typing speed in milliseconds per character
@@ -255,11 +256,12 @@ export default function ThePactScreen() {
         </View>
 
         {/* Caption text - typewriter effect */}
-        <View style={styles.captionContainer}>
-          <Text style={styles.captionText}>
-            {displayedText}
-            {isTyping && <Text style={styles.cursor}>|</Text>}
-          </Text>
+        <View style={styles.dialogueBoxContainer}>
+          <SoteriaDialogueBox
+            text={displayedText}
+            glowPosition="top"
+            isTyping={isTyping}
+          />
         </View>
       </View>
 
@@ -307,22 +309,8 @@ const styles = StyleSheet.create({
   presenceContainer: {
     marginBottom: 64,
   },
-  captionContainer: {
+  dialogueBoxContainer: {
     width: '100%',
-    minHeight: 80,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  captionText: {
-    fontSize: 20,
-    lineHeight: 30,
-    color: AppColors.textPrimary,
-    textAlign: 'center',
-    paddingHorizontal: 20,
-  },
-  cursor: {
-    color: AppColors.primary,
-    fontWeight: '300',
   },
   welcomeText: {
     fontSize: 24,

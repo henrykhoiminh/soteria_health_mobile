@@ -39,7 +39,8 @@
         }
       ],
       "expo-web-browser",
-      "react-native-compressor"
+      "react-native-compressor",
+      "expo-audio"
     ],
     "experiments": {
       "typedRoutes": true,

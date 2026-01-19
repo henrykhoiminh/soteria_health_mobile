@@ -131,6 +131,7 @@ function DiscoverTab({ userId, initialCategory, isInHarmony }: { userId: string;
     initialCategory ? { category: initialCategory } : {}
   );
   const [showFilterModal, setShowFilterModal] = useState(false);
+  const [showSortModal, setShowSortModal] = useState(false);
 
   // Update filters when initialCategory changes (e.g., navigating from dashboard)
   useEffect(() => {
@@ -226,13 +227,7 @@ function DiscoverTab({ userId, initialCategory, isInHarmony }: { userId: string;
           {/* Sort Dropdown */}
           <TouchableOpacity
             style={[styles.filterChip, styles.sortChip]}
-            onPress={() => {
-              // Cycle through sort options
-              const options: RoutineSortOption[] = ['popular', 'trending', 'newest', 'most_saved'];
-              const currentIndex = options.indexOf(sortBy);
-              const nextIndex = (currentIndex + 1) % options.length;
-              setSortBy(options[nextIndex]);
-            }}
+            onPress={() => setShowSortModal(true)}
           >
             <Ionicons name="swap-vertical" size={16} color={AppColors.textPrimary} />
             <Text style={styles.filterChipText}>
@@ -338,7 +333,84 @@ function DiscoverTab({ userId, initialCategory, isInHarmony }: { userId: string;
         }}
         onClose={() => setShowFilterModal(false)}
       />
+
+      {/* Sort Modal */}
+      <SortModal
+        visible={showSortModal}
+        currentSort={sortBy}
+        onSelect={(option) => {
+          setSortBy(option);
+          setShowSortModal(false);
+        }}
+        onClose={() => setShowSortModal(false)}
+      />
     </View>
+  );
+}
+
+// =====================================================
+// SORT MODAL
+// =====================================================
+
+const SORT_OPTIONS: { value: RoutineSortOption; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { value: 'popular', label: 'Popular', icon: 'flame' },
+  { value: 'trending', label: 'Trending', icon: 'trending-up' },
+  { value: 'newest', label: 'Newest', icon: 'time' },
+  { value: 'most_saved', label: 'Most Saved', icon: 'bookmark' },
+];
+
+interface SortModalProps {
+  visible: boolean;
+  currentSort: RoutineSortOption;
+  onSelect: (option: RoutineSortOption) => void;
+  onClose: () => void;
+}
+
+function SortModal({ visible, currentSort, onSelect, onClose }: SortModalProps) {
+  return (
+    <Modal
+      visible={visible}
+      animationType="fade"
+      transparent={true}
+      onRequestClose={onClose}
+    >
+      <TouchableOpacity
+        style={styles.sortModalOverlay}
+        activeOpacity={1}
+        onPress={onClose}
+      >
+        <View style={styles.sortModalContent}>
+          <Text style={styles.sortModalTitle}>Sort By</Text>
+          {SORT_OPTIONS.map((option) => (
+            <TouchableOpacity
+              key={option.value}
+              style={[
+                styles.sortOption,
+                currentSort === option.value && styles.sortOptionActive,
+              ]}
+              onPress={() => onSelect(option.value)}
+            >
+              <Ionicons
+                name={option.icon}
+                size={20}
+                color={currentSort === option.value ? AppColors.primary : AppColors.textSecondary}
+              />
+              <Text
+                style={[
+                  styles.sortOptionText,
+                  currentSort === option.value && styles.sortOptionTextActive,
+                ]}
+              >
+                {option.label}
+              </Text>
+              {currentSort === option.value && (
+                <Ionicons name="checkmark" size={20} color={AppColors.primary} />
+              )}
+            </TouchableOpacity>
+          ))}
+        </View>
+      </TouchableOpacity>
+    </Modal>
   );
 }
 
@@ -1457,5 +1529,47 @@ const styles = StyleSheet.create({
   },
   advancedFilterDescriptionActive: {
     color: 'rgba(255, 255, 255, 0.8)',
+  },
+  // Sort Modal styles
+  sortModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  sortModalContent: {
+    backgroundColor: AppColors.surface,
+    borderRadius: 16,
+    padding: 20,
+    width: '100%',
+    maxWidth: 320,
+  },
+  sortModalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: AppColors.textPrimary,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  sortOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    gap: 12,
+  },
+  sortOptionActive: {
+    backgroundColor: AppColors.lightGold,
+  },
+  sortOptionText: {
+    flex: 1,
+    fontSize: 16,
+    color: AppColors.textSecondary,
+  },
+  sortOptionTextActive: {
+    color: AppColors.primary,
+    fontWeight: '600',
   },
 });

@@ -6,6 +6,7 @@ import { Animated, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from
 import AvatarOrb from './components/AvatarOrb';
 import OnboardingButton from './components/OnboardingButton';
 import OnboardingProgress from './components/OnboardingProgress';
+import SoteriaDialogueBox from './components/SoteriaDialogueBox';
 import SoteriaPresence from './components/SoteriaPresence';
 
 // Phase 1: Introduction
@@ -322,14 +323,15 @@ export default function ThreeLightsScreen() {
 
         {/* Caption text - below Soteria */}
         <TouchableOpacity
-          style={styles.captionContainer}
+          style={styles.dialogueBoxContainer}
           onPress={handleTapToSpeed}
           activeOpacity={1}
         >
-          <Text style={styles.captionText}>
-            {displayedText}
-            {isTyping && <Text style={styles.cursor}>|</Text>}
-          </Text>
+          <SoteriaDialogueBox
+            text={displayedText}
+            glowPosition="top"
+            isTyping={isTyping}
+          />
         </TouchableOpacity>
       </View>
 
@@ -383,25 +385,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     textTransform: 'uppercase',
   },
-  captionContainer: {
+  dialogueBoxContainer: {
     width: '100%',
-    backgroundColor: AppColors.surface,
-    borderRadius: 16,
-    padding: 20,
-    minHeight: 80,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: AppColors.borderLight,
-  },
-  captionText: {
-    fontSize: 18,
-    lineHeight: 28,
-    color: AppColors.textPrimary,
-    textAlign: 'center',
-  },
-  cursor: {
-    color: AppColors.primary,
-    fontWeight: '300',
   },
 });

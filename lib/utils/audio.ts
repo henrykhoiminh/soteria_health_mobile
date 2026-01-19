@@ -1,10 +1,8 @@
 import { Audio } from 'expo-av'
 
-// Sound asset - using require for static asset bundling
+// Sound assets - using require for static asset bundling
 const COUNTDOWN_BEEP_SOUND = require('@/assets/sounds/count_down_beep.mp3')
-
-// Pre-loaded sound instance for faster playback
-let preloadedBeepSound: Audio.Sound | null = null
+const EXTRACTION_MYSTICAL_SOUND = require('@/assets/sounds/extraction_mystical.mp3')
 
 /**
  * Initialize audio settings for background playback
@@ -16,26 +14,8 @@ export async function initAudio(): Promise<void> {
       staysActiveInBackground: false,
       shouldDuckAndroid: true,
     })
-
-    // Pre-load the beep sound for faster playback
-    await preloadCountdownSound()
   } catch (error) {
     console.error('Error initializing audio:', error)
-  }
-}
-
-/**
- * Pre-load the countdown sound for instant playback
- */
-async function preloadCountdownSound(): Promise<void> {
-  try {
-    if (preloadedBeepSound) {
-      await preloadedBeepSound.unloadAsync()
-    }
-    const { sound } = await Audio.Sound.createAsync(COUNTDOWN_BEEP_SOUND)
-    preloadedBeepSound = sound
-  } catch (error) {
-    console.error('Error preloading countdown sound:', error)
   }
 }
 
@@ -45,7 +25,6 @@ async function preloadCountdownSound(): Promise<void> {
  */
 export async function playCountdownBeep(): Promise<void> {
   try {
-    // Create a new sound instance each time for reliable playback
     const { sound } = await Audio.Sound.createAsync(
       COUNTDOWN_BEEP_SOUND,
       { shouldPlay: true, volume: 0.8 }
@@ -83,15 +62,29 @@ export async function playCompletionSound(): Promise<void> {
 }
 
 /**
- * Cleanup all loaded sounds
+ * Play the mystical extraction sound for character summoning animations
+ * Used during onboarding character introduction sequences
+ */
+export async function playExtractionSound(): Promise<void> {
+  try {
+    const { sound } = await Audio.Sound.createAsync(
+      EXTRACTION_MYSTICAL_SOUND,
+      { shouldPlay: true, volume: 0.7 }
+    )
+
+    sound.setOnPlaybackStatusUpdate((status) => {
+      if (status.isLoaded && status.didJustFinish) {
+        sound.unloadAsync()
+      }
+    })
+  } catch (error) {
+    console.error('Error playing extraction sound:', error)
+  }
+}
+
+/**
+ * Cleanup function (kept for API compatibility)
  */
 export async function cleanupAudio(): Promise<void> {
-  try {
-    if (preloadedBeepSound) {
-      await preloadedBeepSound.unloadAsync()
-      preloadedBeepSound = null
-    }
-  } catch (error) {
-    console.error('Error cleaning up audio:', error)
-  }
+  // Audio.Sound instances auto-cleanup when unloaded
 }

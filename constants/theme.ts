@@ -65,6 +65,11 @@ export const AppColors = {
   lightBlue: '#1E3A5F',       // Dark blue for goals/mind tags
   lightOrange: '#4A3A1F',     // Dark amber for warnings/injuries
   lightGold: '#3D3520',       // Dark gold for Soteria-related highlights
+
+  // Header Dynamic Backgrounds (based on completed categories)
+  headerMind: '#1E3A5F',      // Dark blue for Mind category completion
+  headerBody: '#4A1F1F',      // Dark red for Body category completion
+  headerSoul: '#4A3A1F',      // Dark amber for Soul category completion
 };
 
 // Card Elevation Style (for consistent card appearance) - Dark Mode Adjusted

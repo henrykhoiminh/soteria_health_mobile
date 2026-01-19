@@ -9,6 +9,7 @@ import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Animated, Image, Keyboard, KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import OnboardingProgress from './components/OnboardingProgress';
+import SoteriaDialogueBox from './components/SoteriaDialogueBox';
 import SoteriaPresence from './components/SoteriaPresence';
 
 // Typing speed in milliseconds per character
@@ -224,11 +225,12 @@ export default function TravelerNameScreen() {
           )}
 
           {/* Caption text - typewriter effect */}
-          <View style={styles.captionContainer}>
-            <Text style={styles.captionText}>
-              {displayedText}
-              {isTyping && <Text style={styles.cursor}>|</Text>}
-            </Text>
+          <View style={styles.dialogueBoxContainer}>
+            <SoteriaDialogueBox
+              text={displayedText}
+              glowPosition="top"
+              isTyping={isTyping}
+            />
           </View>
 
           {/* Profile Picture & Username - fades in after typing */}
@@ -346,23 +348,9 @@ const styles = StyleSheet.create({
   presenceContainer: {
     marginBottom: 32,
   },
-  captionContainer: {
+  dialogueBoxContainer: {
     width: '100%',
-    minHeight: 60,
-    justifyContent: 'center',
-    alignItems: 'center',
     marginBottom: 24,
-  },
-  captionText: {
-    fontSize: 20,
-    lineHeight: 30,
-    color: AppColors.textPrimary,
-    textAlign: 'center',
-    paddingHorizontal: 20,
-  },
-  cursor: {
-    color: AppColors.primary,
-    fontWeight: '300',
   },
   inputContainer: {
     width: '100%',
