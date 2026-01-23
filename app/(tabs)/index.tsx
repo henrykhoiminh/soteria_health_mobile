@@ -72,39 +72,48 @@ export default function DashboardScreen() {
    */
   const getHeaderBackground = ():
     | { type: 'solid'; color: string }
-    | { type: 'gradient'; colors: readonly [string, string, string]; start: { x: number; y: number }; end: { x: number; y: number } } => {
+    | { type: 'gradient'; colors: [string, string, ...string[]]; start: { x: number; y: number }; end: { x: number; y: number } } => {
     // Check which avatars are completed (Glowing or Radiant)
     const completedCategories = avatarStates.filter(
       state => state.lightState === 'Glowing' || state.lightState === 'Radiant'
     );
+
+    const categoryColorMap: Record<string, string> = {
+      Mind: AppColors.headerMind,
+      Body: AppColors.headerBody,
+      Soul: AppColors.headerSoul,
+    };
 
     // If no routines completed today, use neutral surface color
     if (completedCategories.length === 0) {
       return { type: 'solid' as const, color: AppColors.surface };
     }
 
-    // If all three categories are complete (Harmony state), use gradient
-    if (completedCategories.length === 3) {
+    // If only one category complete, use solid color
+    if (completedCategories.length === 1) {
       return {
-        type: 'gradient' as const,
-        colors: [AppColors.headerMind, AppColors.headerBody, AppColors.headerSoul] as const,
-        start: { x: 0, y: 0 },
-        end: { x: 1, y: 0 }, // Horizontal gradient
+        type: 'solid' as const,
+        color: categoryColorMap[completedCategories[0].category],
       };
     }
 
-    // Otherwise, use the most recently completed category's color
-    // Since avatarStates maintains order [Mind, Body, Soul], we'll take the last completed
-    const lastCompleted = completedCategories[completedCategories.length - 1];
-    const categoryColorMap = {
-      Mind: AppColors.headerMind,
-      Body: AppColors.headerBody,
-      Soul: AppColors.headerSoul,
-    };
+    // If 2 or more categories are complete, use gradient of those colors
+    // Build gradient colors array in Mind → Body → Soul order for consistency
+    const gradientColors: string[] = [];
+    const categoryOrder = ['Mind', 'Body', 'Soul'];
+
+    for (const category of categoryOrder) {
+      const isCompleted = completedCategories.some(state => state.category === category);
+      if (isCompleted) {
+        gradientColors.push(categoryColorMap[category]);
+      }
+    }
 
     return {
-      type: 'solid' as const,
-      color: categoryColorMap[lastCompleted.category as keyof typeof categoryColorMap],
+      type: 'gradient' as const,
+      colors: gradientColors as [string, string, ...string[]],
+      start: { x: 0, y: 0 },
+      end: { x: 1, y: 0 }, // Horizontal gradient
     };
   };
 

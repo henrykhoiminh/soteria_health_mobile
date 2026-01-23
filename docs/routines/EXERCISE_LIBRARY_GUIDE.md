@@ -77,10 +77,11 @@ export interface ExerciseLibraryItem {
 - category (Mind/Body/Soul)
 - difficulty (Beginner/Intermediate/Advanced)
 - searchQuery (text search)
-- bodyParts (array contains)
+- bodyParts (array contains) - Upper Body: Neck, Shoulder, Upper Back, Elbow, Wrist, Chest, Arm; Lower Body: Lower Back, Hip, Knee, Ankle, Foot
 - tags (array overlaps)
 - isOfficial (true/false)
 - createdBy (user ID)
+- ownership (all/official/mine/community)
 
 ---
 
@@ -90,6 +91,8 @@ export interface ExerciseLibraryItem {
 - ✅ Search exercises by name/description/instructions
 - ✅ Filter by category (Mind/Body/Soul)
 - ✅ Filter by difficulty (Beginner/Intermediate/Advanced)
+- ✅ Filter by ownership (All/Official/My Exercises/Community)
+- ✅ Filter by body part (Upper Body/Lower Body areas)
 - ✅ View exercise cards with metadata
 - ✅ Select exercises (for routine builder)
 - ✅ Edit exercises (for health team)
@@ -97,15 +100,26 @@ export interface ExerciseLibraryItem {
 - ✅ Displays body parts and tags
 - ✅ Shows duration and usage count
 
+**Filter UI (Horizontal Scroll Carousel):**
+- 4 filter chips in a horizontal ScrollView
+- Each chip has an icon + label + chevron
+- Icons: `people-outline`, `apps-outline`, `speedometer-outline`, `body-outline`
+- Active state: gold background with primary-colored text/icons
+- Body Part modal shows grouped options (Upper Body / Lower Body sections)
+
 **Props:**
 ```typescript
 {
   onSelectExercise?: (exercise) => void    // For routine builder
   onEditExercise?: (exercise) => void      // For health team
+  onDeleteExercise?: (exerciseId) => void  // Delete callback
   category?: RoutineCategory               // Pre-filter by category
   showOfficialOnly?: boolean               // Show only official exercises
   allowSelection?: boolean                 // Enable selection mode
   allowEditing?: boolean                   // Show edit buttons
+  allowDeleting?: boolean                  // Show delete buttons
+  userId?: string                          // For permission checks
+  isHealthTeam?: boolean                   // Health team/admin status
 }
 ```
 
@@ -369,6 +383,7 @@ health_team_can_delete_official_exercises
 - ✅ Exercise CRUD operations
 - ✅ Advanced filtering & search
 - ✅ Body parts targeting
+- ✅ Body part filter in UI (Upper/Lower body grouped)
 - ✅ Tag system
 - ✅ Official/community exercises
 - ✅ RLS permissions
@@ -378,7 +393,8 @@ health_team_can_delete_official_exercises
 - ✅ Duration validation
 - ✅ Usage tracking placeholder
 - ✅ Responsive UI components
-- ⏳ Integration with routine builder
+- ✅ Horizontal scroll filter carousel
+- ✅ Integration with routine builder
 - ⏳ Health team management UI
 
 ---

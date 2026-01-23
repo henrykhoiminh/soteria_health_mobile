@@ -1348,7 +1348,7 @@ function ExerciseSelectionStep({
           disabled={!canProceed}
         >
           <Text style={styles.nextButtonText}>Next</Text>
-          <Ionicons name="arrow-forward" size={20} color={AppColors.textPrimary} />
+          <Ionicons name="arrow-forward" size={20} color={AppColors.primaryText} />
         </TouchableOpacity>
       </View>
     </View>
@@ -1764,7 +1764,7 @@ function DetailsStep({
           disabled={!canProceed}
         >
           <Text style={styles.nextButtonText}>Review</Text>
-          <Ionicons name="arrow-forward" size={20} color={AppColors.textPrimary} />
+          <Ionicons name="arrow-forward" size={20} color={AppColors.primaryText} />
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -2363,7 +2363,7 @@ const styles = StyleSheet.create({
   confirmButtonText: {
     fontSize: 18,
     fontWeight: '600',
-    color: AppColors.textPrimary,
+    color: AppColors.primaryText,
   },
   exerciseList: {
     flex: 1,
@@ -2590,7 +2590,7 @@ const styles = StyleSheet.create({
   nextButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: AppColors.textPrimary,
+    color: AppColors.primaryText,
   },
   publishButton: {
     flexDirection: 'row',
@@ -2871,7 +2871,7 @@ const styles = StyleSheet.create({
   continueButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: AppColors.textPrimary,
+    color: AppColors.primaryText,
   },
   editDurationModalOverlay: {
     flex: 1,
@@ -2943,7 +2943,7 @@ const styles = StyleSheet.create({
   editDurationSaveText: {
     fontSize: 16,
     fontWeight: '600',
-    color: AppColors.textPrimary,
+    color: AppColors.primaryText,
   },
   benefitsSeparator: {
     height: 1,

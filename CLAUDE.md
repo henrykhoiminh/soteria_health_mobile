@@ -306,7 +306,52 @@ lsof -ti:8081 | xargs kill -9
   - Skip tutorial entirely and use contextual hints in actual dashboard
   - Progressive disclosure - reveal features as user engages with app
 
-### Session 26 (Latest - Onboarding UX Enhancements)
+### Session 27 (Latest - Exercise Library Filters & Builder UX)
+- **Expo Startup Troubleshooting:**
+  - Created `EXPO-STARTUP-GUIDE.md` documenting slow startup causes and fixes
+  - Key issue: Watchman file watches go stale after Mac sleeps
+  - Quick fix: `watchman watch-del-all && npm start` (faster than reinstalling node_modules)
+  - Added info on disabling telemetry and persistent Metro cache
+
+- **Exercise Library Body Parts Filter (`components/ExerciseLibrary.tsx`):**
+  - Added new "Body Part" filter to exercise selection in Builder tab
+  - Converted filter row from flex-wrap to horizontal ScrollView carousel
+  - All 4 filters now scroll horizontally: Created By, Category, Difficulty, Body Part
+  - Filter chips redesigned with icons (via soteria-design-system agent):
+    - `people-outline` for Created By
+    - `apps-outline` for Category
+    - `speedometer-outline` for Difficulty
+    - `body-outline` for Body Part
+  - Active state: gold background with primary color text/icons
+  - Body Part modal shows grouped options: Upper Body / Lower Body sections
+  - Fixed chip text cutoff with `flexShrink: 0` and fixed `height: 40`
+
+- **Builder Tab Button Accessibility (via soteria-design-system agent):**
+  - Updated all gold/primary buttons to use dark text (`AppColors.primaryText`)
+  - Affected styles: `nextButtonText`, `continueButtonText`, `confirmButtonText`, `editDurationSaveText`
+  - Updated arrow icons on Next and Review buttons
+  - Contrast improved from 1.35:1 to 12.87:1 (WCAG AAA compliant)
+  - Publish button (green background) correctly kept white text
+
+- **Dashboard Dynamic Gradient Header Fix (`app/(tabs)/index.tsx`):**
+  - Fixed `getHeaderBackground()` to show gradient for 2+ completed categories
+  - Previous: Only showed gradient when all 3 complete, otherwise solid color of last
+  - New logic:
+    - 0 completed → solid surface color
+    - 1 completed → solid color of that category
+    - 2 completed → gradient of those 2 colors (in Mind→Body→Soul order)
+    - 3 completed → full harmony gradient
+  - Example: Mind + Body glowing = blue-to-red gradient
+
+- **Key Files Modified:**
+  - `components/ExerciseLibrary.tsx` - Body Parts filter, horizontal carousel, chip redesign
+  - `app/(tabs)/builder.tsx` - Button text colors for accessibility
+  - `app/(tabs)/index.tsx` - Dynamic gradient header for 2+ categories
+  - `EXPO-STARTUP-GUIDE.md` - New troubleshooting documentation
+
+---
+
+### Session 26 (Onboarding UX Enhancements)
 - **Glass Panel Dialogue Box (BotW-Inspired):**
   - Created `SoteriaDialogueBox` component with frosted glass effect using `expo-blur`
   - Features: luminous gold edge glow, semi-transparent background, italicized text
@@ -419,7 +464,7 @@ lsof -ti:8081 | xargs kill -9
 
 ---
 
-**Last Updated:** 2026-01-19
+**Last Updated:** 2026-01-23
 **Current Version:** Expo SDK 54, React Native 0.76+
 
 ## Known Issues & Pending Investigations

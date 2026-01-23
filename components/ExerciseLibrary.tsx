@@ -20,6 +20,7 @@ import {
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import type { ExerciseLibraryItem, RoutineCategory, RoutineDifficulty } from '../types'
+import { UPPER_BODY_AREAS, LOWER_BODY_AREAS } from '../types'
 import { getExercises, deleteExercise } from '../lib/utils/exercises'
 import { AppColors } from '../constants/theme'
 
@@ -71,11 +72,13 @@ export default function ExerciseLibrary({
   const [selectedCategory, setSelectedCategory] = useState<RoutineCategory | undefined>(category)
   const [selectedDifficulty, setSelectedDifficulty] = useState<RoutineDifficulty | undefined>()
   const [selectedOwnership, setSelectedOwnership] = useState<'all' | 'official' | 'mine' | 'community'>('all')
+  const [selectedBodyPart, setSelectedBodyPart] = useState<string | undefined>()
 
   // Dropdown modal state
   const [categoryModalVisible, setCategoryModalVisible] = useState(false)
   const [difficultyModalVisible, setDifficultyModalVisible] = useState(false)
   const [ownershipModalVisible, setOwnershipModalVisible] = useState(false)
+  const [bodyPartModalVisible, setBodyPartModalVisible] = useState(false)
 
   // Load exercises
   useEffect(() => {
@@ -119,8 +122,15 @@ export default function ExerciseLibrary({
       })
     }
 
+    // Body parts filter
+    if (selectedBodyPart) {
+      filtered = filtered.filter((ex) =>
+        ex.body_parts?.includes(selectedBodyPart)
+      )
+    }
+
     setFilteredExercises(filtered)
-  }, [exercises, searchQuery, selectedDifficulty, selectedOwnership, userId])
+  }, [exercises, searchQuery, selectedDifficulty, selectedOwnership, selectedBodyPart, userId])
 
   const loadExercises = async () => {
     setLoading(true)
@@ -275,54 +285,121 @@ export default function ExerciseLibrary({
         )}
       </View>
 
-      {/* Filter Dropdowns */}
-      <View style={styles.filtersRow}>
+      {/* Filter Dropdowns - Horizontal Carousel */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.filtersScrollView}
+        contentContainerStyle={styles.filtersScrollViewContent}
+      >
         {/* Created By Dropdown */}
         <TouchableOpacity
-          style={styles.dropdown}
+          style={[
+            styles.filterChip,
+            (selectedOwnership !== 'all') && styles.filterChipActive
+          ]}
           onPress={() => setOwnershipModalVisible(true)}
         >
-          <Text style={styles.dropdownLabel}>Created By</Text>
-          <View style={styles.dropdownValue}>
-            <Text style={styles.dropdownValueText}>
-              {selectedOwnership === 'all' ? 'All' :
-               selectedOwnership === 'official' ? 'Official' :
-               selectedOwnership === 'mine' ? 'My Exercises' : 'Community'}
-            </Text>
-            <Ionicons name="chevron-down" size={16} color={AppColors.textSecondary} />
-          </View>
+          <Ionicons
+            name="people-outline"
+            size={16}
+            color={selectedOwnership !== 'all' ? AppColors.primary : AppColors.textSecondary}
+          />
+          <Text style={[
+            styles.filterChipText,
+            (selectedOwnership !== 'all') && styles.filterChipTextActive
+          ]}>
+            {selectedOwnership === 'all' ? 'All' :
+             selectedOwnership === 'official' ? 'Official' :
+             selectedOwnership === 'mine' ? 'My Exercises' : 'Community'}
+          </Text>
+          <Ionicons
+            name="chevron-down"
+            size={14}
+            color={selectedOwnership !== 'all' ? AppColors.primary : AppColors.textSecondary}
+          />
         </TouchableOpacity>
 
         {/* Category Dropdown */}
         {!category && (
           <TouchableOpacity
-            style={styles.dropdown}
+            style={[
+              styles.filterChip,
+              selectedCategory && styles.filterChipActive
+            ]}
             onPress={() => setCategoryModalVisible(true)}
           >
-            <Text style={styles.dropdownLabel}>Category</Text>
-            <View style={styles.dropdownValue}>
-              <Text style={styles.dropdownValueText}>
-                {selectedCategory || 'All'}
-              </Text>
-              <Ionicons name="chevron-down" size={16} color={AppColors.textSecondary} />
-            </View>
+            <Ionicons
+              name="apps-outline"
+              size={16}
+              color={selectedCategory ? AppColors.primary : AppColors.textSecondary}
+            />
+            <Text style={[
+              styles.filterChipText,
+              selectedCategory && styles.filterChipTextActive
+            ]}>
+              {selectedCategory || 'All Categories'}
+            </Text>
+            <Ionicons
+              name="chevron-down"
+              size={14}
+              color={selectedCategory ? AppColors.primary : AppColors.textSecondary}
+            />
           </TouchableOpacity>
         )}
 
         {/* Difficulty Dropdown */}
         <TouchableOpacity
-          style={styles.dropdown}
+          style={[
+            styles.filterChip,
+            selectedDifficulty && styles.filterChipActive
+          ]}
           onPress={() => setDifficultyModalVisible(true)}
         >
-          <Text style={styles.dropdownLabel}>Difficulty</Text>
-          <View style={styles.dropdownValue}>
-            <Text style={styles.dropdownValueText}>
-              {selectedDifficulty || 'All'}
-            </Text>
-            <Ionicons name="chevron-down" size={16} color={AppColors.textSecondary} />
-          </View>
+          <Ionicons
+            name="speedometer-outline"
+            size={16}
+            color={selectedDifficulty ? AppColors.primary : AppColors.textSecondary}
+          />
+          <Text style={[
+            styles.filterChipText,
+            selectedDifficulty && styles.filterChipTextActive
+          ]}>
+            {selectedDifficulty || 'All Levels'}
+          </Text>
+          <Ionicons
+            name="chevron-down"
+            size={14}
+            color={selectedDifficulty ? AppColors.primary : AppColors.textSecondary}
+          />
         </TouchableOpacity>
-      </View>
+
+        {/* Body Part Dropdown */}
+        <TouchableOpacity
+          style={[
+            styles.filterChip,
+            selectedBodyPart && styles.filterChipActive
+          ]}
+          onPress={() => setBodyPartModalVisible(true)}
+        >
+          <Ionicons
+            name="body-outline"
+            size={16}
+            color={selectedBodyPart ? AppColors.primary : AppColors.textSecondary}
+          />
+          <Text style={[
+            styles.filterChipText,
+            selectedBodyPart && styles.filterChipTextActive
+          ]}>
+            {selectedBodyPart || 'All Body Parts'}
+          </Text>
+          <Ionicons
+            name="chevron-down"
+            size={14}
+            color={selectedBodyPart ? AppColors.primary : AppColors.textSecondary}
+          />
+        </TouchableOpacity>
+      </ScrollView>
 
       {/* Results Count */}
       <Text style={styles.resultsCount}>
@@ -490,6 +567,105 @@ export default function ExerciseLibrary({
           </View>
         </TouchableOpacity>
       </Modal>
+
+      {/* Body Part Modal */}
+      <Modal
+        visible={bodyPartModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setBodyPartModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setBodyPartModalVisible(false)}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Select Body Part</Text>
+            <ScrollView>
+              {/* All option */}
+              <TouchableOpacity
+                style={[
+                  styles.modalOption,
+                  !selectedBodyPart && styles.modalOptionActive,
+                ]}
+                onPress={() => {
+                  setSelectedBodyPart(undefined)
+                  setBodyPartModalVisible(false)
+                }}
+              >
+                <Text
+                  style={[
+                    styles.modalOptionText,
+                    !selectedBodyPart && styles.modalOptionTextActive,
+                  ]}
+                >
+                  All Body Parts
+                </Text>
+                {!selectedBodyPart && (
+                  <Ionicons name="checkmark" size={20} color={AppColors.primary} />
+                )}
+              </TouchableOpacity>
+
+              {/* Upper Body Section */}
+              <Text style={styles.modalSectionHeader}>Upper Body</Text>
+              {UPPER_BODY_AREAS.map((bodyPart) => (
+                <TouchableOpacity
+                  key={bodyPart}
+                  style={[
+                    styles.modalOption,
+                    selectedBodyPart === bodyPart && styles.modalOptionActive,
+                  ]}
+                  onPress={() => {
+                    setSelectedBodyPart(bodyPart)
+                    setBodyPartModalVisible(false)
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.modalOptionText,
+                      selectedBodyPart === bodyPart && styles.modalOptionTextActive,
+                    ]}
+                  >
+                    {bodyPart}
+                  </Text>
+                  {selectedBodyPart === bodyPart && (
+                    <Ionicons name="checkmark" size={20} color={AppColors.primary} />
+                  )}
+                </TouchableOpacity>
+              ))}
+
+              {/* Lower Body Section */}
+              <Text style={styles.modalSectionHeader}>Lower Body</Text>
+              {LOWER_BODY_AREAS.map((bodyPart) => (
+                <TouchableOpacity
+                  key={bodyPart}
+                  style={[
+                    styles.modalOption,
+                    selectedBodyPart === bodyPart && styles.modalOptionActive,
+                  ]}
+                  onPress={() => {
+                    setSelectedBodyPart(bodyPart)
+                    setBodyPartModalVisible(false)
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.modalOptionText,
+                      selectedBodyPart === bodyPart && styles.modalOptionTextActive,
+                    ]}
+                  >
+                    {bodyPart}
+                  </Text>
+                  {selectedBodyPart === bodyPart && (
+                    <Ionicons name="checkmark" size={20} color={AppColors.primary} />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   )
 }
@@ -513,36 +689,46 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: AppColors.textPrimary,
   },
-  filtersRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
+  filtersScrollView: {
+    flexGrow: 0,
+    flexShrink: 0,
     marginBottom: 12,
+    minHeight: 44,
   },
-  dropdown: {
-    minWidth: 100,
-    flexGrow: 1,
-    flexBasis: '30%',
-    backgroundColor: AppColors.surface,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: AppColors.borderLight,
-    padding: 10,
+  filtersScrollViewContent: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingRight: 8,
   },
-  dropdownLabel: {
-    fontSize: 12,
-    color: AppColors.textSecondary,
-    marginBottom: 4,
-  },
-  dropdownValue: {
+  filterChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+    flexShrink: 0,
+    flexGrow: 0,
+    gap: 6,
+    height: 40,
+    paddingHorizontal: 14,
+    marginRight: 8,
+    borderRadius: 20,
+    backgroundColor: AppColors.surfaceSecondary,
+    borderWidth: 1,
+    borderColor: AppColors.border,
   },
-  dropdownValueText: {
-    fontSize: 14,
+  filterChipActive: {
+    backgroundColor: AppColors.lightGold,
+    borderColor: AppColors.primary,
+  },
+  filterChipText: {
+    fontSize: 13,
     fontWeight: '500',
-    color: AppColors.textPrimary,
+    color: AppColors.textSecondary,
+    flexShrink: 0,
+    lineHeight: 18,
+  },
+  filterChipTextActive: {
+    color: AppColors.primary,
+    fontWeight: '600',
   },
   resultsCount: {
     fontSize: 14,
@@ -700,5 +886,15 @@ const styles = StyleSheet.create({
   modalOptionTextActive: {
     color: AppColors.primary,
     fontWeight: '600',
+  },
+  modalSectionHeader: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: AppColors.textSecondary,
+    paddingHorizontal: 12,
+    paddingTop: 16,
+    paddingBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 })
