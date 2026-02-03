@@ -1,17 +1,42 @@
 import JourneyBadge from '@/components/JourneyBadge';
 import { AppColors } from '@/constants/theme';
 import { useOnboarding } from '@/lib/contexts/OnboardingContext';
-import { JourneyFocus } from '@/types';
+import { JourneyFocus, UPPER_BODY_AREAS, LOWER_BODY_AREAS } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Animated, Keyboard, KeyboardAvoidingView, Platform, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Animated, Keyboard, KeyboardAvoidingView, Modal, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import OnboardingButton from './components/OnboardingButton';
 import OnboardingProgress from './components/OnboardingProgress';
 import SoteriaDialogueBox from './components/SoteriaDialogueBox';
 import SoteriaPresence from './components/SoteriaPresence';
 import CharacterSummoningAnimation from './components/CharacterSummoningAnimation';
+
+// Recovery category definitions
+const RECOVERY_CATEGORIES = [
+  {
+    id: 'Mind',
+    label: 'Mind',
+    icon: 'bulb-outline' as const,
+    color: AppColors.mind,
+    description: 'Mental wellness & stress recovery',
+  },
+  {
+    id: 'Body',
+    label: 'Body',
+    icon: 'body-outline' as const,
+    color: AppColors.body,
+    description: 'Physical recovery from injury',
+  },
+  {
+    id: 'Soul',
+    label: 'Soul',
+    icon: 'sparkles-outline' as const,
+    color: AppColors.soul,
+    description: 'Emotional & spiritual healing',
+  },
+];
 
 // Phase 1: Initial mystery - Soteria notices the user (two-part dialogue)
 const mysteryCaptions = [
@@ -29,15 +54,18 @@ const introCaptions = [
 
 // Welcome captions after journey selection
 const preventionWelcomeCaptions = [
-  { text: 'Preparation over repair.', pauseAfter: 600 },
-  { text: 'Wise.', pauseAfter: 500 },
+  { text: 'Preparation over repair.', pauseAfter: 1200 },
+  { text: 'Wise.', pauseAfter: 1000 },
   { text: 'Welcome.', pauseAfter: 0 },
 ];
 
-const recoveryWelcomeCaptions = [
-  { text: 'Coming back stronger.', pauseAfter: 600 },
-  { text: 'That takes courage.', pauseAfter: 600 },
-  { text: 'Welcome.', pauseAfter: 0 },
+// Recovery welcome captions are generated dynamically to include recovery areas
+const getRecoveryWelcomeCaptions = (areasFormatted: string) => [
+  { text: `Your ${areasFormatted}...`, pauseAfter: 1200 },
+  { text: 'I understand.', pauseAfter: 1400 },
+  { text: 'Seeking healing is extremely wise.', pauseAfter: 1200 },
+  { text: "Let's see what we can do.", pauseAfter: 1000 },
+  { text: 'Come with me.', pauseAfter: 0 },
 ];
 
 // Typing speed in milliseconds per character
@@ -50,7 +78,7 @@ type Phase = 'mystery' | 'name-entry' | 'reinforcement' | 'intro' | 'choices' | 
 // Screen 2: Finding Soteria
 export default function FindingSoteriaScreen() {
   const router = useRouter();
-  const { data, setFirstName, setLastName, setJourneyFocus } = useOnboarding();
+  const { data, setFirstName, setLastName, setJourneyFocus, setRecoveryAreas } = useOnboarding();
 
   // Phase management
   const [phase, setPhase] = useState<Phase>('mystery');
@@ -66,6 +94,11 @@ export default function FindingSoteriaScreen() {
   const [showSummoning, setShowSummoning] = useState(true);
   const [summoningComplete, setSummoningComplete] = useState(false);
 
+  // Recovery areas modal state
+  const [showRecoveryModal, setShowRecoveryModal] = useState(false);
+  const [showBodyPartsPicker, setShowBodyPartsPicker] = useState(false);
+  const [selectedAreas, setSelectedAreas] = useState<string[]>([]);
+
   // Animation refs
   const choicesOpacity = useRef(new Animated.Value(0)).current;
   const choicesScale = useRef(new Animated.Value(0.9)).current;
@@ -79,6 +112,63 @@ export default function FindingSoteriaScreen() {
 
   const isNameValid = data.firstName.trim().length > 0 && data.lastName.trim().length > 0;
 
+  // Recovery area helpers
+  const isCategorySelected = (categoryId: string): boolean => {
+    if (categoryId === 'Mind' || categoryId === 'Soul') {
+      return selectedAreas.includes(categoryId);
+    }
+    const bodyParts = [...UPPER_BODY_AREAS, ...LOWER_BODY_AREAS];
+    return selectedAreas.some(area => bodyParts.includes(area as typeof bodyParts[number]));
+  };
+
+  const getSelectedBodyParts = (): string[] => {
+    const bodyParts = [...UPPER_BODY_AREAS, ...LOWER_BODY_AREAS];
+    return selectedAreas.filter(area => bodyParts.includes(area as typeof bodyParts[number]));
+  };
+
+  const toggleCategory = (categoryId: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    if (categoryId === 'Mind' || categoryId === 'Soul') {
+      setSelectedAreas(prev =>
+        prev.includes(categoryId)
+          ? prev.filter(a => a !== categoryId)
+          : [...prev, categoryId]
+      );
+    } else if (categoryId === 'Body') {
+      setShowBodyPartsPicker(true);
+    }
+  };
+
+  const toggleBodyPart = (part: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setSelectedAreas(prev =>
+      prev.includes(part)
+        ? prev.filter(a => a !== part)
+        : [...prev, part]
+    );
+  };
+
+  const clearBodyParts = () => {
+    const bodyParts = [...UPPER_BODY_AREAS, ...LOWER_BODY_AREAS];
+    setSelectedAreas(prev => prev.filter(a => !bodyParts.includes(a as typeof bodyParts[number])));
+  };
+
+  // Format recovery areas for dialogue (natural language)
+  const formatRecoveryAreasForDialogue = (): string => {
+    const areas: string[] = [];
+    const selectedBodyParts = getSelectedBodyParts();
+    if (selectedAreas.includes('Mind')) areas.push('Mind');
+    if (selectedBodyParts.length > 0) areas.push('Body');
+    if (selectedAreas.includes('Soul')) areas.push('Soul');
+
+    if (areas.length === 1) return areas[0];
+    if (areas.length === 2) return `${areas[0]} and ${areas[1]}`;
+    return `${areas[0]}, ${areas[1]}, and ${areas[2]}`;
+  };
+
+  const canContinueRecovery = selectedAreas.length > 0;
+
   // Get current captions based on phase
   const getCurrentCaptions = useCallback(() => {
     if (phase === 'mystery') return mysteryCaptions;
@@ -86,10 +176,10 @@ export default function FindingSoteriaScreen() {
     if (phase === 'welcome' && selectedFocus) {
       return selectedFocus === 'Injury Prevention'
         ? preventionWelcomeCaptions
-        : recoveryWelcomeCaptions;
+        : getRecoveryWelcomeCaptions(formatRecoveryAreasForDialogue());
     }
     return [];
-  }, [phase, selectedFocus]);
+  }, [phase, selectedFocus, selectedAreas]);
 
   // Typewriter effect
   const startTyping = useCallback((text: string, onComplete: () => void) => {
@@ -255,12 +345,15 @@ export default function FindingSoteriaScreen() {
   useEffect(() => {
     if (phase !== 'welcome' || !selectedFocus) return;
 
+    // Wait until currentIndex is properly initialized (not -1)
+    if (currentIndex < 0) return;
+
     const captions = selectedFocus === 'Injury Prevention'
       ? preventionWelcomeCaptions
-      : recoveryWelcomeCaptions;
+      : getRecoveryWelcomeCaptions(formatRecoveryAreasForDialogue());
     const currentCaption = captions[currentIndex];
 
-    // Guard: wait until currentIndex is valid (set after badge animation)
+    // Guard: wait until currentIndex is valid
     if (!currentCaption) return;
 
     startTyping(currentCaption.text, () => {
@@ -334,6 +427,20 @@ export default function FindingSoteriaScreen() {
     setJourneyFocus(focus);
     setSelectedFocus(focus);
 
+    if (focus === 'Recovery') {
+      // Show recovery areas modal first
+      setShowRecoveryModal(true);
+    } else {
+      // Injury Prevention - proceed directly to welcome
+      proceedToWelcome();
+    }
+  };
+
+  // Proceed to welcome phase after journey selection (and recovery areas if applicable)
+  const proceedToWelcome = () => {
+    // Reset currentIndex BEFORE changing phase to avoid stale index issues
+    setCurrentIndex(-1); // Use -1 as a "not started" marker
+
     // Immediately change phase to remove choices from DOM and update layout
     setPhase('welcome');
 
@@ -348,6 +455,22 @@ export default function FindingSoteriaScreen() {
         setCurrentIndex(0);
       });
     }, 150);
+  };
+
+  // Handle recovery areas confirmation
+  const handleRecoveryConfirm = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setRecoveryAreas(selectedAreas);
+    setShowRecoveryModal(false);
+    proceedToWelcome();
+  };
+
+  // Handle recovery modal cancel - go back to choices
+  const handleRecoveryCancel = () => {
+    setShowRecoveryModal(false);
+    setSelectedAreas([]);
+    setSelectedFocus(null);
+    setJourneyFocus(null as unknown as JourneyFocus);
   };
 
   // Handle skip - jump to choices
@@ -556,6 +679,213 @@ export default function FindingSoteriaScreen() {
         onPress={buttonConfig.onPress}
         visible={buttonConfig.visible}
       />
+
+      {/* Recovery Areas Modal */}
+      <Modal
+        visible={showRecoveryModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={handleRecoveryCancel}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            {/* Header */}
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Recovery Areas</Text>
+              <Text style={styles.modalSubtitle}>
+                Where does your healing journey need to focus?
+              </Text>
+            </View>
+
+            <ScrollView
+              style={styles.modalScroll}
+              showsVerticalScrollIndicator={false}
+            >
+              {/* Recovery Categories */}
+              {RECOVERY_CATEGORIES.map((category) => {
+                const isSelected = isCategorySelected(category.id);
+                const isBody = category.id === 'Body';
+                const selectedBodyParts = getSelectedBodyParts();
+
+                return (
+                  <TouchableOpacity
+                    key={category.id}
+                    style={[
+                      styles.categoryCard,
+                      isSelected && { borderColor: category.color },
+                    ]}
+                    onPress={() => toggleCategory(category.id)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.categoryContent}>
+                      <View
+                        style={[
+                          styles.categoryIconContainer,
+                          { backgroundColor: category.color + '20' },
+                        ]}
+                      >
+                        <Ionicons
+                          name={category.icon}
+                          size={28}
+                          color={category.color}
+                        />
+                      </View>
+                      <View style={styles.categoryTextContainer}>
+                        <Text style={styles.categoryLabel}>{category.label}</Text>
+                        <Text style={styles.categoryDescription}>
+                          {category.description}
+                        </Text>
+                        {isBody && isSelected && selectedBodyParts.length > 0 && (
+                          <Text style={styles.selectedBodyParts}>
+                            {selectedBodyParts.join(', ')}
+                          </Text>
+                        )}
+                      </View>
+                      <View
+                        style={[
+                          styles.checkbox,
+                          isSelected && { backgroundColor: category.color, borderColor: category.color },
+                        ]}
+                      >
+                        {isSelected && (
+                          <Ionicons name="checkmark" size={18} color="#fff" />
+                        )}
+                      </View>
+                    </View>
+                    {isBody && isSelected && (
+                      <TouchableOpacity
+                        style={styles.editBodyPartsButton}
+                        onPress={() => setShowBodyPartsPicker(true)}
+                      >
+                        <Ionicons name="pencil" size={14} color={AppColors.primary} />
+                        <Text style={styles.editBodyPartsText}>
+                          {selectedBodyParts.length === 0 ? 'Select Body Parts' : 'Edit Body Parts'}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+
+              {/* Helper text */}
+              {selectedAreas.length === 0 && (
+                <Text style={styles.helperText}>
+                  Select at least one area to continue
+                </Text>
+              )}
+            </ScrollView>
+
+            {/* Action Buttons */}
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={handleRecoveryCancel}
+              >
+                <Text style={styles.cancelButtonText}>Back</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.continueButton,
+                  !canContinueRecovery && styles.continueButtonDisabled,
+                ]}
+                onPress={handleRecoveryConfirm}
+                disabled={!canContinueRecovery}
+              >
+                <Text style={styles.continueButtonText}>Continue</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+
+        {/* Body Parts Picker Modal - nested inside recovery modal */}
+        <Modal
+          visible={showBodyPartsPicker}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={() => setShowBodyPartsPicker(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.bodyPartsModal}>
+              <View style={styles.bodyPartsHeader}>
+                <Text style={styles.bodyPartsTitle}>Select Body Parts</Text>
+                <TouchableOpacity
+                  onPress={() => setShowBodyPartsPicker(false)}
+                  style={styles.doneButton}
+                >
+                  <Text style={styles.doneButtonText}>Done</Text>
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {/* Upper Body */}
+                <Text style={styles.bodyRegionTitle}>Upper Body</Text>
+                <View style={styles.bodyPartsGrid}>
+                  {UPPER_BODY_AREAS.map((part) => {
+                    const isSelected = selectedAreas.includes(part);
+                    return (
+                      <TouchableOpacity
+                        key={part}
+                        style={[
+                          styles.bodyPartChip,
+                          isSelected && styles.bodyPartChipSelected,
+                        ]}
+                        onPress={() => toggleBodyPart(part)}
+                      >
+                        <Text
+                          style={[
+                            styles.bodyPartChipText,
+                            isSelected && styles.bodyPartChipTextSelected,
+                          ]}
+                        >
+                          {part}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                {/* Lower Body */}
+                <Text style={styles.bodyRegionTitle}>Lower Body</Text>
+                <View style={styles.bodyPartsGrid}>
+                  {LOWER_BODY_AREAS.map((part) => {
+                    const isSelected = selectedAreas.includes(part);
+                    return (
+                      <TouchableOpacity
+                        key={part}
+                        style={[
+                          styles.bodyPartChip,
+                          isSelected && styles.bodyPartChipSelected,
+                        ]}
+                        onPress={() => toggleBodyPart(part)}
+                      >
+                        <Text
+                          style={[
+                            styles.bodyPartChipText,
+                            isSelected && styles.bodyPartChipTextSelected,
+                          ]}
+                        >
+                          {part}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                {/* Clear All Button */}
+                {getSelectedBodyParts().length > 0 && (
+                  <TouchableOpacity
+                    style={styles.clearAllButton}
+                    onPress={clearBodyParts}
+                  >
+                    <Ionicons name="close-circle-outline" size={18} color={AppColors.textSecondary} />
+                    <Text style={styles.clearAllText}>Clear All Body Parts</Text>
+                  </TouchableOpacity>
+                )}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -663,5 +993,225 @@ const styles = StyleSheet.create({
   choiceDescription: {
     fontSize: 14,
     color: 'rgba(255, 255, 255, 0.6)',
+  },
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: AppColors.background,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '85%',
+    paddingBottom: 40,
+  },
+  modalHeader: {
+    padding: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: AppColors.border,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: AppColors.textPrimary,
+    marginBottom: 8,
+  },
+  modalSubtitle: {
+    fontSize: 15,
+    color: AppColors.textSecondary,
+  },
+  modalScroll: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    maxHeight: 400,
+  },
+  categoryCard: {
+    padding: 16,
+    backgroundColor: AppColors.surface,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: AppColors.border,
+    marginBottom: 12,
+  },
+  categoryContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  categoryIconContainer: {
+    width: 52,
+    height: 52,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  categoryTextContainer: {
+    flex: 1,
+  },
+  categoryLabel: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: AppColors.textPrimary,
+    marginBottom: 4,
+  },
+  categoryDescription: {
+    fontSize: 14,
+    color: AppColors.textSecondary,
+  },
+  selectedBodyParts: {
+    fontSize: 12,
+    color: AppColors.body,
+    marginTop: 6,
+    fontStyle: 'italic',
+  },
+  checkbox: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: AppColors.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  editBodyPartsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: AppColors.border,
+  },
+  editBodyPartsText: {
+    fontSize: 14,
+    color: AppColors.primary,
+    fontWeight: '500',
+  },
+  helperText: {
+    textAlign: 'center',
+    color: AppColors.textSecondary,
+    fontSize: 14,
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+  },
+  cancelButton: {
+    flex: 1,
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: AppColors.surface,
+    borderWidth: 1,
+    borderColor: AppColors.border,
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: AppColors.textPrimary,
+  },
+  continueButton: {
+    flex: 1,
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: AppColors.primary,
+  },
+  continueButtonDisabled: {
+    opacity: 0.5,
+  },
+  continueButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: AppColors.primaryText,
+  },
+  // Body Parts Picker Styles
+  bodyPartsModal: {
+    backgroundColor: AppColors.background,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '70%',
+    paddingBottom: 40,
+  },
+  bodyPartsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: AppColors.border,
+  },
+  bodyPartsTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: AppColors.textPrimary,
+  },
+  doneButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: AppColors.primary,
+    borderRadius: 8,
+  },
+  doneButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: AppColors.primaryText,
+  },
+  bodyRegionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: AppColors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginHorizontal: 20,
+    marginTop: 20,
+    marginBottom: 12,
+  },
+  bodyPartsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  bodyPartChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: AppColors.surface,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: AppColors.border,
+  },
+  bodyPartChipSelected: {
+    backgroundColor: AppColors.body + '20',
+    borderColor: AppColors.body,
+  },
+  bodyPartChipText: {
+    fontSize: 14,
+    color: AppColors.textPrimary,
+  },
+  bodyPartChipTextSelected: {
+    color: AppColors.body,
+    fontWeight: '600',
+  },
+  clearAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 20,
+    marginHorizontal: 20,
+    paddingVertical: 12,
+  },
+  clearAllText: {
+    fontSize: 14,
+    color: AppColors.textSecondary,
   },
 });

@@ -3,12 +3,20 @@ import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useOnboarding } from '@/lib/contexts/OnboardingContext';
 
 // Screen 1: Value Prop
 export default function ValuePropScreen() {
   const router = useRouter();
+  const { resetOnboarding } = useOnboarding();
   const [showButton, setShowButton] = useState(false);
   const [skipped, setSkipped] = useState(false);
+
+  // Reset onboarding context when entering this screen
+  // This ensures a clean slate for new users and users who reset their journey
+  useEffect(() => {
+    resetOnboarding();
+  }, []);
 
   // Animation values
   const headlineOpacity = useRef(new Animated.Value(0)).current;

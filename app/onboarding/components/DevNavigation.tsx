@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet, Modal, ScrollView } from 'react-native';
 
 // Onboarding screen order for navigation (matches actual flow)
+// Note: Journey selection + recovery areas are handled in finding-soteria screen
 const SCREEN_ORDER = [
   { path: '/onboarding', label: '1. Value Prop' },
   { path: '/onboarding/finding-soteria', label: '2. Finding Soteria' },

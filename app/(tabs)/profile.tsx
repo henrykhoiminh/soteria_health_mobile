@@ -247,7 +247,7 @@ export default function ProfileScreen() {
   const handleResetJourney = async () => {
     Alert.alert(
       'Reset Journey - Warning',
-      'This will permanently delete ALL your data including:\n\n• Journey progress and stats\n• Routine completions and history\n• Daily progress tracking\n• Avatar companion names\n\nYou will be sent back through onboarding to start fresh.\n\nThis action CANNOT be undone!',
+      'This will reset your journey data including:\n\n• Journey progress and stats\n• Routine completions and history\n• Daily progress tracking\n\nYour earned milestones will be preserved.\n\nYou will be sent back through onboarding to start fresh.',
       [
         { text: 'Cancel', style: 'cancel' },
         {

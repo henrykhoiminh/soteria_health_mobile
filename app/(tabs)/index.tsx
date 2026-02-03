@@ -5,9 +5,10 @@ import JourneyFocusModal from '@/components/JourneyFocusModal';
 import PainProgressChart from '@/components/PainProgressChart';
 import RecommendedRoutineModal from '@/components/RecommendedRoutineModal';
 import UsernameSetupModal from '@/components/UsernameSetupModal';
+import WellnessCheckInModal from '@/components/WellnessCheckInModal';
 import { AppColors } from '@/constants/theme';
 import { useAuth } from '@/lib/contexts/AuthContext';
-import { getRoutinesByCategory, getTodayProgress, getUniqueCompletedRoutines, getUserStats } from '@/lib/utils/dashboard';
+import { getCategoryRecommendation, getTodayProgress, getUniqueCompletedRoutines, getUserStats } from '@/lib/utils/dashboard';
 import { checkHarmonyRequirements } from '@/lib/utils/harmony';
 import { getPainCheckInHistory, getPainLevelInfo, getPainStatistics, getPainTrendInfo } from '@/lib/utils/pain-checkin';
 import { getFormattedFriendActivity } from '@/lib/utils/social';
@@ -19,10 +20,11 @@ import { getDashboardCache, clearDashboardCache } from '@/lib/utils/dashboard-ca
 import { ActivityFeedItem, AvatarState, DailyProgress, HarmonyStatus, PainCheckIn, PainStatistics, Routine, RoutineCategory, UserStats, UserSearchResult } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   Image,
   Modal,
   ScrollView,
@@ -35,7 +37,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 
 export default function DashboardScreen() {
-  const { user, profile } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const router = useRouter();
 
   // Check for cached data immediately on mount to avoid loading flash
@@ -52,6 +54,8 @@ export default function DashboardScreen() {
   const [showRecommendedModal, setShowRecommendedModal] = useState(false);
   const [selectedRoutine, setSelectedRoutine] = useState<Routine | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<RoutineCategory>('Mind');
+  const [recommendationMessage, setRecommendationMessage] = useState<string>('');
+  const [recommendationSubtitle, setRecommendationSubtitle] = useState<string>('');
   const [showCompletedRoutinesModal, setShowCompletedRoutinesModal] = useState(false);
   const [completedRoutines, setCompletedRoutines] = useState<Routine[]>([]);
   const [showHealthTeamInviteModal, setShowHealthTeamInviteModal] = useState(false);
@@ -61,10 +65,38 @@ export default function DashboardScreen() {
   const [invitedUsers, setInvitedUsers] = useState<Set<string>>(new Set());
   const [harmonyStatus, setHarmonyStatus] = useState<HarmonyStatus | null>(initialCache?.harmonyStatus || null);
   const [showHarmonyModal, setShowHarmonyModal] = useState(false);
+  const [showWellnessCheckIn, setShowWellnessCheckIn] = useState(false);
+  const [showUpdateCheckInConfirm, setShowUpdateCheckInConfirm] = useState(false);
   const [cacheUsed] = useState(!!initialCache); // Track if we initialized from cache
   const [activeTooltip, setActiveTooltip] = useState<'streak' | 'harmony' | 'routines' | null>(null);
+  const [painStatsUpdating, setPainStatsUpdating] = useState(false);
+  const painUpdatePulse = useRef(new Animated.Value(1)).current;
 
   const isHealthTeam = profile?.role === 'health_team' || profile?.role === 'admin';
+
+  // Pulse animation for pain stats updating
+  useEffect(() => {
+    if (painStatsUpdating) {
+      const pulse = Animated.loop(
+        Animated.sequence([
+          Animated.timing(painUpdatePulse, {
+            toValue: 0.6,
+            duration: 600,
+            useNativeDriver: true,
+          }),
+          Animated.timing(painUpdatePulse, {
+            toValue: 1,
+            duration: 600,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      pulse.start();
+      return () => pulse.stop();
+    } else {
+      painUpdatePulse.setValue(1);
+    }
+  }, [painStatsUpdating]);
 
   /**
    * Determines the header background based on completed avatar states.
@@ -193,13 +225,20 @@ export default function DashboardScreen() {
         return;
       }
 
-      // Otherwise, show recommendation modal for incomplete categories
-      const routines = await getRoutinesByCategory(category);
+      // Get wellness-aware recommendation with personalized messaging
+      const recommendation = await getCategoryRecommendation(
+        category,
+        user!.id,
+        profile?.journey_focus,
+        profile?.recovery_areas
+      );
 
-      if (routines && routines.length > 0) {
-        // Show modal with the first (most popular) routine
-        setSelectedRoutine(routines[0]);
+      if (recommendation.routines && recommendation.routines.length > 0) {
+        // Show modal with the first (most appropriate) routine and messaging
+        setSelectedRoutine(recommendation.routines[0]);
         setSelectedCategory(category);
+        setRecommendationMessage(recommendation.message);
+        setRecommendationSubtitle(recommendation.subtitle);
         setShowRecommendedModal(true);
       } else {
         // If no routines available, navigate to routines tab filtered by category
@@ -227,6 +266,8 @@ export default function DashboardScreen() {
   const handleCloseModal = () => {
     setShowRecommendedModal(false);
     setSelectedRoutine(null);
+    setRecommendationMessage('');
+    setRecommendationSubtitle('');
   };
 
   const handleShowCompletedRoutines = async () => {
@@ -314,11 +355,13 @@ export default function DashboardScreen() {
       <JourneyFocusModal
         visible={showJourneyFocusModal}
         currentFocus={profile?.journey_focus || 'Injury Prevention'}
+        currentRecoveryAreas={profile?.recovery_areas}
         journeyStartedAt={profile?.journey_started_at || undefined}
         userId={user?.id || ''}
         onClose={() => setShowJourneyFocusModal(false)}
-        onUpdate={() => {
-          // Reload dashboard data after journey focus update
+        onUpdate={async () => {
+          // Refresh profile to get updated recovery_areas, then reload dashboard
+          await refreshProfile();
           loadDashboardData();
         }}
       />
@@ -326,6 +369,8 @@ export default function DashboardScreen() {
         visible={showRecommendedModal}
         routine={selectedRoutine}
         category={selectedCategory}
+        message={recommendationMessage}
+        subtitle={recommendationSubtitle}
         onClose={handleCloseModal}
         onBrowseMore={handleBrowseMore}
         onSelectRoutine={handleStartRoutine}
@@ -348,6 +393,62 @@ export default function DashboardScreen() {
           onHarmonyStatusChanged={loadDashboardData}
         />
       )}
+
+      {/* Wellness Check-In Modal */}
+      {user && (
+        <WellnessCheckInModal
+          visible={showWellnessCheckIn}
+          userId={user.id}
+          mindName={profile?.mind_name || 'Mind'}
+          bodyName={profile?.body_name || 'Body'}
+          soulName={profile?.soul_name || 'Soul'}
+          onComplete={async () => {
+            setShowWellnessCheckIn(false);
+            // Show updating animation on pain progress
+            setPainStatsUpdating(true);
+            // Refresh dashboard to update pain stats
+            await loadDashboardData();
+            setPainStatsUpdating(false);
+          }}
+        />
+      )}
+
+      {/* Update Wellness Check-In Confirmation Modal */}
+      <Modal
+        visible={showUpdateCheckInConfirm}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setShowUpdateCheckInConfirm(false)}
+      >
+        <View style={styles.confirmOverlay}>
+          <View style={styles.confirmModal}>
+            <View style={styles.confirmIconContainer}>
+              <Ionicons name="heart-circle-outline" size={48} color={AppColors.primary} />
+            </View>
+            <Text style={styles.confirmTitle}>Update Wellness Check-In</Text>
+            <Text style={styles.confirmMessage}>
+              Do you want to update your daily wellness check-in? This will overwrite your current values for today.
+            </Text>
+            <View style={styles.confirmButtons}>
+              <TouchableOpacity
+                style={styles.confirmButtonCancel}
+                onPress={() => setShowUpdateCheckInConfirm(false)}
+              >
+                <Text style={styles.confirmButtonCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.confirmButtonConfirm}
+                onPress={() => {
+                  setShowUpdateCheckInConfirm(false);
+                  setShowWellnessCheckIn(true);
+                }}
+              >
+                <Text style={styles.confirmButtonConfirmText}>Update</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Health Team Invite Modal */}
       <Modal
@@ -735,8 +836,16 @@ export default function DashboardScreen() {
       {/* Pain Progress Section */}
       {painStats && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Pain Progress</Text>
-          <View style={styles.painProgressCard}>
+          <View style={styles.painProgressHeader}>
+            <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>Pain Progress</Text>
+            {painStatsUpdating && (
+              <View style={styles.updatingBadge}>
+                <ActivityIndicator size="small" color={AppColors.primary} />
+                <Text style={styles.updatingText}>Updating...</Text>
+              </View>
+            )}
+          </View>
+          <Animated.View style={[styles.painProgressCard, { opacity: painStatsUpdating ? painUpdatePulse : 1 }]}>
             {/* Current Pain Level */}
             <View style={styles.painLevelSection}>
               <View style={styles.painLevelLeft}>
@@ -761,8 +870,12 @@ export default function DashboardScreen() {
                 </View>
               </View>
 
-              {/* Trend Indicator */}
-              <View style={styles.trendIndicator}>
+              {/* Trend Indicator - Tap to check in */}
+              <TouchableOpacity
+                style={styles.trendIndicator}
+                onPress={() => setShowUpdateCheckInConfirm(true)}
+                activeOpacity={0.7}
+              >
                 <Text
                   style={[
                     styles.trendIcon,
@@ -774,7 +887,13 @@ export default function DashboardScreen() {
                 <Text style={styles.trendText}>
                   {getPainTrendInfo(painStats.trend).description}
                 </Text>
-              </View>
+                <Ionicons
+                  name="add-circle-outline"
+                  size={16}
+                  color={AppColors.textTertiary}
+                  style={styles.checkInIcon}
+                />
+              </TouchableOpacity>
             </View>
 
             {/* Pain Progress Chart */}
@@ -801,7 +920,7 @@ export default function DashboardScreen() {
                 <Text style={styles.painStatLabel}>Pain-Free Days</Text>
               </View>
             </View>
-          </View>
+          </Animated.View>
         </View>
       )}
 
@@ -1180,6 +1299,26 @@ const styles = StyleSheet.create({
     color: AppColors.textTertiary,
   },
   // Pain Progress Section Styles
+  painProgressHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  updatingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: AppColors.surfaceSecondary,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  updatingText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: AppColors.primary,
+  },
   painProgressCard: {
     padding: 20,
     borderRadius: 12,
@@ -1238,6 +1377,9 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: AppColors.textSecondary,
     textAlign: 'center',
+  },
+  checkInIcon: {
+    marginTop: 6,
   },
   painStatsRow: {
     flexDirection: 'row',
@@ -1446,5 +1588,72 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: '#10B981',
+  },
+  // Update Wellness Check-In Confirmation Modal
+  confirmOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  confirmModal: {
+    backgroundColor: AppColors.surface,
+    borderRadius: 20,
+    padding: 24,
+    marginHorizontal: 32,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  confirmIconContainer: {
+    marginBottom: 16,
+  },
+  confirmTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: AppColors.textPrimary,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  confirmMessage: {
+    fontSize: 15,
+    color: AppColors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 24,
+  },
+  confirmButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  confirmButtonCancel: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: AppColors.surfaceSecondary,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: AppColors.border,
+  },
+  confirmButtonCancelText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: AppColors.textSecondary,
+  },
+  confirmButtonConfirm: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: AppColors.primary,
+    alignItems: 'center',
+  },
+  confirmButtonConfirmText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: AppColors.primaryText,
   },
 });

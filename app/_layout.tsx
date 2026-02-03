@@ -6,9 +6,9 @@ import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider, useAuth } from '@/lib/contexts/AuthContext';
-// import PainCheckInModal from '@/components/PainCheckInModal'; // DISABLED: Will be integrated into onboarding
+import WellnessCheckInModal from '@/components/WellnessCheckInModal';
 import MilestoneCelebrationModal from '@/components/MilestoneCelebrationModal';
-// import { hasCheckedInToday } from '@/lib/utils/pain-checkin'; // DISABLED: Will be integrated into onboarding
+import { hasCheckedInToday } from '@/lib/utils/pain-checkin';
 import {
   getUncelebratedMilestones,
   markMilestoneCelebrated,
@@ -21,37 +21,37 @@ function RootLayoutNav() {
   const segments = useSegments();
   const router = useRouter();
   const navigationState = useRootNavigationState();
-  // const [showPainCheckIn, setShowPainCheckIn] = useState(false); // DISABLED: Will be integrated into onboarding
+  const [showWellnessCheckIn, setShowWellnessCheckIn] = useState(false);
   const [milestonesToCelebrate, setMilestonesToCelebrate] = useState<UncelebratedMilestone[]>([]);
   const [currentMilestoneIndex, setCurrentMilestoneIndex] = useState(0);
 
   // Check if navigation is ready
   const navigationReady = navigationState?.key != null;
 
-  // Check if pain check-in is needed
-  // DISABLED: Pain check-in will be integrated into onboarding extraction steps
-  // useEffect(() => {
-  //   async function checkPainCheckIn() {
-  //     if (!user || loading || !profile) return;
-  //
-  //     // Only check for users in the tabs area AND with completed onboarding
-  //     const inTabsGroup = segments[0] === '(tabs)';
-  //     const onboardingComplete = profile?.onboarding_completed === true;
-  //
-  //     if (!inTabsGroup || !onboardingComplete) return;
-  //
-  //     try {
-  //       const hasCheckedIn = await hasCheckedInToday(user.id);
-  //       if (!hasCheckedIn) {
-  //         setShowPainCheckIn(true);
-  //       }
-  //     } catch (error) {
-  //       console.error('Error checking pain check-in status:', error);
-  //     }
-  //   }
-  //
-  //   checkPainCheckIn();
-  // }, [user, profile, loading, segments]);
+  // Check if daily wellness check-in is needed (first login of the day)
+  useEffect(() => {
+    async function checkWellnessCheckIn() {
+      if (!user || loading || !profile) return;
+
+      // Only check for users in the tabs area AND with completed onboarding
+      const inTabsGroup = segments[0] === '(tabs)';
+      const onboardingComplete = profile?.onboarding_completed === true;
+
+      if (!inTabsGroup || !onboardingComplete) return;
+
+      try {
+        const hasCheckedIn = await hasCheckedInToday(user.id);
+        if (!hasCheckedIn) {
+          // Small delay for smoother UX after navigation
+          setTimeout(() => setShowWellnessCheckIn(true), 500);
+        }
+      } catch (error) {
+        console.error('Error checking wellness check-in status:', error);
+      }
+    }
+
+    checkWellnessCheckIn();
+  }, [user, profile, loading, segments]);
 
   // Check for uncelebrated milestones
   useEffect(() => {
@@ -162,16 +162,17 @@ function RootLayoutNav() {
         <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
       </Stack>
 
-      {/* Pain Check-In Modal - DISABLED: Will be integrated into onboarding */}
-      {/* {user && (
-        <PainCheckInModal
-          visible={showPainCheckIn}
+      {/* Daily Wellness Check-In Modal */}
+      {user && (
+        <WellnessCheckInModal
+          visible={showWellnessCheckIn}
           userId={user.id}
+          mindName={profile?.mind_name || 'Mind'}
+          bodyName={profile?.body_name || 'Body'}
+          soulName={profile?.soul_name || 'Soul'}
           onComplete={() => {
-            setShowPainCheckIn(false);
+            setShowWellnessCheckIn(false);
             // Force navigation to trigger useFocusEffect and refresh dashboard data
-            // Small delay ensures modal close animation completes
-            // Only navigate if navigation is ready
             if (navigationReady) {
               setTimeout(() => {
                 router.push('/(tabs)');
@@ -179,7 +180,7 @@ function RootLayoutNav() {
             }
           }}
         />
-      )} */}
+      )}
 
       {/* Milestone Celebration Modal */}
       {milestonesToCelebrate.length > 0 && (

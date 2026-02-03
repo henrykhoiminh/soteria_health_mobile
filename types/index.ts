@@ -16,6 +16,9 @@ export interface Profile {
   mind_name: string | null
   body_name: string | null
   soul_name: string | null
+  // Recovery journey fields
+  recovery_areas: string[] | null // Array of recovery focus areas: body parts, 'Mind', or 'Soul'
+  recovery_goals: string[] | null // Optional recovery goals set by user
   // Onboarding status
   onboarding_completed: boolean
   onboarding_completed_at: string | null

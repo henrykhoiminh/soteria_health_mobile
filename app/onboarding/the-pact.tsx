@@ -144,6 +144,9 @@ export default function ThePactScreen() {
         journey_focus: data.journeyFocus,
         journey_started_at: new Date().toISOString(),
 
+        // Recovery areas (only for Recovery journey)
+        recovery_areas: data.journeyFocus === 'Recovery' ? data.recoveryAreas : [],
+
         // Avatar names
         mind_name: data.mindName.trim(),
         body_name: data.bodyName.trim(),

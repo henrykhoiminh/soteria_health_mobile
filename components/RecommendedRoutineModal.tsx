@@ -8,6 +8,9 @@ interface RecommendedRoutineModalProps {
   visible: boolean;
   routine: Routine | null;
   category: RoutineCategory;
+  // Optional wellness-aware messaging
+  message?: string;
+  subtitle?: string;
   onClose: () => void;
   onBrowseMore: () => void;
   onSelectRoutine: () => void;
@@ -17,6 +20,8 @@ export default function RecommendedRoutineModal({
   visible,
   routine,
   category,
+  message,
+  subtitle,
   onClose,
   onBrowseMore,
   onSelectRoutine,
@@ -54,6 +59,14 @@ export default function RecommendedRoutineModal({
           </View>
 
           <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+            {/* Wellness-aware message */}
+            {message && (
+              <View style={styles.wellnessMessageContainer}>
+                <Text style={styles.wellnessMessage}>{message}</Text>
+                {subtitle && <Text style={styles.wellnessSubtitle}>{subtitle}</Text>}
+              </View>
+            )}
+
             {/* Routine Card */}
             <View style={[styles.routineCard, { borderLeftColor: categoryColor }]}>
               {/* Category Badge */}
@@ -160,8 +173,26 @@ const styles = StyleSheet.create({
   content: {
     padding: 20,
   },
+  wellnessMessageContainer: {
+    marginBottom: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: AppColors.border,
+  },
+  wellnessMessage: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: AppColors.textPrimary,
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  wellnessSubtitle: {
+    fontSize: 14,
+    color: AppColors.textSecondary,
+    textAlign: 'center',
+  },
   routineCard: {
-    backgroundColor: AppColors.cardBackground,
+    backgroundColor: AppColors.surfaceSecondary,
     borderRadius: 12,
     padding: 16,
     borderLeftWidth: 4,

@@ -1,9 +1,25 @@
 import { supabase } from '../supabase/client'
-import { DailyProgress, Routine, RoutineCategory, UserStats, JourneyFocus } from '@/types'
+import { DailyProgress, Routine, RoutineCategory, RoutineDifficulty, UserStats, JourneyFocus, PainCheckIn } from '@/types'
 import { format } from 'date-fns'
 import { recordActivity } from './social'
 import { updateEnhancedStats } from './stats'
 import { getLocalDateString, getCurrentTimestamp } from './timezone'
+import { getTodayCheckIn } from './pain-checkin'
+
+// Wellness-aware recommendation types
+export interface WellnessContext {
+  mindScore: number
+  bodyScore: number
+  soulScore: number
+  compositeScore: number
+}
+
+export interface CategoryRecommendation {
+  category: RoutineCategory
+  routines: Routine[]
+  message: string
+  subtitle: string
+}
 
 export async function getTodayProgress(userId: string): Promise<DailyProgress | null> {
   // Use local timezone date so daily progress resets at midnight local time
@@ -93,6 +109,273 @@ export async function getRoutinesByCategory(category: RoutineCategory): Promise<
 
   if (error) throw error
   return data || []
+}
+
+/**
+ * Get max allowed difficulty based on wellness score
+ * Higher score = worse state = gentler routines needed
+ */
+export function getMaxDifficultyForScore(score: number): RoutineDifficulty[] {
+  if (score <= 3) {
+    // Feeling good - any difficulty
+    return ['Beginner', 'Intermediate', 'Advanced']
+  } else if (score <= 6) {
+    // Moderate impact - stick to easier routines
+    return ['Beginner', 'Intermediate']
+  } else {
+    // High impact - gentle routines only
+    return ['Beginner']
+  }
+}
+
+/**
+ * Get personalized message based on category score and recovery areas
+ */
+export function getCategoryMessage(
+  category: RoutineCategory,
+  score: number,
+  recoveryAreas?: string[] | null
+): { message: string; subtitle: string } {
+  const physicalAreas = getPhysicalRecoveryAreas(recoveryAreas)
+  const isRecoveryFocus = isCategoryRecoveryFocus(category, recoveryAreas)
+
+  // Format body parts for display (e.g., "Wrist & Lower Back")
+  const formatBodyParts = (areas: string[]) => {
+    if (areas.length === 0) return ''
+    if (areas.length === 1) return areas[0]
+    if (areas.length === 2) return `${areas[0]} & ${areas[1]}`
+    return `${areas.slice(0, -1).join(', ')} & ${areas[areas.length - 1]}`
+  }
+
+  // Recovery-specific messages for Body with physical areas
+  if (category === 'Body' && physicalAreas.length > 0) {
+    const areaText = formatBodyParts(physicalAreas)
+    if (score <= 3) {
+      return {
+        message: `Your ${areaText} is feeling good`,
+        subtitle: 'Keep up the progress with a strengthening routine',
+      }
+    } else if (score <= 6) {
+      return {
+        message: `Let's work on your ${areaText}`,
+        subtitle: 'A targeted routine to support your recovery',
+      }
+    } else {
+      return {
+        message: `Your ${areaText} needs gentle attention`,
+        subtitle: 'Easy movements to help with recovery',
+      }
+    }
+  }
+
+  // Default messages
+  const messages: Record<RoutineCategory, { low: { message: string; subtitle: string }; mid: { message: string; subtitle: string }; high: { message: string; subtitle: string } }> = {
+    Mind: {
+      low: { message: 'Your mind is feeling clear', subtitle: 'Challenge yourself with something new' },
+      mid: { message: 'Give your mind some attention', subtitle: 'A mindful routine could help' },
+      high: { message: 'Your mind needs extra care', subtitle: 'Try a gentle, calming routine' },
+    },
+    Body: {
+      low: { message: 'Your body is feeling strong', subtitle: 'Ready for any challenge' },
+      mid: { message: 'Your body could use some movement', subtitle: 'A moderate routine might help' },
+      high: { message: 'Your body needs gentle care', subtitle: 'Take it easy with restorative movements' },
+    },
+    Soul: {
+      low: { message: 'Your spirit feels connected', subtitle: 'Explore something meaningful' },
+      mid: { message: 'Nurture your inner self', subtitle: 'A soulful practice awaits' },
+      high: { message: 'Your soul needs nourishment', subtitle: 'Find peace with a gentle practice' },
+    },
+  }
+
+  if (score <= 3) {
+    return messages[category].low
+  } else if (score <= 6) {
+    return messages[category].mid
+  } else {
+    return messages[category].high
+  }
+}
+
+/**
+ * Extract physical body parts from recovery areas (exclude Mind/Soul)
+ */
+function getPhysicalRecoveryAreas(recoveryAreas: string[] | null | undefined): string[] {
+  if (!recoveryAreas) return []
+  return recoveryAreas.filter(area => area !== 'Mind' && area !== 'Soul')
+}
+
+/**
+ * Check if category is a recovery focus
+ */
+function isCategoryRecoveryFocus(category: RoutineCategory, recoveryAreas: string[] | null | undefined): boolean {
+  if (!recoveryAreas) return false
+
+  if (category === 'Mind') return recoveryAreas.includes('Mind')
+  if (category === 'Soul') return recoveryAreas.includes('Soul')
+  if (category === 'Body') return getPhysicalRecoveryAreas(recoveryAreas).length > 0
+
+  return false
+}
+
+/**
+ * Get wellness-aware routines for a specific category
+ * Filters by difficulty based on the user's wellness score
+ * Prioritizes routines matching user's recovery areas
+ */
+export async function getWellnessAwareRoutines(
+  category: RoutineCategory,
+  wellnessScore: number,
+  journeyFocus?: JourneyFocus | null,
+  recoveryAreas?: string[] | null,
+  limit: number = 10
+): Promise<Routine[]> {
+  const allowedDifficulties = getMaxDifficultyForScore(wellnessScore)
+  const physicalRecoveryAreas = getPhysicalRecoveryAreas(recoveryAreas)
+
+  // For Body category with physical recovery areas, try to find matching routines first
+  if (category === 'Body' && physicalRecoveryAreas.length > 0) {
+    // First try: routines targeting user's specific recovery body parts
+    let query = supabase
+      .from('routines')
+      .select('*')
+      .eq('category', 'Body')
+      .in('difficulty', allowedDifficulties)
+      .overlaps('body_parts', physicalRecoveryAreas)
+
+    if (journeyFocus) {
+      query = query.contains('journey_focus', [journeyFocus])
+    }
+
+    query = query
+      .order('completion_count', { ascending: false })
+      .limit(limit)
+
+    const { data, error } = await query
+
+    if (!error && data && data.length > 0) {
+      return data
+    }
+
+    // Second try: any Body routines at appropriate difficulty (no body_parts filter)
+    let fallbackQuery = supabase
+      .from('routines')
+      .select('*')
+      .eq('category', 'Body')
+      .in('difficulty', allowedDifficulties)
+
+    if (journeyFocus) {
+      fallbackQuery = fallbackQuery.contains('journey_focus', [journeyFocus])
+    }
+
+    fallbackQuery = fallbackQuery
+      .order('completion_count', { ascending: false })
+      .limit(limit)
+
+    const { data: fallbackData, error: fallbackError } = await fallbackQuery
+
+    if (!fallbackError && fallbackData && fallbackData.length > 0) {
+      return fallbackData
+    }
+  }
+
+  // Standard query for Mind/Soul or Body without specific recovery areas
+  let query = supabase
+    .from('routines')
+    .select('*')
+    .eq('category', category)
+    .in('difficulty', allowedDifficulties)
+
+  // Filter by journey focus if provided
+  if (journeyFocus) {
+    query = query.contains('journey_focus', [journeyFocus])
+  }
+
+  query = query
+    .order('completion_count', { ascending: false })
+    .limit(limit)
+
+  const { data, error } = await query
+
+  if (error) throw error
+
+  // If no routines match criteria, fall back to any routines in category
+  if (!data || data.length === 0) {
+    return getRoutinesByCategory(category)
+  }
+
+  return data
+}
+
+/**
+ * Get today's wellness context for a user
+ * Returns null if user hasn't checked in today
+ */
+export async function getWellnessContext(userId: string): Promise<WellnessContext | null> {
+  const todayCheckIn = await getTodayCheckIn(userId)
+
+  if (!todayCheckIn) {
+    return null
+  }
+
+  return {
+    mindScore: todayCheckIn.mind_score,
+    bodyScore: todayCheckIn.body_score,
+    soulScore: todayCheckIn.soul_score,
+    compositeScore: Math.round((todayCheckIn.mind_score + todayCheckIn.body_score + todayCheckIn.soul_score) / 3),
+  }
+}
+
+/**
+ * Get the score for a specific category from wellness context
+ */
+export function getCategoryScore(category: RoutineCategory, wellness: WellnessContext): number {
+  switch (category) {
+    case 'Mind': return wellness.mindScore
+    case 'Body': return wellness.bodyScore
+    case 'Soul': return wellness.soulScore
+  }
+}
+
+/**
+ * Get prioritized categories based on wellness scores
+ * Higher scores (more struggling) get higher priority
+ */
+export function getPrioritizedCategories(wellness: WellnessContext): RoutineCategory[] {
+  const categories: { category: RoutineCategory; score: number }[] = [
+    { category: 'Mind', score: wellness.mindScore },
+    { category: 'Body', score: wellness.bodyScore },
+    { category: 'Soul', score: wellness.soulScore },
+  ]
+
+  // Sort by score descending (higher = more need = higher priority)
+  return categories
+    .sort((a, b) => b.score - a.score)
+    .map(c => c.category)
+}
+
+/**
+ * Get full recommendation for a category including routines and messaging
+ */
+export async function getCategoryRecommendation(
+  category: RoutineCategory,
+  userId: string,
+  journeyFocus?: JourneyFocus | null,
+  recoveryAreas?: string[] | null
+): Promise<CategoryRecommendation> {
+  const wellness = await getWellnessContext(userId)
+
+  // If no wellness check-in, use default score of 0 (assume feeling fine)
+  const score = wellness ? getCategoryScore(category, wellness) : 0
+  const { message, subtitle } = getCategoryMessage(category, score, recoveryAreas)
+
+  const routines = await getWellnessAwareRoutines(category, score, journeyFocus, recoveryAreas)
+
+  return {
+    category,
+    routines,
+    message,
+    subtitle,
+  }
 }
 
 // Get one routine from each category (Mind, Body, Soul) for a balanced recommendation

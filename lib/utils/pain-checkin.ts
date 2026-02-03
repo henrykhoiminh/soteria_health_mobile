@@ -154,20 +154,20 @@ export async function submitPainCheckIn(
 
 /**
  * Get wellness level description and color for a category score
- * @param score - Wellness score (0-10, higher = worse)
+ * @param score - Wellness score (0-10, higher = more impact/worse)
  * @returns Object with label and color
  */
 export function getWellnessLevelInfo(score: number): { label: string; color: string } {
   if (score === 0) {
-    return { label: 'Thriving', color: '#34C759' } // Green
+    return { label: 'Not at all', color: '#34C759' } // Green
   } else if (score <= 3) {
-    return { label: 'Good', color: '#34C759' } // Green
-  } else if (score <= 5) {
-    return { label: 'Okay', color: '#FFD60A' } // Yellow
-  } else if (score <= 7) {
-    return { label: 'Struggling', color: '#FF9500' } // Orange
+    return { label: "A bit, but I'm great", color: '#34C759' } // Green
+  } else if (score <= 6) {
+    return { label: 'It takes its toll', color: '#FFD60A' } // Yellow
+  } else if (score <= 9) {
+    return { label: 'Significantly', color: '#FF9500' } // Orange
   } else {
-    return { label: 'Needs Care', color: '#FF3B30' } // Red
+    return { label: "It's ruining my life", color: '#FF3B30' } // Red
   }
 }
 

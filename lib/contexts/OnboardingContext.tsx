@@ -5,6 +5,7 @@ import { JourneyFocus } from '@/types';
 export interface OnboardingData {
   // Journey
   journeyFocus: JourneyFocus | null;
+  recoveryAreas: string[]; // Recovery areas: body parts, 'Mind', or 'Soul'
 
   // Avatar names
   mindName: string;
@@ -26,6 +27,7 @@ export interface OnboardingData {
 // Default/initial state
 const defaultOnboardingData: OnboardingData = {
   journeyFocus: null,
+  recoveryAreas: [],
   mindName: '',
   bodyName: '',
   soulName: '',
@@ -48,6 +50,7 @@ interface OnboardingContextType {
 
   // Update functions
   setJourneyFocus: (focus: JourneyFocus) => void;
+  setRecoveryAreas: (areas: string[]) => void;
   setMindName: (name: string) => void;
   setBodyName: (name: string) => void;
   setSoulName: (name: string) => void;
@@ -67,6 +70,7 @@ interface OnboardingContextType {
 
   // Validation helpers
   isJourneySelected: boolean;
+  isRecoveryAreasComplete: boolean;
   isAvatarNamingComplete: boolean;
   isIdentityComplete: boolean;
   isUsernameSet: boolean;
@@ -81,6 +85,10 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
   // Individual setters
   const setJourneyFocus = useCallback((focus: JourneyFocus) => {
     setData(prev => ({ ...prev, journeyFocus: focus }));
+  }, []);
+
+  const setRecoveryAreas = useCallback((areas: string[]) => {
+    setData(prev => ({ ...prev, recoveryAreas: areas }));
   }, []);
 
   const setMindName = useCallback((name: string) => {
@@ -136,6 +144,8 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
 
   // Validation helpers
   const isJourneySelected = data.journeyFocus !== null;
+  const isRecoveryAreasComplete =
+    data.journeyFocus !== 'Recovery' || data.recoveryAreas.length > 0;
   const isAvatarNamingComplete =
     data.mindName.trim().length > 0 &&
     data.bodyName.trim().length > 0 &&
@@ -152,6 +162,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
         isResetFlow,
         setIsResetFlow,
         setJourneyFocus,
+        setRecoveryAreas,
         setMindName,
         setBodyName,
         setSoulName,
@@ -165,6 +176,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
         updateData,
         resetOnboarding,
         isJourneySelected,
+        isRecoveryAreasComplete,
         isAvatarNamingComplete,
         isIdentityComplete,
         isUsernameSet,

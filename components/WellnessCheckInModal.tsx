@@ -81,11 +81,11 @@ export default function WellnessCheckInModal({
   const getStepQuestion = () => {
     switch (currentStep) {
       case 'mind':
-        return `How is ${mindName} doing today?`;
+        return 'How is mental strain affecting your enjoyment of life?';
       case 'body':
-        return `How is ${bodyName} feeling?`;
+        return 'How is physical discomfort affecting your daily activities?';
       case 'soul':
-        return `How is ${soulName} doing?`;
+        return 'How much is feeling lost or disconnected affecting your sense of purpose?';
       case 'notes':
         return 'Anything else to share?';
       default:
@@ -96,11 +96,9 @@ export default function WellnessCheckInModal({
   const getStepDescription = () => {
     switch (currentStep) {
       case 'mind':
-        return 'Thoughts, focus, mental clarity';
       case 'body':
-        return 'Physical state, energy, comfort';
       case 'soul':
-        return 'Emotions, peace, connection';
+        return ''; // No description needed - slider labels are self-explanatory
       case 'notes':
         return 'Optional notes about how you\'re feeling';
       default:
@@ -311,11 +309,11 @@ export default function WellnessCheckInModal({
                 <View style={styles.sliderLabels}>
                   <View style={styles.sliderLabel}>
                     <Text style={styles.sliderLabelNumber}>0</Text>
-                    <Text style={styles.sliderLabelText}>Thriving</Text>
+                    <Text style={styles.sliderLabelText}>Not at all</Text>
                   </View>
                   <View style={styles.sliderLabel}>
                     <Text style={styles.sliderLabelNumber}>10</Text>
-                    <Text style={styles.sliderLabelText}>Struggling</Text>
+                    <Text style={styles.sliderLabelText}>It's ruining my life</Text>
                   </View>
                 </View>
               </View>
@@ -386,7 +384,7 @@ export default function WellnessCheckInModal({
                 onPress={handleNext}
               >
                 <Text style={styles.nextButtonText}>Next</Text>
-                <Ionicons name="arrow-forward" size={20} color={AppColors.textPrimary} />
+                <Ionicons name="arrow-forward" size={20} color={AppColors.primaryText} />
               </TouchableOpacity>
             ) : (
               <TouchableOpacity
@@ -395,10 +393,10 @@ export default function WellnessCheckInModal({
                 disabled={submitting}
               >
                 {submitting ? (
-                  <ActivityIndicator size="small" color={AppColors.textPrimary} />
+                  <ActivityIndicator size="small" color={AppColors.primaryText} />
                 ) : (
                   <>
-                    <Ionicons name="checkmark-circle" size={20} color={AppColors.textPrimary} />
+                    <Ionicons name="checkmark-circle" size={20} color={AppColors.primaryText} />
                     <Text style={styles.submitButtonText}>Submit Check-In</Text>
                   </>
                 )}
