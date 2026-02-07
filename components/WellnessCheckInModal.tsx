@@ -1,19 +1,22 @@
-import React, { useState } from 'react';
+import { AppColors } from '@/constants/theme';
+import { getEncouragementMessage, getWellnessLevelInfo, submitPainCheckIn } from '@/lib/utils/pain-checkin';
+import { Ionicons } from '@expo/vector-icons';
+import Slider from '@react-native-community/slider';
+import React, { useEffect, useState } from 'react';
 import {
-  Modal,
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  TextInput,
-  ScrollView,
   ActivityIndicator,
   Alert,
+  Animated,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import Slider from '@react-native-community/slider';
-import { Ionicons } from '@expo/vector-icons';
-import { AppColors } from '@/constants/theme';
-import { submitPainCheckIn, getWellnessLevelInfo, getEncouragementMessage } from '@/lib/utils/pain-checkin';
 
 interface WellnessCheckInModalProps {
   visible: boolean;
@@ -25,13 +28,21 @@ interface WellnessCheckInModalProps {
   onComplete: () => void;
 }
 
-type Step = 'mind' | 'body' | 'soul' | 'notes';
+type Step = 'welcome' | 'mind' | 'body' | 'soul' | 'notes';
 
 // Category colors matching the app theme
 const CATEGORY_COLORS = {
   mind: '#3B82F6', // Blue
   body: '#EF4444', // Red
   soul: '#F59E0B', // Amber
+};
+
+// Get time-appropriate greeting
+const getTimeGreeting = (): string => {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning!';
+  if (hour < 17) return 'Good afternoon!';
+  return 'Good evening!';
 };
 
 export default function WellnessCheckInModal({
@@ -42,7 +53,7 @@ export default function WellnessCheckInModal({
   soulName = 'Soul',
   onComplete,
 }: WellnessCheckInModalProps) {
-  const [currentStep, setCurrentStep] = useState<Step>('mind');
+  const [currentStep, setCurrentStep] = useState<Step>('welcome');
   const [mindScore, setMindScore] = useState<number>(0);
   const [bodyScore, setBodyScore] = useState<number>(0);
   const [soulScore, setSoulScore] = useState<number>(0);
@@ -50,6 +61,33 @@ export default function WellnessCheckInModal({
   const [submitting, setSubmitting] = useState(false);
   const [showEncouragement, setShowEncouragement] = useState(false);
   const [encouragementMessage, setEncouragementMessage] = useState('');
+  const [welcomeOpacity] = useState(new Animated.Value(0));
+
+  // Auto-transition from welcome to mind after 3 seconds
+  useEffect(() => {
+    if (visible && currentStep === 'welcome') {
+      // Fade in the welcome screen
+      Animated.timing(welcomeOpacity, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }).start();
+
+      // Auto-advance after 3 seconds
+      const timer = setTimeout(() => {
+        // Fade out then transition
+        Animated.timing(welcomeOpacity, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }).start(() => {
+          setCurrentStep('mind');
+        });
+      }, 3000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [visible, currentStep]);
 
   const getCurrentScore = () => {
     switch (currentStep) {
@@ -85,22 +123,7 @@ export default function WellnessCheckInModal({
       case 'body':
         return 'How is physical discomfort affecting your daily activities?';
       case 'soul':
-        return 'How much is feeling lost or disconnected affecting your sense of purpose?';
-      case 'notes':
-        return 'Anything else to share?';
-      default:
-        return '';
-    }
-  };
-
-  const getStepDescription = () => {
-    switch (currentStep) {
-      case 'mind':
-      case 'body':
-      case 'soul':
-        return ''; // No description needed - slider labels are self-explanatory
-      case 'notes':
-        return 'Optional notes about how you\'re feeling';
+        return 'How much is feeling disconnected affecting your sense of purpose?';
       default:
         return '';
     }
@@ -165,7 +188,7 @@ export default function WellnessCheckInModal({
 
   const handleClose = () => {
     // Reset state
-    setCurrentStep('mind');
+    setCurrentStep('welcome');
     setMindScore(0);
     setBodyScore(0);
     setSoulScore(0);
@@ -173,6 +196,7 @@ export default function WellnessCheckInModal({
     setSubmitting(false);
     setShowEncouragement(false);
     setEncouragementMessage('');
+    welcomeOpacity.setValue(0);
 
     onComplete();
   };
@@ -214,6 +238,33 @@ export default function WellnessCheckInModal({
     );
   }
 
+  // Welcome intro screen
+  if (currentStep === 'welcome') {
+    return (
+      <Modal
+        visible={visible}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => {}}
+      >
+        <View style={styles.welcomeOverlay}>
+          <Animated.View style={[styles.welcomeContent, { opacity: welcomeOpacity }]}>
+            <Ionicons
+              name="sunny"
+              size={64}
+              color={AppColors.primary}
+              style={styles.welcomeIcon}
+            />
+            <Text style={styles.welcomeTitle}>{getTimeGreeting()}</Text>
+            <Text style={styles.welcomeSubtitle}>
+              Let's take a moment to check in with yourself today.
+            </Text>
+          </Animated.View>
+        </View>
+      </Modal>
+    );
+  }
+
   return (
     <Modal
       visible={visible}
@@ -221,8 +272,15 @@ export default function WellnessCheckInModal({
       presentationStyle="pageSheet"
       onRequestClose={() => {}}
     >
-      <View style={styles.container}>
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={0}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
           {/* Header */}
           <View style={styles.header}>
             <Text style={styles.title}>Daily Wellness Check</Text>
@@ -267,9 +325,10 @@ export default function WellnessCheckInModal({
             </Text>
           </View>
 
-          {/* Step-specific Title */}
-          <Text style={styles.stepTitle}>{getStepQuestion()}</Text>
-          <Text style={styles.stepDescription}>{getStepDescription()}</Text>
+          {/* Step-specific Title - only for score steps */}
+          {currentStep !== 'notes' && (
+            <Text style={styles.stepTitle}>{getStepQuestion()}</Text>
+          )}
 
           {/* Score Steps (Mind, Body, Soul) */}
           {currentStep !== 'notes' && (
@@ -313,7 +372,7 @@ export default function WellnessCheckInModal({
                   </View>
                   <View style={styles.sliderLabel}>
                     <Text style={styles.sliderLabelNumber}>10</Text>
-                    <Text style={styles.sliderLabelText}>It's ruining my life</Text>
+                    <Text style={styles.sliderLabelText}>Ruining my life</Text>
                   </View>
                 </View>
               </View>
@@ -322,46 +381,72 @@ export default function WellnessCheckInModal({
 
           {/* Notes Step */}
           {currentStep === 'notes' && (
-            <View style={styles.section}>
-              {/* Summary of scores */}
+            <View style={styles.notesSection}>
+              {/* Summary of scores - Horizontal cards (right after timeline) */}
               <View style={styles.summaryContainer}>
-                <View style={styles.summaryItem}>
-                  <View style={[styles.summaryDot, { backgroundColor: CATEGORY_COLORS.mind }]} />
-                  <Text style={styles.summaryName}>{mindName}</Text>
-                  <Text style={[styles.summaryScore, { color: getWellnessLevelInfo(mindScore).color }]}>
-                    {mindScore}
-                  </Text>
+                <View style={styles.summaryCard}>
+                  <View style={styles.summaryCardLeft}>
+                    <View style={[styles.summaryDot, { backgroundColor: CATEGORY_COLORS.mind }]} />
+                    <Text style={styles.summaryName}>{mindName}</Text>
+                  </View>
+                  <View style={styles.summaryCardRight}>
+                    <Text style={[styles.summaryScore, { color: getWellnessLevelInfo(mindScore).color }]}>
+                      {mindScore}
+                    </Text>
+                    <Text style={[styles.summaryLabel, { color: getWellnessLevelInfo(mindScore).color }]}>
+                      {getWellnessLevelInfo(mindScore).label}
+                    </Text>
+                  </View>
                 </View>
-                <View style={styles.summaryItem}>
-                  <View style={[styles.summaryDot, { backgroundColor: CATEGORY_COLORS.body }]} />
-                  <Text style={styles.summaryName}>{bodyName}</Text>
-                  <Text style={[styles.summaryScore, { color: getWellnessLevelInfo(bodyScore).color }]}>
-                    {bodyScore}
-                  </Text>
+
+                <View style={styles.summaryCard}>
+                  <View style={styles.summaryCardLeft}>
+                    <View style={[styles.summaryDot, { backgroundColor: CATEGORY_COLORS.body }]} />
+                    <Text style={styles.summaryName}>{bodyName}</Text>
+                  </View>
+                  <View style={styles.summaryCardRight}>
+                    <Text style={[styles.summaryScore, { color: getWellnessLevelInfo(bodyScore).color }]}>
+                      {bodyScore}
+                    </Text>
+                    <Text style={[styles.summaryLabel, { color: getWellnessLevelInfo(bodyScore).color }]}>
+                      {getWellnessLevelInfo(bodyScore).label}
+                    </Text>
+                  </View>
                 </View>
-                <View style={styles.summaryItem}>
-                  <View style={[styles.summaryDot, { backgroundColor: CATEGORY_COLORS.soul }]} />
-                  <Text style={styles.summaryName}>{soulName}</Text>
-                  <Text style={[styles.summaryScore, { color: getWellnessLevelInfo(soulScore).color }]}>
-                    {soulScore}
-                  </Text>
+
+                <View style={styles.summaryCard}>
+                  <View style={styles.summaryCardLeft}>
+                    <View style={[styles.summaryDot, { backgroundColor: CATEGORY_COLORS.soul }]} />
+                    <Text style={styles.summaryName}>{soulName}</Text>
+                  </View>
+                  <View style={styles.summaryCardRight}>
+                    <Text style={[styles.summaryScore, { color: getWellnessLevelInfo(soulScore).color }]}>
+                      {soulScore}
+                    </Text>
+                    <Text style={[styles.summaryLabel, { color: getWellnessLevelInfo(soulScore).color }]}>
+                      {getWellnessLevelInfo(soulScore).label}
+                    </Text>
+                  </View>
                 </View>
               </View>
 
-              {/* Notes Input */}
-              <TextInput
-                style={styles.notesInput}
-                value={notes}
-                onChangeText={setNotes}
-                placeholder="Any thoughts on how you're feeling today? (optional)"
-                placeholderTextColor={AppColors.textTertiary}
-                multiline
-                numberOfLines={4}
-                maxLength={500}
-              />
-              <Text style={styles.characterCount}>
-                {notes.length}/500 characters
-              </Text>
+              {/* Notes section with title */}
+              <View style={styles.notesContainer}>
+                <Text style={styles.notesTitle}>Anything else to share?</Text>
+                <TextInput
+                  style={styles.notesInput}
+                  value={notes}
+                  onChangeText={setNotes}
+                  placeholder="Any thoughts on how you're feeling today? (optional)"
+                  placeholderTextColor={AppColors.textTertiary}
+                  multiline
+                  numberOfLines={4}
+                  maxLength={500}
+                />
+                <Text style={styles.characterCount}>
+                  {notes.length}/500 characters
+                </Text>
+              </View>
             </View>
           )}
 
@@ -404,7 +489,7 @@ export default function WellnessCheckInModal({
             )}
           </View>
         </ScrollView>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -417,8 +502,8 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     padding: 24,
-    paddingTop: 60,
-    paddingBottom: 100,
+    paddingTop: 80,
+    paddingBottom: 40,
     justifyContent: 'space-between',
   },
   header: {
@@ -472,13 +557,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: AppColors.textPrimary,
     textAlign: 'center',
-    marginBottom: 8,
-  },
-  stepDescription: {
-    fontSize: 14,
-    color: AppColors.textSecondary,
-    textAlign: 'center',
-    marginBottom: 32,
+    marginBottom: 24,
   },
   section: {
     flex: 1,
@@ -533,33 +612,59 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: AppColors.textSecondary,
   },
+  notesSection: {
+    flex: 1,
+  },
   summaryContainer: {
     width: '100%',
+    gap: 12,
+    marginBottom: 24,
+  },
+  notesContainer: {
+    flex: 1,
+  },
+  notesTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: AppColors.textPrimary,
+    marginBottom: 12,
+  },
+  summaryCard: {
     backgroundColor: AppColors.surface,
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: AppColors.border,
     padding: 16,
-    marginBottom: 20,
-  },
-  summaryItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
+    justifyContent: 'space-between',
+  },
+  summaryCardLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  summaryCardRight: {
+    alignItems: 'flex-end',
   },
   summaryDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginRight: 12,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
   },
   summaryName: {
-    flex: 1,
     fontSize: 16,
     color: AppColors.textPrimary,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   summaryScore: {
-    fontSize: 20,
+    fontSize: 28,
     fontWeight: 'bold',
+  },
+  summaryLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 2,
   },
   notesInput: {
     width: '100%',
@@ -663,5 +768,32 @@ const styles = StyleSheet.create({
     color: AppColors.textPrimary,
     textAlign: 'center',
     lineHeight: 26,
+  },
+  welcomeOverlay: {
+    flex: 1,
+    backgroundColor: AppColors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+  },
+  welcomeContent: {
+    alignItems: 'center',
+  },
+  welcomeIcon: {
+    marginBottom: 24,
+  },
+  welcomeTitle: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: AppColors.textPrimary,
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  welcomeSubtitle: {
+    fontSize: 18,
+    color: AppColors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 26,
+    paddingHorizontal: 16,
   },
 });

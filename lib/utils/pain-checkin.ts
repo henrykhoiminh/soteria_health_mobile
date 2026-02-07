@@ -1,5 +1,5 @@
-import { supabase } from '../supabase/client'
 import { PainCheckIn, PainStatistics } from '@/types'
+import { supabase } from '../supabase/client'
 import { getLocalDateString } from './timezone'
 
 /**
@@ -159,15 +159,15 @@ export async function submitPainCheckIn(
  */
 export function getWellnessLevelInfo(score: number): { label: string; color: string } {
   if (score === 0) {
-    return { label: 'Not at all', color: '#34C759' } // Green
+    return { label: 'No at all', color: '#34C759' } // Green
   } else if (score <= 3) {
-    return { label: "A bit, but I'm great", color: '#34C759' } // Green
+    return { label: "Barely there", color: '#34C759' } // Green
   } else if (score <= 6) {
-    return { label: 'It takes its toll', color: '#FFD60A' } // Yellow
+    return { label: 'Dragging me down', color: '#FFD60A' } // Yellow
   } else if (score <= 9) {
-    return { label: 'Significantly', color: '#FF9500' } // Orange
+    return { label: 'Controling my day', color: '#FF9500' } // Orange
   } else {
-    return { label: "It's ruining my life", color: '#FF3B30' } // Red
+    return { label: "Ruining my life", color: '#FF3B30' } // Red
   }
 }
 
@@ -267,9 +267,9 @@ export function getPainLevelInfo(painLevel: number): { label: string; color: str
  */
 export function getEncouragementMessage(painLevel: number): string {
   if (painLevel <= 2) {
-    return "Great job staying pain-free! Keep it up! 🎉"
+    return "Great job staying pain-free! Keep it up!"
   } else if (painLevel <= 5) {
-    return "You're managing well. Keep up with your routines! 💪"
+    return "You're managing well. Keep up with your routines!"
   } else if (painLevel <= 8) {
     return "We're here to help. Check out recovery routines for your pain areas."
   } else {
