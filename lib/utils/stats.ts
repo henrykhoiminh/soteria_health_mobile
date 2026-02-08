@@ -46,8 +46,9 @@ export async function calculateCategoryStreak(
     // User missed yesterday (and hasn't completed today), streak is 0
     currentStreak = 0
   } else {
-    // Start checking from today backwards
-    let daysBack = 0
+    // Start from today if completed, otherwise start from yesterday
+    // This ensures streak counts correctly when user hasn't done anything today yet
+    let daysBack = hasCompletionToday ? 0 : 1
 
     while (true) {
       const dateStr = getLocalDateWithOffset(-daysBack)
@@ -166,8 +167,9 @@ export async function calculateActivityStreak(
     // User missed yesterday (and hasn't completed today), streak is 0
     currentStreak = 0
   } else {
-    // Start checking from today backwards
-    let daysBack = 0
+    // Start from today if completed, otherwise start from yesterday
+    // This ensures streak counts correctly when user hasn't done anything today yet
+    let daysBack = hasCompletionToday ? 0 : 1
 
     while (true) {
       const dateStr = getLocalDateWithOffset(-daysBack)
@@ -440,21 +442,23 @@ async function getLastActivityDate(
 /**
  * Get avatar light state based on today's progress
  *
- * State Hierarchy (highest state persists):
- * - Dormant: Category not completed today AND user missed yesterday (no harmony)
- * - Sleepy: New day begins after achieving harmony yesterday (all categories completed)
- * - Awakening: User is currently executing a routine in this category (only if not already Glowing)
- * - Glowing: Category routine completed today (stays Glowing even if doing another routine)
- * - Radiant: ALL three categories completed today (perfect harmony)
+ * State Flow (from inactive to fully active):
+ * - Dormant: 48+ hours since last activity in this category (decay state)
+ * - Sleepy: Start of new day, activity within 48 hours but nothing completed today yet
+ * - Awakening: User is currently executing a routine in this category
+ * - Glowing: At least one routine completed today in this category
+ * - Radiant: ALL three categories have at least one routine complete today
  *
  * Important:
- * - Once Glowing, stays Glowing. Awakening only shows when going from Dormant/Sleepy during execution.
- * - Sleepy state is determined by getAllAvatarStates when checking start-of-day state
+ * - Once Glowing, stays Glowing even if executing another routine
+ * - Awakening is a transition state only shown during active execution
+ * - Dormant state is determined by the 48-hour decay threshold
  */
 export function getAvatarLightState(
   categoryCompleted: boolean,
   allCategoriesCompleted: boolean,
-  isExecutingThisCategory?: boolean
+  isExecutingThisCategory?: boolean,
+  isDormant?: boolean
 ): AvatarLightState {
   // Radiant: All three categories completed today (perfect harmony) - HIGHEST STATE
   if (allCategoriesCompleted) return 'Radiant'
@@ -465,9 +469,11 @@ export function getAvatarLightState(
   // Awakening: Currently executing a routine in this category (only if not yet completed)
   if (isExecutingThisCategory) return 'Awakening'
 
-  // Dormant: Not completed today and not currently executing
-  // Note: "Sleepy" state is set by getAllAvatarStates when no progress exists yet
-  return 'Dormant'
+  // Dormant: 48+ hours since last activity (decay state)
+  if (isDormant) return 'Dormant'
+
+  // Sleepy: Default state for start of day when user has recent activity but nothing today
+  return 'Sleepy'
 }
 
 /**
@@ -503,20 +509,11 @@ export async function getAllAvatarStates(userId: string): Promise<AvatarState[]>
   const decayHours = 48
   const now = new Date()
   const decayThreshold = new Date(now.getTime() - decayHours * 60 * 60 * 1000)
-  const awakeningThreshold = new Date(now.getTime() - 48 * 60 * 60 * 1000)
 
   // Helper to check if category is dormant
   const isDormant = (lastRoutineAt: string | null): boolean => {
     if (!lastRoutineAt) return true
     return new Date(lastRoutineAt) < decayThreshold
-  }
-
-  // Helper to check awakening (2+ routines in 48 hours - calculated separately if needed)
-  // For now, we'll use a simpler check: activity within 48 hours but not today
-  const couldBeAwakening = (lastRoutineAt: string | null): boolean => {
-    if (!lastRoutineAt) return false
-    const lastTime = new Date(lastRoutineAt)
-    return lastTime >= awakeningThreshold && lastTime >= decayThreshold
   }
 
   // Check if all categories completed today (for Radiant state)
@@ -525,12 +522,13 @@ export async function getAllAvatarStates(userId: string): Promise<AvatarState[]>
                             todayProgress?.soul_complete
 
   // Determine state for each category
+  // Note: "Awakening" state is NOT set here - it's set by the UI when user is actively executing a routine
   const getStateForCategory = (
     _category: RoutineCategory,
     completedToday: boolean,
     lastRoutineAt: string | null
   ): AvatarLightState => {
-    // Priority 1: Radiant (all completed today)
+    // Priority 1: Radiant (all completed today - perfect harmony)
     if (allCompletedToday) {
       return 'Radiant'
     }
@@ -540,19 +538,13 @@ export async function getAllAvatarStates(userId: string): Promise<AvatarState[]>
       return 'Glowing'
     }
 
-    // Priority 3: Dormant (no activity within decay threshold)
+    // Priority 3: Dormant (no activity within 48-hour decay threshold)
     if (isDormant(lastRoutineAt)) {
       return 'Dormant'
     }
 
-    // Priority 4: Awakening (recent activity, building momentum)
-    // This would ideally check for 2+ routines in 48 hours
-    // For simplicity, we'll use recent activity without completion today
-    if (couldBeAwakening(lastRoutineAt)) {
-      return 'Awakening'
-    }
-
-    // Default: Sleepy
+    // Default: Sleepy (has recent activity within 48 hours but nothing completed today yet)
+    // This is the correct state at the start of a new day
     return 'Sleepy'
   }
 
