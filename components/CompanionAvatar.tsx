@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, Animated, Image, ImageSourcePropType } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppColors } from '@/constants/theme';
 
@@ -38,40 +38,10 @@ const CATEGORY_ICONS: Record<Category, keyof typeof Ionicons.glyphMap> = {
 };
 
 // Static image requires for each companion state
-// React Native requires static paths at bundle time
-// Images will be undefined until files are added to assets/companions/
-const COMPANION_IMAGES: Record<Category, Record<LightState, ImageSourcePropType | null>> = {
-  Mind: {
-    Dormant: safeRequire(() => require('@/assets/companions/mind/dormant.png')),
-    Sleepy: safeRequire(() => require('@/assets/companions/mind/sleepy.png')),
-    Awakening: safeRequire(() => require('@/assets/companions/mind/awakening.png')),
-    Glowing: safeRequire(() => require('@/assets/companions/mind/glowing.png')),
-    Radiant: safeRequire(() => require('@/assets/companions/mind/radiant.png')),
-  },
-  Body: {
-    Dormant: safeRequire(() => require('@/assets/companions/body/dormant.png')),
-    Sleepy: safeRequire(() => require('@/assets/companions/body/sleepy.png')),
-    Awakening: safeRequire(() => require('@/assets/companions/body/awakening.png')),
-    Glowing: safeRequire(() => require('@/assets/companions/body/glowing.png')),
-    Radiant: safeRequire(() => require('@/assets/companions/body/radiant.png')),
-  },
-  Soul: {
-    Dormant: safeRequire(() => require('@/assets/companions/soul/dormant.png')),
-    Sleepy: safeRequire(() => require('@/assets/companions/soul/sleepy.png')),
-    Awakening: safeRequire(() => require('@/assets/companions/soul/awakening.png')),
-    Glowing: safeRequire(() => require('@/assets/companions/soul/glowing.png')),
-    Radiant: safeRequire(() => require('@/assets/companions/soul/radiant.png')),
-  },
-};
-
-// Helper to safely require images that may not exist yet
-function safeRequire(requireFn: () => ImageSourcePropType): ImageSourcePropType | null {
-  try {
-    return requireFn();
-  } catch (e) {
-    return null;
-  }
-}
+// TODO: Re-enable when PNG assets are added to assets/companions/{mind,body,soul}/
+// Metro bundler resolves require() statically at bundle time, so we can't use
+// try/catch to handle missing files. For now, always use icon fallback.
+// const COMPANION_IMAGES: Record<Category, Record<LightState, ImageSourcePropType | null>> = { ... };
 
 export type Category = 'Mind' | 'Body' | 'Soul';
 export type LightState = 'Dormant' | 'Sleepy' | 'Awakening' | 'Glowing' | 'Radiant';
@@ -104,14 +74,9 @@ export default function CompanionAvatar({
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const glowAnim = useRef(new Animated.Value(0)).current;
   const [riveError, setRiveError] = useState(false);
-  const [imageError, setImageError] = useState(false);
 
   const color = CATEGORY_COLORS[category];
   const lightLevel = LIGHT_STATE_LEVELS[lightState];
-
-  // Get static image for current state
-  const stateImage = COMPANION_IMAGES[category]?.[lightState];
-  const hasStaticImage = stateImage !== null && !imageError;
 
   // Animate glow based on light state
   useEffect(() => {
@@ -208,8 +173,8 @@ export default function CompanionAvatar({
 
   // Determine which rendering mode to use
   // Priority: Rive > Static Images > Icon Fallback
+  // TODO: Re-enable static image path when PNG assets are available
   const shouldUseRive = Rive && useRive && !riveError;
-  const shouldUseStaticImage = !shouldUseRive && hasStaticImage && !useIconFallback;
 
   let content: React.ReactNode;
 
@@ -224,43 +189,6 @@ export default function CompanionAvatar({
         style={{ width: size, height: size }}
         onError={() => setRiveError(true)}
       />
-    );
-  } else if (shouldUseStaticImage && stateImage) {
-    // Static image for current state
-    content = (
-      <Animated.View
-        style={[
-          styles.imageContainer,
-          {
-            width: size,
-            height: size,
-            transform: [{ scale: pulseAnim }],
-          },
-        ]}
-      >
-        {/* Glow effect behind image */}
-        <Animated.View
-          style={[
-            styles.glowEffect,
-            {
-              width: size * 1.3,
-              height: size * 1.3,
-              borderRadius: (size * 1.3) / 2,
-              backgroundColor: color,
-              opacity: glowAnim,
-            },
-          ]}
-        />
-        <Image
-          source={stateImage}
-          style={{
-            width: size,
-            height: size,
-          }}
-          resizeMode="contain"
-          onError={() => setImageError(true)}
-        />
-      </Animated.View>
     );
   } else {
     // Icon fallback
@@ -317,10 +245,6 @@ export default function CompanionAvatar({
 }
 
 const styles = StyleSheet.create({
-  imageContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   fallbackContainer: {
     justifyContent: 'center',
     alignItems: 'center',
