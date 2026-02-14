@@ -42,9 +42,9 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native';
+import HapticPressable from '@/components/HapticPressable';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import DraggableExerciseList from '@/components/DraggableExerciseList';
 import ExerciseLibrary from '@/components/ExerciseLibrary';
@@ -675,19 +675,16 @@ export default function RoutineBuilderScreen() {
   if (buildMode === 'select') {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
-          <View style={styles.headerButton} />
-          <Text style={styles.title}>Build</Text>
-          <View style={styles.headerButton} />
+        <View style={styles.modeSelectionHeader}>
+          <Text style={styles.modeSelectionTitle}>Build</Text>
+          <Text style={styles.modeSelectionSubtitle}>
+            Create custom routines and exercises
+          </Text>
         </View>
 
         <View style={styles.modeSelectionContainer}>
-          <Text style={styles.modeSelectionTitle}>What would you like to build?</Text>
-          <Text style={styles.modeSelectionSubtitle}>
-            Create new exercises for the library or build complete routines
-          </Text>
 
-          <TouchableOpacity
+          <HapticPressable
             style={styles.modeCard}
             onPress={() => setBuildMode('exercise')}
           >
@@ -701,9 +698,9 @@ export default function RoutineBuilderScreen() {
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color={AppColors.textSecondary} />
-          </TouchableOpacity>
+          </HapticPressable>
 
-          <TouchableOpacity
+          <HapticPressable
             style={styles.modeCard}
             onPress={() => setBuildMode('routine')}
           >
@@ -717,7 +714,7 @@ export default function RoutineBuilderScreen() {
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color={AppColors.textSecondary} />
-          </TouchableOpacity>
+          </HapticPressable>
         </View>
       </View>
     );
@@ -729,19 +726,19 @@ export default function RoutineBuilderScreen() {
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity
+          <HapticPressable
             onPress={() => setBuildMode('select')}
             style={styles.headerButton}
           >
             <Ionicons name="arrow-back" size={28} color={AppColors.textSecondary} />
-          </TouchableOpacity>
+          </HapticPressable>
           <Text style={styles.title}>Exercise Library</Text>
-          <TouchableOpacity
+          <HapticPressable
             onPress={handleAddExercise}
             style={styles.headerButton}
           >
             <Ionicons name="add-circle" size={28} color={AppColors.primary} />
-          </TouchableOpacity>
+          </HapticPressable>
         </View>
 
         {/* Exercise Library */}
@@ -782,9 +779,9 @@ export default function RoutineBuilderScreen() {
     return (
       <GestureHandlerRootView style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={handleExit} style={styles.headerButton}>
+          <HapticPressable onPress={handleExit} style={styles.headerButton}>
             <Ionicons name="close" size={28} color={AppColors.textSecondary} />
-          </TouchableOpacity>
+          </HapticPressable>
           <Text style={styles.title}>
             {isEditMode
               ? isEditingOfficialRoutine
@@ -793,9 +790,9 @@ export default function RoutineBuilderScreen() {
               : 'Routine Builder'}
           </Text>
           {!isEditMode && (
-            <TouchableOpacity onPress={handleReset} style={styles.headerButton}>
+            <HapticPressable onPress={handleReset} style={styles.headerButton}>
               <Ionicons name="refresh" size={24} color={AppColors.primary} />
-            </TouchableOpacity>
+            </HapticPressable>
           )}
         {isEditMode && <View style={styles.headerButton} />}
       </View>
@@ -842,7 +839,7 @@ export default function RoutineBuilderScreen() {
             </View>
 
             <View style={styles.publishModalOptions}>
-              <TouchableOpacity
+              <HapticPressable
                 style={styles.publishModalOption}
                 onPress={() => {
                   setSelectedRoutineType('official');
@@ -866,9 +863,9 @@ export default function RoutineBuilderScreen() {
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={24} color="#10B981" />
-              </TouchableOpacity>
+              </HapticPressable>
 
-              <TouchableOpacity
+              <HapticPressable
                 style={styles.publishModalOption}
                 onPress={() => {
                   setSelectedRoutineType('community');
@@ -892,10 +889,10 @@ export default function RoutineBuilderScreen() {
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={24} color={AppColors.primary} />
-              </TouchableOpacity>
+              </HapticPressable>
             </View>
 
-            <TouchableOpacity
+            <HapticPressable
               style={styles.publishModalCancelButton}
               onPress={() => {
                 setShowPublishModal(false);
@@ -904,7 +901,7 @@ export default function RoutineBuilderScreen() {
               disabled={loading}
             >
               <Text style={styles.publishModalCancelText}>Cancel</Text>
-            </TouchableOpacity>
+            </HapticPressable>
           </View>
         </View>
       </Modal>
@@ -926,7 +923,7 @@ export default function RoutineBuilderScreen() {
         <Text style={styles.modeSelectionSubtitle}>
           Create new exercises for the library or build complete routines
         </Text>
-        <TouchableOpacity
+        <HapticPressable
           style={styles.modeCard}
           onPress={() => setBuildMode('exercise')}
         >
@@ -940,8 +937,8 @@ export default function RoutineBuilderScreen() {
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={24} color={AppColors.textSecondary} />
-        </TouchableOpacity>
-        <TouchableOpacity
+        </HapticPressable>
+        <HapticPressable
           style={styles.modeCard}
           onPress={() => setBuildMode('routine')}
         >
@@ -955,7 +952,7 @@ export default function RoutineBuilderScreen() {
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={24} color={AppColors.textSecondary} />
-        </TouchableOpacity>
+        </HapticPressable>
       </View>
     </View>
   );
@@ -1118,13 +1115,13 @@ function ExerciseSelectionStep({
         />
       )}
 
-      <TouchableOpacity
+      <HapticPressable
         style={styles.addExerciseButton}
         onPress={() => setModalVisible(true)}
       >
         <Ionicons name="add-circle" size={24} color={AppColors.primary} />
         <Text style={styles.addExerciseButtonText}>Add Exercise</Text>
-      </TouchableOpacity>
+      </HapticPressable>
 
       {/* Exercise Selection Modal */}
       <Modal
@@ -1138,14 +1135,14 @@ function ExerciseSelectionStep({
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-            <TouchableOpacity
+            <HapticPressable
               onPress={() => {
                 setModalVisible(false);
                 setSelectedLibraryExercise(null);
               }}
             >
               <Ionicons name="close" size={28} color={AppColors.textPrimary} />
-            </TouchableOpacity>
+            </HapticPressable>
             <Text style={styles.modalTitle}>
               {selectedLibraryExercise ? 'Set Duration' : 'Select Exercise'}
             </Text>
@@ -1164,9 +1161,9 @@ function ExerciseSelectionStep({
                 keyboardShouldPersistTaps="handled"
               >
                 <View style={styles.exerciseConfigHeader}>
-                  <TouchableOpacity onPress={() => setSelectedLibraryExercise(null)}>
+                  <HapticPressable onPress={() => setSelectedLibraryExercise(null)}>
                     <Ionicons name="arrow-back" size={24} color={AppColors.textPrimary} />
-                  </TouchableOpacity>
+                  </HapticPressable>
                   <Text style={styles.exerciseConfigTitle}>Set Duration</Text>
                   <View style={{ width: 24 }} />
                 </View>
@@ -1174,7 +1171,8 @@ function ExerciseSelectionStep({
                 <Text style={styles.exerciseConfigName}>{selectedLibraryExercise.name}</Text>
 
                 {/* Collapsible Instructions */}
-                <TouchableOpacity
+                <HapticPressable
+                  hapticStyle="selection"
                   style={styles.instructionsToggle}
                   onPress={() => setInstructionsExpanded(!instructionsExpanded)}
                   activeOpacity={0.7}
@@ -1185,7 +1183,7 @@ function ExerciseSelectionStep({
                     size={20}
                     color={AppColors.textSecondary}
                   />
-                </TouchableOpacity>
+                </HapticPressable>
                 {instructionsExpanded && (
                   <Text style={styles.exerciseConfigInstructions}>
                     {selectedLibraryExercise.instructions}
@@ -1236,9 +1234,9 @@ function ExerciseSelectionStep({
                   )}
                 </View>
 
-                <TouchableOpacity style={styles.confirmButton} onPress={handleAddExercise}>
+                <HapticPressable style={styles.confirmButton} onPress={handleAddExercise}>
                   <Text style={styles.confirmButtonText}>Add to Routine</Text>
-                </TouchableOpacity>
+                </HapticPressable>
               </ScrollView>
             </KeyboardAvoidingView>
           ) : (
@@ -1318,7 +1316,7 @@ function ExerciseSelectionStep({
                 </View>
 
                 <View style={styles.editDurationModalActions}>
-                  <TouchableOpacity
+                  <HapticPressable
                     style={styles.editDurationCancelButton}
                     onPress={() => {
                       setEditingExercise(null);
@@ -1327,13 +1325,13 @@ function ExerciseSelectionStep({
                     }}
                   >
                     <Text style={styles.editDurationCancelText}>Cancel</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
+                  </HapticPressable>
+                  <HapticPressable
                     style={styles.editDurationSaveButton}
                     onPress={handleUpdateExercise}
                   >
                     <Text style={styles.editDurationSaveText}>Save</Text>
-                  </TouchableOpacity>
+                  </HapticPressable>
                 </View>
               </>
             )}
@@ -1342,14 +1340,14 @@ function ExerciseSelectionStep({
       </Modal>
 
       <View style={styles.stepNavigation}>
-        <TouchableOpacity
+        <HapticPressable
           style={[styles.nextButton, !canProceed && styles.nextButtonDisabled, { flex: 1 }]}
           onPress={onNext}
           disabled={!canProceed}
         >
           <Text style={styles.nextButtonText}>Next</Text>
           <Ionicons name="arrow-forward" size={20} color={AppColors.primaryText} />
-        </TouchableOpacity>
+        </HapticPressable>
       </View>
     </View>
   );
@@ -1470,7 +1468,8 @@ function DetailsStep({
           {(['Mind', 'Body', 'Soul'] as RoutineCategory[]).map((category) => {
             const categoryColor = category === 'Mind' ? AppColors.mind : category === 'Body' ? AppColors.body : AppColors.soul;
             return (
-              <TouchableOpacity
+              <HapticPressable
+                hapticStyle="selection"
                 key={category}
                 style={[
                   styles.segmentButton,
@@ -1486,7 +1485,7 @@ function DetailsStep({
                 >
                   {category}
                 </Text>
-              </TouchableOpacity>
+              </HapticPressable>
             );
           })}
         </View>
@@ -1500,7 +1499,8 @@ function DetailsStep({
               (data.journeyFocus === 'Both' && (focus === 'Injury Prevention' || focus === 'Recovery'));
 
             return (
-              <TouchableOpacity
+              <HapticPressable
+                hapticStyle="selection"
                 key={focus}
                 style={[
                   styles.segmentButton,
@@ -1530,7 +1530,7 @@ function DetailsStep({
                 >
                   {focus}
                 </Text>
-              </TouchableOpacity>
+              </HapticPressable>
             );
           })}
         </View>
@@ -1538,7 +1538,8 @@ function DetailsStep({
         <Text style={styles.fieldLabel}>Difficulty</Text>
         <View style={styles.segmentedControl}>
           {(['Beginner', 'Intermediate', 'Advanced'] as RoutineDifficulty[]).map((difficulty) => (
-            <TouchableOpacity
+            <HapticPressable
+              hapticStyle="selection"
               key={difficulty}
               style={[
                 styles.segmentButton,
@@ -1554,7 +1555,7 @@ function DetailsStep({
               >
                 {difficulty}
               </Text>
-            </TouchableOpacity>
+            </HapticPressable>
           ))}
         </View>
 
@@ -1565,7 +1566,7 @@ function DetailsStep({
             <Text style={styles.fieldHint}>Select body parts targeted by this routine</Text>
 
             {/* Body Parts Dropdown */}
-            <TouchableOpacity
+            <HapticPressable
               style={styles.dropdownButton}
               onPress={() => setBodyPartsModalVisible(true)}
             >
@@ -1575,7 +1576,7 @@ function DetailsStep({
                   : 'Select body parts'}
               </Text>
               <Ionicons name="chevron-down" size={20} color={AppColors.textSecondary} />
-            </TouchableOpacity>
+            </HapticPressable>
 
             {/* Display Selected Body Parts */}
             {data.body_parts && data.body_parts.length > 0 && (
@@ -1583,9 +1584,9 @@ function DetailsStep({
                 {data.body_parts.map((bodyPart) => (
                   <View key={bodyPart} style={styles.selectedBodyPartChip}>
                     <Text style={styles.selectedBodyPartText}>{bodyPart}</Text>
-                    <TouchableOpacity onPress={() => toggleBodyPart(bodyPart)}>
+                    <HapticPressable onPress={() => toggleBodyPart(bodyPart)}>
                       <Ionicons name="close-circle" size={18} color={AppColors.primary} />
-                    </TouchableOpacity>
+                    </HapticPressable>
                   </View>
                 ))}
               </View>
@@ -1614,7 +1615,7 @@ function DetailsStep({
             onSubmitEditing={handleAddBenefit}
             returnKeyType="done"
           />
-          <TouchableOpacity
+          <HapticPressable
             style={[
               styles.addTagButton,
               (!currentBenefitInput.trim() || (data.benefits && data.benefits.length >= MAX_BENEFITS)) &&
@@ -1632,7 +1633,7 @@ function DetailsStep({
                   : AppColors.primary
               }
             />
-          </TouchableOpacity>
+          </HapticPressable>
         </View>
 
         {/* Display Selected Benefits as Chips (same pattern as tags) */}
@@ -1641,9 +1642,9 @@ function DetailsStep({
             {data.benefits.map((benefit, index) => (
               <View key={`${benefit}-${index}`} style={styles.selectedTagChip}>
                 <Text style={styles.selectedTagText}>{benefit}</Text>
-                <TouchableOpacity onPress={() => handleRemoveBenefit(benefit)}>
+                <HapticPressable onPress={() => handleRemoveBenefit(benefit)}>
                   <Ionicons name="close-circle" size={18} color={AppColors.primary} />
-                </TouchableOpacity>
+                </HapticPressable>
               </View>
             ))}
           </View>
@@ -1659,7 +1660,8 @@ function DetailsStep({
             <Text style={styles.advancedToggleDescription}>
               Mark this routine as Advanced. Users must achieve Harmony to access it.
             </Text>
-            <TouchableOpacity
+            <HapticPressable
+              hapticStyle="selection"
               style={[
                 styles.advancedToggleButton,
                 data.is_advanced && styles.advancedToggleButtonActive,
@@ -1679,7 +1681,7 @@ function DetailsStep({
               >
                 {data.is_advanced ? 'Advanced (Harmony Required)' : 'Standard (No Restrictions)'}
               </Text>
-            </TouchableOpacity>
+            </HapticPressable>
           </View>
         )}
       </View>
@@ -1692,7 +1694,8 @@ function DetailsStep({
         animationType="fade"
         onRequestClose={() => setBodyPartsModalVisible(false)}
       >
-        <TouchableOpacity
+        <HapticPressable
+          hapticStyle="none"
           style={styles.modalOverlay}
           activeOpacity={1}
           onPress={() => setBodyPartsModalVisible(false)}
@@ -1700,15 +1703,16 @@ function DetailsStep({
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select Body Parts</Text>
-              <TouchableOpacity onPress={() => setBodyPartsModalVisible(false)}>
+              <HapticPressable onPress={() => setBodyPartsModalVisible(false)}>
                 <Ionicons name="close" size={24} color={AppColors.textSecondary} />
-              </TouchableOpacity>
+              </HapticPressable>
             </View>
 
             {/* Body Region Filter */}
             <View style={styles.filterContainer}>
               {(['All', 'Upper Body', 'Lower Body'] as BodyRegion[]).map((region) => (
-                <TouchableOpacity
+                <HapticPressable
+                  hapticStyle="selection"
                   key={region}
                   style={[
                     styles.filterButton,
@@ -1724,13 +1728,14 @@ function DetailsStep({
                   >
                     {region}
                   </Text>
-                </TouchableOpacity>
+                </HapticPressable>
               ))}
             </View>
 
             <ScrollView style={styles.modalScrollView}>
               {getFilteredBodyParts().map((bodyPart) => (
-                <TouchableOpacity
+                <HapticPressable
+                  hapticStyle="selection"
                   key={bodyPart}
                   style={styles.modalOption}
                   onPress={() => toggleBodyPart(bodyPart)}
@@ -1746,26 +1751,26 @@ function DetailsStep({
                   {data.body_parts?.includes(bodyPart) && (
                     <Ionicons name="checkmark" size={20} color={AppColors.primary} />
                   )}
-                </TouchableOpacity>
+                </HapticPressable>
               ))}
             </ScrollView>
           </View>
-        </TouchableOpacity>
+        </HapticPressable>
       </Modal>
 
       <View style={styles.stepNavigation}>
-        <TouchableOpacity style={styles.backButton} onPress={onBack}>
+        <HapticPressable style={styles.backButton} onPress={onBack}>
           <Ionicons name="arrow-back" size={20} color={AppColors.textSecondary} />
           <Text style={styles.backButtonText}>Back</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
+        </HapticPressable>
+        <HapticPressable
           style={[styles.nextButton, !canProceed && styles.nextButtonDisabled]}
           onPress={onNext}
           disabled={!canProceed}
         >
           <Text style={styles.nextButtonText}>Review</Text>
           <Ionicons name="arrow-forward" size={20} color={AppColors.primaryText} />
-        </TouchableOpacity>
+        </HapticPressable>
       </View>
     </KeyboardAvoidingView>
   );
@@ -1875,11 +1880,11 @@ function ReviewStep({
       </View>
 
       <View style={styles.stepNavigation}>
-        <TouchableOpacity style={styles.backButton} onPress={onBack} disabled={loading}>
+        <HapticPressable style={styles.backButton} onPress={onBack} disabled={loading}>
           <Ionicons name="arrow-back" size={20} color={AppColors.textSecondary} />
           <Text style={styles.backButtonText}>Back</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
+        </HapticPressable>
+        <HapticPressable
           style={[styles.publishButton, loading && styles.publishButtonDisabled]}
           onPress={onPublish}
           disabled={loading}
@@ -1898,7 +1903,7 @@ function ReviewStep({
               </Text>
             </>
           )}
-        </TouchableOpacity>
+        </HapticPressable>
       </View>
     </View>
   );
@@ -1923,22 +1928,25 @@ const styles = StyleSheet.create({
     backgroundColor: AppColors.background,
   },
   // Mode selection styles
+  modeSelectionHeader: {
+    padding: 24,
+    paddingTop: 100,
+    backgroundColor: AppColors.surface,
+  },
   modeSelectionContainer: {
     flex: 1,
     padding: 24,
-    paddingTop: 40,
+    paddingTop: 24,
   },
   modeSelectionTitle: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 28,
+    fontWeight: 'bold',
     color: AppColors.textPrimary,
-    marginBottom: 8,
   },
   modeSelectionSubtitle: {
     fontSize: 16,
     color: AppColors.textSecondary,
-    marginBottom: 32,
-    lineHeight: 24,
+    marginTop: 4,
   },
   modeCard: {
     flexDirection: 'row',

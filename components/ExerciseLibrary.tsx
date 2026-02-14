@@ -18,6 +18,7 @@ import {
   Modal,
   ScrollView,
 } from 'react-native'
+import HapticPressable from '@/components/HapticPressable'
 import { Ionicons } from '@expo/vector-icons'
 import type { ExerciseLibraryItem, RoutineCategory, RoutineDifficulty } from '../types'
 import { UPPER_BODY_AREAS, LOWER_BODY_AREAS } from '../types'
@@ -188,7 +189,7 @@ export default function ExerciseLibrary({
     const showDeleteButton = allowDeleting && canModify
 
     return (
-      <TouchableOpacity
+      <HapticPressable
         style={styles.exerciseCard}
         onPress={() => allowSelection && onSelectExercise?.(item)}
         disabled={!allowSelection}
@@ -203,20 +204,21 @@ export default function ExerciseLibrary({
           {(showEditButton || showDeleteButton) && (
             <View style={styles.actionButtons}>
               {showEditButton && (
-                <TouchableOpacity
+                <HapticPressable
                   style={styles.actionButton}
                   onPress={() => onEditExercise(item)}
                 >
                   <Ionicons name="create-outline" size={24} color={AppColors.primary} />
-                </TouchableOpacity>
+                </HapticPressable>
               )}
               {showDeleteButton && (
-                <TouchableOpacity
+                <HapticPressable
                   style={styles.actionButton}
+                  hapticStyle="medium"
                   onPress={() => handleDeleteExercise(item)}
                 >
                   <Ionicons name="trash-outline" size={24} color={AppColors.destructive} />
-                </TouchableOpacity>
+                </HapticPressable>
               )}
             </View>
           )}
@@ -249,7 +251,7 @@ export default function ExerciseLibrary({
             </Text>
           </View>
         </View>
-      </TouchableOpacity>
+      </HapticPressable>
     )
   }
 
@@ -279,9 +281,9 @@ export default function ExerciseLibrary({
           placeholderTextColor={AppColors.textSecondary}
         />
         {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={() => setSearchQuery('')}>
+          <HapticPressable onPress={() => setSearchQuery('')}>
             <Ionicons name="close-circle" size={20} color={AppColors.textSecondary} />
-          </TouchableOpacity>
+          </HapticPressable>
         )}
       </View>
 
@@ -293,11 +295,12 @@ export default function ExerciseLibrary({
         contentContainerStyle={styles.filtersScrollViewContent}
       >
         {/* Created By Dropdown */}
-        <TouchableOpacity
+        <HapticPressable
           style={[
             styles.filterChip,
             (selectedOwnership !== 'all') && styles.filterChipActive
           ]}
+          hapticStyle="selection"
           onPress={() => setOwnershipModalVisible(true)}
         >
           <Ionicons
@@ -318,15 +321,16 @@ export default function ExerciseLibrary({
             size={14}
             color={selectedOwnership !== 'all' ? AppColors.primary : AppColors.textSecondary}
           />
-        </TouchableOpacity>
+        </HapticPressable>
 
         {/* Category Dropdown */}
         {!category && (
-          <TouchableOpacity
+          <HapticPressable
             style={[
               styles.filterChip,
               selectedCategory && styles.filterChipActive
             ]}
+            hapticStyle="selection"
             onPress={() => setCategoryModalVisible(true)}
           >
             <Ionicons
@@ -345,15 +349,16 @@ export default function ExerciseLibrary({
               size={14}
               color={selectedCategory ? AppColors.primary : AppColors.textSecondary}
             />
-          </TouchableOpacity>
+          </HapticPressable>
         )}
 
         {/* Difficulty Dropdown */}
-        <TouchableOpacity
+        <HapticPressable
           style={[
             styles.filterChip,
             selectedDifficulty && styles.filterChipActive
           ]}
+          hapticStyle="selection"
           onPress={() => setDifficultyModalVisible(true)}
         >
           <Ionicons
@@ -372,14 +377,15 @@ export default function ExerciseLibrary({
             size={14}
             color={selectedDifficulty ? AppColors.primary : AppColors.textSecondary}
           />
-        </TouchableOpacity>
+        </HapticPressable>
 
         {/* Body Part Dropdown */}
-        <TouchableOpacity
+        <HapticPressable
           style={[
             styles.filterChip,
             selectedBodyPart && styles.filterChipActive
           ]}
+          hapticStyle="selection"
           onPress={() => setBodyPartModalVisible(true)}
         >
           <Ionicons
@@ -398,7 +404,7 @@ export default function ExerciseLibrary({
             size={14}
             color={selectedBodyPart ? AppColors.primary : AppColors.textSecondary}
           />
-        </TouchableOpacity>
+        </HapticPressable>
       </ScrollView>
 
       {/* Results Count */}
@@ -444,12 +450,13 @@ export default function ExerciseLibrary({
             <Text style={styles.modalTitle}>Select Category</Text>
             <ScrollView>
               {categories.map((cat) => (
-                <TouchableOpacity
+                <HapticPressable
                   key={cat || 'all'}
                   style={[
                     styles.modalOption,
                     selectedCategory === cat && styles.modalOptionActive,
                   ]}
+                  hapticStyle="selection"
                   onPress={() => {
                     setSelectedCategory(cat)
                     setCategoryModalVisible(false)
@@ -466,7 +473,7 @@ export default function ExerciseLibrary({
                   {selectedCategory === cat && (
                     <Ionicons name="checkmark" size={20} color={AppColors.primary} />
                   )}
-                </TouchableOpacity>
+                </HapticPressable>
               ))}
             </ScrollView>
           </View>
@@ -489,12 +496,13 @@ export default function ExerciseLibrary({
             <Text style={styles.modalTitle}>Select Difficulty</Text>
             <ScrollView>
               {difficulties.map((diff) => (
-                <TouchableOpacity
+                <HapticPressable
                   key={diff || 'all'}
                   style={[
                     styles.modalOption,
                     selectedDifficulty === diff && styles.modalOptionActive,
                   ]}
+                  hapticStyle="selection"
                   onPress={() => {
                     setSelectedDifficulty(diff)
                     setDifficultyModalVisible(false)
@@ -511,7 +519,7 @@ export default function ExerciseLibrary({
                   {selectedDifficulty === diff && (
                     <Ionicons name="checkmark" size={20} color={AppColors.primary} />
                   )}
-                </TouchableOpacity>
+                </HapticPressable>
               ))}
             </ScrollView>
           </View>
@@ -539,12 +547,13 @@ export default function ExerciseLibrary({
                 { value: 'mine', label: 'My Exercises' },
                 { value: 'community', label: 'Community' },
               ] as const).map((option) => (
-                <TouchableOpacity
+                <HapticPressable
                   key={option.value}
                   style={[
                     styles.modalOption,
                     selectedOwnership === option.value && styles.modalOptionActive,
                   ]}
+                  hapticStyle="selection"
                   onPress={() => {
                     setSelectedOwnership(option.value)
                     setOwnershipModalVisible(false)
@@ -561,7 +570,7 @@ export default function ExerciseLibrary({
                   {selectedOwnership === option.value && (
                     <Ionicons name="checkmark" size={20} color={AppColors.primary} />
                   )}
-                </TouchableOpacity>
+                </HapticPressable>
               ))}
             </ScrollView>
           </View>
@@ -584,11 +593,12 @@ export default function ExerciseLibrary({
             <Text style={styles.modalTitle}>Select Body Part</Text>
             <ScrollView>
               {/* All option */}
-              <TouchableOpacity
+              <HapticPressable
                 style={[
                   styles.modalOption,
                   !selectedBodyPart && styles.modalOptionActive,
                 ]}
+                hapticStyle="selection"
                 onPress={() => {
                   setSelectedBodyPart(undefined)
                   setBodyPartModalVisible(false)
@@ -605,17 +615,18 @@ export default function ExerciseLibrary({
                 {!selectedBodyPart && (
                   <Ionicons name="checkmark" size={20} color={AppColors.primary} />
                 )}
-              </TouchableOpacity>
+              </HapticPressable>
 
               {/* Upper Body Section */}
               <Text style={styles.modalSectionHeader}>Upper Body</Text>
               {UPPER_BODY_AREAS.map((bodyPart) => (
-                <TouchableOpacity
+                <HapticPressable
                   key={bodyPart}
                   style={[
                     styles.modalOption,
                     selectedBodyPart === bodyPart && styles.modalOptionActive,
                   ]}
+                  hapticStyle="selection"
                   onPress={() => {
                     setSelectedBodyPart(bodyPart)
                     setBodyPartModalVisible(false)
@@ -632,18 +643,19 @@ export default function ExerciseLibrary({
                   {selectedBodyPart === bodyPart && (
                     <Ionicons name="checkmark" size={20} color={AppColors.primary} />
                   )}
-                </TouchableOpacity>
+                </HapticPressable>
               ))}
 
               {/* Lower Body Section */}
               <Text style={styles.modalSectionHeader}>Lower Body</Text>
               {LOWER_BODY_AREAS.map((bodyPart) => (
-                <TouchableOpacity
+                <HapticPressable
                   key={bodyPart}
                   style={[
                     styles.modalOption,
                     selectedBodyPart === bodyPart && styles.modalOptionActive,
                   ]}
+                  hapticStyle="selection"
                   onPress={() => {
                     setSelectedBodyPart(bodyPart)
                     setBodyPartModalVisible(false)
@@ -660,7 +672,7 @@ export default function ExerciseLibrary({
                   {selectedBodyPart === bodyPart && (
                     <Ionicons name="checkmark" size={20} color={AppColors.primary} />
                   )}
-                </TouchableOpacity>
+                </HapticPressable>
               ))}
             </ScrollView>
           </View>

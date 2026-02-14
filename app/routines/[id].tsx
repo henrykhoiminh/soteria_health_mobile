@@ -14,9 +14,9 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
+import HapticPressable from '@/components/HapticPressable';
 import RoutineAuthorBadge from '@/components/RoutineAuthorBadge';
 
 export default function RoutineDetailScreen() {
@@ -122,9 +122,9 @@ export default function RoutineDetailScreen() {
       <View style={styles.errorContainer}>
         <Ionicons name="alert-circle-outline" size={48} color={AppColors.textTertiary} />
         <Text style={styles.errorText}>Routine not found</Text>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        <HapticPressable style={styles.backButton} onPress={() => router.back()}>
           <Text style={styles.backButtonText}>Go Back</Text>
-        </TouchableOpacity>
+        </HapticPressable>
       </View>
     );
   }
@@ -134,19 +134,19 @@ export default function RoutineDetailScreen() {
       <ScrollView style={styles.content}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backIcon} onPress={() => router.back()}>
+          <HapticPressable style={styles.backIcon} onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={24} color={AppColors.textPrimary} />
-          </TouchableOpacity>
+          </HapticPressable>
           <View style={styles.headerRight}>
             {canEdit && (
               <View style={styles.actionButtons}>
-                <TouchableOpacity style={styles.actionButton} onPress={handleEditRoutine}>
+                <HapticPressable style={styles.actionButton} onPress={handleEditRoutine}>
                   <Ionicons name="create-outline" size={24} color={canEditOfficial ? '#10B981' : AppColors.primary} />
-                </TouchableOpacity>
+                </HapticPressable>
                 {isCustomRoutine && (
-                  <TouchableOpacity style={styles.actionButton} onPress={handleDeleteRoutine}>
+                  <HapticPressable style={styles.actionButton} onPress={handleDeleteRoutine} hapticStyle="medium">
                     <Ionicons name="trash-outline" size={24} color={AppColors.body} />
-                  </TouchableOpacity>
+                  </HapticPressable>
                 )}
               </View>
             )}
@@ -185,7 +185,7 @@ export default function RoutineDetailScreen() {
           {routine.source_routine_name && routine.source_routine_id && (
             <View style={styles.sourceSection}>
               <Text style={styles.authorLabel}>Remixed from</Text>
-              <TouchableOpacity
+              <HapticPressable
                 style={styles.sourceLink}
                 onPress={() => router.push(`/routines/${routine.source_routine_id}`)}
               >
@@ -198,7 +198,7 @@ export default function RoutineDetailScreen() {
                     <Text style={styles.officialBadgeText}>Official</Text>
                   </View>
                 )}
-              </TouchableOpacity>
+              </HapticPressable>
             </View>
           )}
 
@@ -260,24 +260,24 @@ export default function RoutineDetailScreen() {
 
       {/* Footer with Start and Customize Buttons */}
       <View style={styles.footer}>
-        <TouchableOpacity
+        <HapticPressable
           style={styles.startButton}
           onPress={handleStartRoutine}
           disabled={!user}
         >
           <Ionicons name="play" size={24} color={AppColors.primaryText} />
           <Text style={styles.startButtonText}>Start Routine</Text>
-        </TouchableOpacity>
+        </HapticPressable>
 
         {/* Customize Button - allows users to create their own version */}
         {user && (
-          <TouchableOpacity
+          <HapticPressable
             style={styles.customizeButton}
             onPress={handleCustomizeRoutine}
           >
             <Ionicons name="copy-outline" size={20} color={AppColors.primary} />
             <Text style={styles.customizeButtonText}>Remix This Routine</Text>
-          </TouchableOpacity>
+          </HapticPressable>
         )}
       </View>
     </View>

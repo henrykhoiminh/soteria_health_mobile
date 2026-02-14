@@ -29,6 +29,7 @@ This file contains technical context, architectural decisions, and implementatio
   "expo-router": "~6.x",
   "expo-image-picker": "latest",
   "expo-av": "~16.x",
+  "expo-haptics": "latest",
   "lottie-react-native": "^7.x",
   "@react-native-async-storage/async-storage": "latest",
   "@react-native-picker/picker": "latest",
@@ -63,6 +64,7 @@ app/routines/
 
 components/
 ├── DraggableExerciseList.tsx    # Exercise cards with reorder/edit/delete (NO gestures)
+├── HapticPressable.tsx          # Drop-in TouchableOpacity replacement with haptic feedback
 ├── JourneyBadge.tsx             # Journey type badge with icon
 ├── PainCheckInModal.tsx         # 3-step pain check-in modal
 └── HealthTeamInvitationCard.tsx # Health team invitation UI
@@ -75,6 +77,7 @@ lib/
     ├── audio.ts                 # Audio playback for countdown beeps
     ├── dashboard.ts             # Dashboard data, recommendations
     ├── dashboard-cache.ts       # In-memory cache for fluid navigation
+    ├── haptics.ts               # Centralized haptic feedback (light/medium/heavy/selection)
     ├── harmony.ts               # Harmony status checking
     ├── pain-checkin.ts          # Pain check-in logic
     ├── routine-builder.ts       # Builder utilities & validation
@@ -198,7 +201,55 @@ lsof -ti:8081 | xargs kill -9
 
 ## Session History Summary
 
-### Session 23 (Latest - Design System & Onboarding Improvements)
+### Session 28 (Latest - Save from Circles, Optimistic UI & App-Wide Haptic Feedback)
+- **Save/Unsave Routines from Circle Routine Cards:**
+  - Extended `searchCircleRoutines()` in `lib/utils/social.ts` to accept optional `userId` parameter
+  - Fetches user's saved routine IDs from `routine_saves` table, sets `is_saved` on each routine
+  - Updated `EnhancedCircleRoutinesTab.tsx` to pass `user?.id`, added `handleSaveToggle`, passes `onSaveToggle` to `RoutineCard`
+
+- **Optimistic Save Toggle (No Loading Spinner):**
+  - Replaced `loadRoutines()` reload pattern (caused full-screen ActivityIndicator) with optimistic UI
+  - Updated 3 save handlers: Discover tab, My Routines tab, Circle routines tab
+  - Pattern: Toggle local state immediately → call API in background → revert on failure
+  - Applies to both save and unsave actions across all routine card locations
+
+- **App-Wide Haptic Feedback System:**
+  - Created `lib/utils/haptics.ts` - Centralized haptic utilities using `expo-haptics`
+    - Functions: `light()`, `medium()`, `heavy()`, `selection()`, `success()`, `warning()`, `error()`
+    - iOS-only (no-op on Android via `Platform.OS === 'ios'` guard)
+  - Created `components/HapticPressable.tsx` - Drop-in `TouchableOpacity` replacement
+    - Adds `hapticStyle` prop: `'light'` | `'medium'` | `'heavy'` | `'selection'` | `'none'`
+    - Default: `'light'` - fires haptic on `onPressIn` for immediate tactile response
+  - Replaced `TouchableOpacity` with `HapticPressable` across **~240 interactive elements in ~40 files**:
+    - Tab screens (5): index, routines, builder, social, profile (~112 elements)
+    - Shared components (6): RoutineCard, ActivityCard, EnhancedCircleRoutinesTab, ExerciseLibrary, DraggableExerciseList, SwipeableTabs (~38 elements)
+    - Route screens (3): routines/[id], routines/[id]/execute, circles/[id] (~33 elements)
+    - Modal components (10): PainCheckIn, JourneyFocus, Harmony, WellnessCheckIn, RecommendedRoutine, CompletedRoutines, ExerciseEditor, FriendInvite, UsernameSetup, MilestoneCelebration
+    - Auth screens (3): login, signup, verify-email
+    - Other components (5): Avatar, CompanionAvatar, HealthTeamInvitationCard, MilestoneCard, PainProgressChart, companion-demo
+
+  - **Haptic Style Assignments:**
+    | Style | Use Case | Examples |
+    |-------|----------|---------|
+    | `light` (default) | Standard navigation, buttons, cards | Back buttons, action buttons, card taps |
+    | `selection` | Toggles, filters, tabs, chips | Filter chips, tab switches, category segments |
+    | `medium` | Destructive actions | Delete, leave, quit, unfriend, sign out, reset |
+    | `none` | Modal backdrops | Dismiss overlay areas (`activeOpacity={1}`) |
+
+  - **Files NOT converted** (intentionally): Onboarding screens, `components/ui/collapsible.tsx`
+  - **Key dependency:** `expo-haptics` (already installed)
+
+- **Key Files Created:**
+  - `lib/utils/haptics.ts` - Haptic feedback utility functions
+  - `components/HapticPressable.tsx` - Haptic-enabled pressable component
+
+- **Key Files Modified:**
+  - `lib/utils/social.ts` - `searchCircleRoutines` save status support
+  - `components/EnhancedCircleRoutinesTab.tsx` - Save toggle + haptics
+  - `app/(tabs)/routines.tsx` - Optimistic save + haptics
+  - ~37 additional files for HapticPressable replacement
+
+### Session 23 (Design System & Onboarding Improvements)
 - **Primary Button Visibility Fix (via soteria-design-system agent):**
   - Fixed critical accessibility issue with primary buttons app-wide
   - Original: White text (#FFFFFF) on soft gold background (#F7DD6F) = 1.35:1 contrast (FAIL)
@@ -464,7 +515,7 @@ lsof -ti:8081 | xargs kill -9
 
 ---
 
-**Last Updated:** 2026-01-23
+**Last Updated:** 2026-02-14
 **Current Version:** Expo SDK 54, React Native 0.76+
 
 ## Known Issues & Pending Investigations

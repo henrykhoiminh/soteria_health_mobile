@@ -14,9 +14,9 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native';
+import HapticPressable from '@/components/HapticPressable';
 
 interface WellnessCheckInModalProps {
   visible: boolean;
@@ -453,26 +453,26 @@ export default function WellnessCheckInModal({
           {/* Navigation Buttons */}
           <View style={styles.stepNavigation}>
             {currentStep !== 'mind' && (
-              <TouchableOpacity
+              <HapticPressable
                 style={styles.backButton}
                 onPress={handleBack}
                 disabled={submitting}
               >
                 <Ionicons name="arrow-back" size={20} color={AppColors.textSecondary} />
                 <Text style={styles.backButtonText}>Back</Text>
-              </TouchableOpacity>
+              </HapticPressable>
             )}
 
             {currentStep !== 'notes' ? (
-              <TouchableOpacity
+              <HapticPressable
                 style={[styles.nextButton, { backgroundColor: currentColor }]}
                 onPress={handleNext}
               >
                 <Text style={styles.nextButtonText}>Next</Text>
                 <Ionicons name="arrow-forward" size={20} color={AppColors.primaryText} />
-              </TouchableOpacity>
+              </HapticPressable>
             ) : (
-              <TouchableOpacity
+              <HapticPressable
                 style={[styles.submitButton, submitting && styles.submitButtonDisabled]}
                 onPress={handleSubmit}
                 disabled={submitting}
@@ -485,7 +485,7 @@ export default function WellnessCheckInModal({
                     <Text style={styles.submitButtonText}>Submit Check-In</Text>
                   </>
                 )}
-              </TouchableOpacity>
+              </HapticPressable>
             )}
           </View>
         </ScrollView>

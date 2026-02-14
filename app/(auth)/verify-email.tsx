@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase/client';
 import { AppColors } from '@/constants/theme';
+import HapticPressable from '@/components/HapticPressable';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -8,7 +9,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 
@@ -68,7 +68,7 @@ export default function VerifyEmailScreen() {
         </Text>
       </View>
 
-      <TouchableOpacity
+      <HapticPressable
         style={[styles.button, loading && styles.buttonDisabled]}
         onPress={handleResendEmail}
         disabled={loading}
@@ -77,9 +77,9 @@ export default function VerifyEmailScreen() {
         <Text style={styles.buttonText}>
           {loading ? 'Sending...' : 'Resend Verification Email'}
         </Text>
-      </TouchableOpacity>
+      </HapticPressable>
 
-      <TouchableOpacity
+      <HapticPressable
         style={styles.secondaryButton}
         onPress={() => router.replace('/(auth)/login')}
         disabled={loading}
@@ -87,7 +87,7 @@ export default function VerifyEmailScreen() {
         <Text style={styles.secondaryButtonText}>
           Already verified? Sign In
         </Text>
-      </TouchableOpacity>
+      </HapticPressable>
     </ScrollView>
   );
 }

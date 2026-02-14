@@ -1,5 +1,6 @@
 import { signUp } from '@/lib/utils/auth';
 import { AppColors } from '@/constants/theme';
+import HapticPressable from '@/components/HapticPressable';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -10,7 +11,6 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -103,7 +103,7 @@ export default function SignupScreen() {
                 secureTextEntry={!showPassword}
                 editable={!loading}
               />
-              <TouchableOpacity
+              <HapticPressable
                 style={styles.eyeIcon}
                 onPress={() => setShowPassword(!showPassword)}
               >
@@ -112,7 +112,7 @@ export default function SignupScreen() {
                   size={24}
                   color={AppColors.textSecondary}
                 />
-              </TouchableOpacity>
+              </HapticPressable>
             </View>
 
             <View style={styles.passwordContainer}>
@@ -125,7 +125,7 @@ export default function SignupScreen() {
                 secureTextEntry={!showConfirmPassword}
                 editable={!loading}
               />
-              <TouchableOpacity
+              <HapticPressable
                 style={styles.eyeIcon}
                 onPress={() => setShowConfirmPassword(!showConfirmPassword)}
               >
@@ -134,10 +134,10 @@ export default function SignupScreen() {
                   size={24}
                   color={AppColors.textSecondary}
                 />
-              </TouchableOpacity>
+              </HapticPressable>
             </View>
 
-            <TouchableOpacity
+            <HapticPressable
               style={[styles.button, loading && styles.buttonDisabled]}
               onPress={handleSignup}
               disabled={loading}
@@ -145,9 +145,9 @@ export default function SignupScreen() {
               <Text style={styles.buttonText}>
                 {loading ? 'Creating account...' : 'Sign Up'}
               </Text>
-            </TouchableOpacity>
+            </HapticPressable>
 
-            <TouchableOpacity
+            <HapticPressable
               style={styles.linkButton}
               onPress={() => router.push('/(auth)/login')}
               disabled={loading}
@@ -155,7 +155,7 @@ export default function SignupScreen() {
               <Text style={styles.linkText}>
                 Already have an account? Sign in
               </Text>
-            </TouchableOpacity>
+            </HapticPressable>
           </View>
         </View>
       </ScrollView>

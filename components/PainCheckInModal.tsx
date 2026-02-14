@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import HapticPressable from '@/components/HapticPressable';
 import Slider from '@react-native-community/slider';
 import { Ionicons } from '@expo/vector-icons';
 import { AppColors } from '@/constants/theme';
@@ -204,7 +205,7 @@ export default function PainCheckInModal({ visible, userId, onComplete }: PainCh
               <Text style={styles.sectionSubtitle}>Select all that apply (optional)</Text>
 
               {/* Multi-select Dropdown */}
-              <TouchableOpacity
+              <HapticPressable
                 style={styles.dropdownButton}
                 onPress={() => setShowLocationsModal(true)}
               >
@@ -214,7 +215,7 @@ export default function PainCheckInModal({ visible, userId, onComplete }: PainCh
                     : `${selectedLocations.length} area${selectedLocations.length > 1 ? 's' : ''} selected`}
                 </Text>
                 <Ionicons name="chevron-down" size={20} color={AppColors.textSecondary} />
-              </TouchableOpacity>
+              </HapticPressable>
 
               {/* Display Selected Locations */}
               {selectedLocations.length > 0 && (
@@ -222,9 +223,9 @@ export default function PainCheckInModal({ visible, userId, onComplete }: PainCh
                   {selectedLocations.map((location) => (
                     <View key={location} style={styles.selectedLocationChip}>
                       <Text style={styles.selectedLocationText}>{location}</Text>
-                      <TouchableOpacity onPress={() => handleToggleLocation(location)}>
+                      <HapticPressable onPress={() => handleToggleLocation(location)}>
                         <Ionicons name="close-circle" size={18} color={AppColors.primary} />
-                      </TouchableOpacity>
+                      </HapticPressable>
                     </View>
                   ))}
                 </View>
@@ -257,26 +258,26 @@ export default function PainCheckInModal({ visible, userId, onComplete }: PainCh
           {/* Navigation Buttons */}
           <View style={styles.stepNavigation}>
             {currentStep !== 'pain' && (
-              <TouchableOpacity
+              <HapticPressable
                 style={styles.backButton}
                 onPress={handleBack}
                 disabled={submitting}
               >
                 <Ionicons name="arrow-back" size={20} color={AppColors.textSecondary} />
                 <Text style={styles.backButtonText}>Back</Text>
-              </TouchableOpacity>
+              </HapticPressable>
             )}
 
             {currentStep !== 'notes' ? (
-              <TouchableOpacity
+              <HapticPressable
                 style={styles.nextButton}
                 onPress={handleNext}
               >
                 <Text style={styles.nextButtonText}>Next</Text>
                 <Ionicons name="arrow-forward" size={20} color={AppColors.textPrimary} />
-              </TouchableOpacity>
+              </HapticPressable>
             ) : (
-              <TouchableOpacity
+              <HapticPressable
                 style={[styles.submitButton, submitting && styles.submitButtonDisabled]}
                 onPress={handleSubmit}
                 disabled={submitting}
@@ -289,7 +290,7 @@ export default function PainCheckInModal({ visible, userId, onComplete }: PainCh
                     <Text style={styles.submitButtonText}>Submit Check-In</Text>
                   </>
                 )}
-              </TouchableOpacity>
+              </HapticPressable>
             )}
           </View>
         </ScrollView>
@@ -310,18 +311,19 @@ export default function PainCheckInModal({ visible, userId, onComplete }: PainCh
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select Affected Areas</Text>
-              <TouchableOpacity onPress={() => setShowLocationsModal(false)}>
+              <HapticPressable onPress={() => setShowLocationsModal(false)}>
                 <Ionicons name="close" size={24} color={AppColors.textSecondary} />
-              </TouchableOpacity>
+              </HapticPressable>
             </View>
             <ScrollView style={styles.modalScrollView}>
               {PAIN_LOCATIONS.map((location) => {
                 const isSelected = selectedLocations.includes(location);
                 return (
-                  <TouchableOpacity
+                  <HapticPressable
                     key={location}
                     style={styles.modalOption}
                     onPress={() => handleToggleLocation(location)}
+                    hapticStyle="selection"
                   >
                     <Text
                       style={[
@@ -334,7 +336,7 @@ export default function PainCheckInModal({ visible, userId, onComplete }: PainCh
                     {isSelected && (
                       <Ionicons name="checkmark" size={20} color={AppColors.primary} />
                     )}
-                  </TouchableOpacity>
+                  </HapticPressable>
                 );
               })}
             </ScrollView>

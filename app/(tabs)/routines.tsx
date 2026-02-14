@@ -4,13 +4,13 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   ActivityIndicator,
   Modal,
   TextInput,
   RefreshControl,
   Alert,
 } from 'react-native';
+import HapticPressable from '@/components/HapticPressable';
 import { AppColors } from '@/constants/theme';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -80,7 +80,8 @@ export default function RoutinesScreen() {
 
       {/* Tab Navigation */}
       <View style={styles.tabBar}>
-        <TouchableOpacity
+        <HapticPressable
+          hapticStyle="selection"
           style={[styles.tab, activeTab === 'discover' && styles.tabActive]}
           onPress={() => setActiveTab('discover')}
         >
@@ -92,9 +93,10 @@ export default function RoutinesScreen() {
           <Text style={[styles.tabText, activeTab === 'discover' && styles.tabTextActive]}>
             Discover
           </Text>
-        </TouchableOpacity>
+        </HapticPressable>
 
-        <TouchableOpacity
+        <HapticPressable
+          hapticStyle="selection"
           style={[styles.tab, activeTab === 'my-routines' && styles.tabActive]}
           onPress={() => setActiveTab('my-routines')}
         >
@@ -106,7 +108,7 @@ export default function RoutinesScreen() {
           <Text style={[styles.tabText, activeTab === 'my-routines' && styles.tabTextActive]}>
             My Routines
           </Text>
-        </TouchableOpacity>
+        </HapticPressable>
       </View>
 
       {/* Tab Content */}
@@ -170,15 +172,32 @@ function DiscoverTab({ userId, initialCategory, isInHarmony }: { userId: string;
   };
 
   const handleSaveToggle = async (routine: Routine) => {
+    const wasSaved = routine.is_saved;
+
+    // Optimistic UI update
+    setRoutines(prev =>
+      prev.map(r =>
+        r.id === routine.id
+          ? { ...r, is_saved: !wasSaved, save_count: (r.save_count || 0) + (wasSaved ? -1 : 1) }
+          : r
+      )
+    );
+
     try {
-      if (routine.is_saved) {
+      if (wasSaved) {
         await unsaveRoutine(userId, routine.id);
       } else {
         await saveRoutine(userId, routine.id);
       }
-      // Reload routines to update saved status
-      await loadRoutines();
     } catch (error: any) {
+      // Revert on failure
+      setRoutines(prev =>
+        prev.map(r =>
+          r.id === routine.id
+            ? { ...r, is_saved: wasSaved, save_count: (r.save_count || 0) + (wasSaved ? 1 : -1) }
+            : r
+        )
+      );
       console.error('Error toggling save:', error);
     }
   };
@@ -214,9 +233,9 @@ function DiscoverTab({ userId, initialCategory, isInHarmony }: { userId: string;
             returnKeyType="search"
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => { setSearchQuery(''); handleSearch(); }}>
+            <HapticPressable onPress={() => { setSearchQuery(''); handleSearch(); }}>
               <Ionicons name="close-circle" size={20} color={AppColors.textSecondary} />
-            </TouchableOpacity>
+            </HapticPressable>
           )}
         </View>
       </View>
@@ -225,7 +244,8 @@ function DiscoverTab({ userId, initialCategory, isInHarmony }: { userId: string;
       <View style={styles.filterBar}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterChipsScroll}>
           {/* Sort Dropdown */}
-          <TouchableOpacity
+          <HapticPressable
+            hapticStyle="selection"
             style={[styles.filterChip, styles.sortChip]}
             onPress={() => setShowSortModal(true)}
           >
@@ -237,10 +257,11 @@ function DiscoverTab({ userId, initialCategory, isInHarmony }: { userId: string;
               {sortBy === 'most_saved' && 'Most Saved'}
             </Text>
             <Ionicons name="chevron-down" size={14} color={AppColors.textSecondary} />
-          </TouchableOpacity>
+          </HapticPressable>
 
           {/* Filter Button */}
-          <TouchableOpacity
+          <HapticPressable
+            hapticStyle="selection"
             style={[styles.filterChip, hasActiveFilters && styles.filterChipActive]}
             onPress={() => setShowFilterModal(true)}
           >
@@ -252,23 +273,23 @@ function DiscoverTab({ userId, initialCategory, isInHarmony }: { userId: string;
             <Text style={[styles.filterChipText, hasActiveFilters && styles.filterChipTextActive]}>
               Filters {hasActiveFilters && `(${Object.keys(filters).length})`}
             </Text>
-          </TouchableOpacity>
+          </HapticPressable>
 
           {/* Active Filter Chips */}
           {filters.category && (
             <View style={[styles.filterChip, styles.activeFilterChip]}>
               <Text style={styles.activeFilterText}>{filters.category}</Text>
-              <TouchableOpacity onPress={() => setFilters({ ...filters, category: undefined })}>
+              <HapticPressable onPress={() => setFilters({ ...filters, category: undefined })}>
                 <Ionicons name="close-circle" size={16} color={AppColors.primary} />
-              </TouchableOpacity>
+              </HapticPressable>
             </View>
           )}
           {filters.difficulty && (
             <View style={[styles.filterChip, styles.activeFilterChip]}>
               <Text style={styles.activeFilterText}>{filters.difficulty}</Text>
-              <TouchableOpacity onPress={() => setFilters({ ...filters, difficulty: undefined })}>
+              <HapticPressable onPress={() => setFilters({ ...filters, difficulty: undefined })}>
                 <Ionicons name="close-circle" size={16} color={AppColors.primary} />
-              </TouchableOpacity>
+              </HapticPressable>
             </View>
           )}
           {filters.source && filters.source !== 'all' && (
@@ -276,26 +297,26 @@ function DiscoverTab({ userId, initialCategory, isInHarmony }: { userId: string;
               <Text style={styles.activeFilterText}>
                 {filters.source === 'official' ? 'Official' : 'Community'}
               </Text>
-              <TouchableOpacity onPress={() => setFilters({ ...filters, source: undefined })}>
+              <HapticPressable onPress={() => setFilters({ ...filters, source: undefined })}>
                 <Ionicons name="close-circle" size={16} color={AppColors.primary} />
-              </TouchableOpacity>
+              </HapticPressable>
             </View>
           )}
           {filters.isAdvanced && (
             <View style={[styles.filterChip, styles.advancedFilterChip]}>
               <Ionicons name="sparkles" size={14} color="#F59E0B" />
               <Text style={styles.advancedFilterText}>Advanced</Text>
-              <TouchableOpacity onPress={() => setFilters({ ...filters, isAdvanced: undefined })}>
+              <HapticPressable onPress={() => setFilters({ ...filters, isAdvanced: undefined })}>
                 <Ionicons name="close-circle" size={16} color="#F59E0B" />
-              </TouchableOpacity>
+              </HapticPressable>
             </View>
           )}
         </ScrollView>
 
         {hasActiveFilters && (
-          <TouchableOpacity style={styles.clearFiltersButton} onPress={clearFilters}>
+          <HapticPressable style={styles.clearFiltersButton} onPress={clearFilters}>
             <Text style={styles.clearFiltersText}>Clear</Text>
-          </TouchableOpacity>
+          </HapticPressable>
         )}
       </View>
 
@@ -374,7 +395,8 @@ function SortModal({ visible, currentSort, onSelect, onClose }: SortModalProps) 
       transparent={true}
       onRequestClose={onClose}
     >
-      <TouchableOpacity
+      <HapticPressable
+        hapticStyle="none"
         style={styles.sortModalOverlay}
         activeOpacity={1}
         onPress={onClose}
@@ -382,7 +404,8 @@ function SortModal({ visible, currentSort, onSelect, onClose }: SortModalProps) 
         <View style={styles.sortModalContent}>
           <Text style={styles.sortModalTitle}>Sort By</Text>
           {SORT_OPTIONS.map((option) => (
-            <TouchableOpacity
+            <HapticPressable
+              hapticStyle="selection"
               key={option.value}
               style={[
                 styles.sortOption,
@@ -406,10 +429,10 @@ function SortModal({ visible, currentSort, onSelect, onClose }: SortModalProps) 
               {currentSort === option.value && (
                 <Ionicons name="checkmark" size={20} color={AppColors.primary} />
               )}
-            </TouchableOpacity>
+            </HapticPressable>
           ))}
         </View>
-      </TouchableOpacity>
+      </HapticPressable>
     </Modal>
   );
 }
@@ -455,10 +478,17 @@ function MyRoutinesTab({ userId, isInHarmony }: { userId: string; isInHarmony: b
   };
 
   const handleUnsave = async (routineId: string) => {
+    // Optimistic UI update - remove from saved list
+    const removedRoutine = savedRoutines.find(r => r.id === routineId);
+    setSavedRoutines(prev => prev.filter(r => r.id !== routineId));
+
     try {
       await unsaveRoutine(userId, routineId);
-      await loadData();
     } catch (error) {
+      // Revert on failure
+      if (removedRoutine) {
+        setSavedRoutines(prev => [...prev, removedRoutine]);
+      }
       console.error('Error unsaving routine:', error);
     }
   };
@@ -532,13 +562,13 @@ function MyRoutinesTab({ userId, isInHarmony }: { userId: string; isInHarmony: b
             <Text style={styles.sectionTitle}>My Custom Routines ({customRoutines.length})</Text>
             <Text style={styles.sectionSubtitle}>Routines you've created</Text>
           </View>
-          <TouchableOpacity
+          <HapticPressable
             style={styles.createButton}
             onPress={() => router.push('/(tabs)/builder')}
           >
             <Ionicons name="add-circle" size={20} color={AppColors.primary} />
             <Text style={styles.createButtonText}>Create</Text>
-          </TouchableOpacity>
+          </HapticPressable>
         </View>
         {customRoutines.length === 0 ? (
           <View style={styles.emptyState}>
@@ -602,7 +632,7 @@ function RoutineCard({
   };
 
   return (
-    <TouchableOpacity
+    <HapticPressable
       style={[
         styles.routineCard,
         compact && styles.routineCardCompact,
@@ -650,7 +680,7 @@ function RoutineCard({
 
       {/* Source Attribution - Clone & Customize feature */}
       {!compact && routine.source_routine_name && routine.source_routine_id && (
-        <TouchableOpacity
+        <HapticPressable
           style={styles.sourceLink}
           onPress={(e) => {
             e.stopPropagation();
@@ -660,7 +690,7 @@ function RoutineCard({
           <Text style={styles.sourceLinkText}>
             Based on {routine.source_routine_name}
           </Text>
-        </TouchableOpacity>
+        </HapticPressable>
       )}
 
       {/* Description */}
@@ -709,7 +739,7 @@ function RoutineCard({
 
         {/* Save/Public Toggle */}
         {isOwner && onTogglePublic ? (
-          <TouchableOpacity
+          <HapticPressable
             style={styles.saveButton}
             onPress={(e) => {
               e.stopPropagation();
@@ -721,9 +751,9 @@ function RoutineCard({
               size={20}
               color={routine.is_public ? AppColors.primary : AppColors.textSecondary}
             />
-          </TouchableOpacity>
+          </HapticPressable>
         ) : onSaveToggle ? (
-          <TouchableOpacity
+          <HapticPressable
             style={styles.saveButton}
             onPress={(e) => {
               e.stopPropagation();
@@ -735,10 +765,10 @@ function RoutineCard({
               size={20}
               color={routine.is_saved ? AppColors.primary : AppColors.textSecondary}
             />
-          </TouchableOpacity>
+          </HapticPressable>
         ) : null}
       </View>
-    </TouchableOpacity>
+    </HapticPressable>
   );
 }
 
@@ -790,13 +820,13 @@ function FilterModal({ visible, filters, onApply, onClose }: FilterModalProps) {
     >
       <View style={styles.modalContainer}>
         <View style={styles.modalHeader}>
-          <TouchableOpacity onPress={onClose}>
+          <HapticPressable onPress={onClose}>
             <Ionicons name="close" size={28} color={AppColors.textPrimary} />
-          </TouchableOpacity>
+          </HapticPressable>
           <Text style={styles.modalTitle}>Filter Routines</Text>
-          <TouchableOpacity onPress={handleReset}>
+          <HapticPressable onPress={handleReset}>
             <Text style={styles.resetText}>Reset</Text>
-          </TouchableOpacity>
+          </HapticPressable>
         </View>
 
         <ScrollView style={styles.modalContent}>
@@ -807,7 +837,8 @@ function FilterModal({ visible, filters, onApply, onClose }: FilterModalProps) {
               const isSelected = localFilters.category === category;
               const categoryColor = getCategoryColor(category);
               return (
-                <TouchableOpacity
+                <HapticPressable
+                  hapticStyle="selection"
                   key={category}
                   style={[
                     styles.filterOption,
@@ -831,7 +862,7 @@ function FilterModal({ visible, filters, onApply, onClose }: FilterModalProps) {
                   >
                     {category}
                   </Text>
-                </TouchableOpacity>
+                </HapticPressable>
               );
             })}
           </View>
@@ -840,7 +871,8 @@ function FilterModal({ visible, filters, onApply, onClose }: FilterModalProps) {
           <Text style={styles.filterSectionTitle}>Difficulty</Text>
           <View style={styles.filterOptions}>
             {DIFFICULTIES.map((difficulty) => (
-              <TouchableOpacity
+              <HapticPressable
+                hapticStyle="selection"
                 key={difficulty}
                 style={[
                   styles.filterOption,
@@ -861,7 +893,7 @@ function FilterModal({ visible, filters, onApply, onClose }: FilterModalProps) {
                 >
                   {difficulty}
                 </Text>
-              </TouchableOpacity>
+              </HapticPressable>
             ))}
           </View>
 
@@ -869,7 +901,8 @@ function FilterModal({ visible, filters, onApply, onClose }: FilterModalProps) {
           <Text style={styles.filterSectionTitle}>Journey Focus</Text>
           <View style={styles.filterOptions}>
             {JOURNEY_FOCUSES.map((focus) => (
-              <TouchableOpacity
+              <HapticPressable
+                hapticStyle="selection"
                 key={focus}
                 style={[
                   styles.filterOption,
@@ -890,14 +923,15 @@ function FilterModal({ visible, filters, onApply, onClose }: FilterModalProps) {
                 >
                   {focus}
                 </Text>
-              </TouchableOpacity>
+              </HapticPressable>
             ))}
           </View>
 
           {/* Source Filter */}
           <Text style={styles.filterSectionTitle}>Source</Text>
           <View style={styles.filterOptions}>
-            <TouchableOpacity
+            <HapticPressable
+              hapticStyle="selection"
               style={[
                 styles.filterOption,
                 (!localFilters.source || localFilters.source === 'all') && styles.filterOptionActive,
@@ -913,8 +947,9 @@ function FilterModal({ visible, filters, onApply, onClose }: FilterModalProps) {
               >
                 All
               </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
+            </HapticPressable>
+            <HapticPressable
+              hapticStyle="selection"
               style={[
                 styles.filterOption,
                 localFilters.source === 'official' && styles.filterOptionActive,
@@ -929,8 +964,9 @@ function FilterModal({ visible, filters, onApply, onClose }: FilterModalProps) {
               >
                 Official
               </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
+            </HapticPressable>
+            <HapticPressable
+              hapticStyle="selection"
               style={[
                 styles.filterOption,
                 localFilters.source === 'community' && styles.filterOptionActive,
@@ -945,12 +981,13 @@ function FilterModal({ visible, filters, onApply, onClose }: FilterModalProps) {
               >
                 Community
               </Text>
-            </TouchableOpacity>
+            </HapticPressable>
           </View>
 
           {/* Advanced Filter (Harmony Required) */}
           <Text style={styles.filterSectionTitle}>Harmony</Text>
-          <TouchableOpacity
+          <HapticPressable
+            hapticStyle="selection"
             style={[
               styles.advancedFilterOption,
               localFilters.isAdvanced && styles.advancedFilterOptionActive,
@@ -990,13 +1027,13 @@ function FilterModal({ visible, filters, onApply, onClose }: FilterModalProps) {
             {localFilters.isAdvanced && (
               <Ionicons name="checkmark-circle" size={24} color="#FFFFFF" />
             )}
-          </TouchableOpacity>
+          </HapticPressable>
         </ScrollView>
 
         <View style={styles.modalFooter}>
-          <TouchableOpacity style={styles.applyButton} onPress={handleApply}>
+          <HapticPressable style={styles.applyButton} onPress={handleApply}>
             <Text style={styles.applyButtonText}>Apply Filters</Text>
-          </TouchableOpacity>
+          </HapticPressable>
         </View>
       </View>
     </Modal>

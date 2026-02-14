@@ -2,11 +2,11 @@ import React, { useRef, useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
-  TouchableOpacity,
   Text,
   Platform,
   Dimensions,
 } from 'react-native';
+import HapticPressable from '@/components/HapticPressable';
 import PagerView from 'react-native-pager-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
@@ -47,12 +47,8 @@ export default function SwipeableTabs({ tabs, initialPage = 0 }: SwipeableTabsPr
     }
   }, [segments]);
 
-  // Handle tab press - navigate to page with haptic feedback
+  // Handle tab press - navigate to page (haptic feedback handled by HapticPressable)
   const handleTabPress = (index: number) => {
-    if (Platform.OS === 'ios') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-
     pagerRef.current?.setPage(index);
     setCurrentPage(index);
   };
@@ -96,11 +92,12 @@ export default function SwipeableTabs({ tabs, initialPage = 0 }: SwipeableTabsPr
           const inactiveColor = Colors[colorScheme ?? 'light'].tabIconDefault;
 
           return (
-            <TouchableOpacity
+            <HapticPressable
               key={tab.name}
               style={styles.tabButton}
               onPress={() => handleTabPress(index)}
               activeOpacity={0.7}
+              hapticStyle="selection"
             >
               <IconSymbol
                 size={28}
@@ -115,7 +112,7 @@ export default function SwipeableTabs({ tabs, initialPage = 0 }: SwipeableTabsPr
               >
                 {tab.title}
               </Text>
-            </TouchableOpacity>
+            </HapticPressable>
           );
         })}
       </View>

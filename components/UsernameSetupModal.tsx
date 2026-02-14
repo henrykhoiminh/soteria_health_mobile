@@ -4,11 +4,11 @@ import {
   View,
   Text,
   TextInput,
-  TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
   ScrollView,
 } from 'react-native';
+import HapticPressable from '@/components/HapticPressable';
 import { AppColors } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { validateUsername, getSuggestedUsernames } from '@/lib/utils/username';
@@ -169,13 +169,14 @@ export default function UsernameSetupModal({ visible, onComplete }: UsernameSetu
                     <ActivityIndicator size="small" color={AppColors.primary} />
                   ) : (
                     suggestions.map((suggestion) => (
-                      <TouchableOpacity
+                      <HapticPressable
                         key={suggestion}
                         style={[
                           styles.suggestionChip,
                           username === suggestion && styles.suggestionChipSelected,
                         ]}
                         onPress={() => handleSelectSuggestion(suggestion)}
+                        hapticStyle="selection"
                       >
                         <Text
                           style={[
@@ -185,7 +186,7 @@ export default function UsernameSetupModal({ visible, onComplete }: UsernameSetu
                         >
                           @{suggestion}
                         </Text>
-                      </TouchableOpacity>
+                      </HapticPressable>
                     ))
                   )}
                 </View>
@@ -194,7 +195,7 @@ export default function UsernameSetupModal({ visible, onComplete }: UsernameSetu
 
             {/* Buttons */}
             <View style={styles.buttonContainer}>
-              <TouchableOpacity
+              <HapticPressable
                 style={[styles.button, styles.primaryButton, (saving || !username || usernameError) && styles.buttonDisabled]}
                 onPress={handleSave}
                 disabled={saving || !username || !!usernameError}
@@ -202,15 +203,16 @@ export default function UsernameSetupModal({ visible, onComplete }: UsernameSetu
                 <Text style={styles.primaryButtonText}>
                   {saving ? 'Saving...' : 'Continue'}
                 </Text>
-              </TouchableOpacity>
+              </HapticPressable>
 
-              <TouchableOpacity
+              <HapticPressable
                 style={[styles.button, styles.secondaryButton]}
                 onPress={handleSkip}
                 disabled={saving}
+                hapticStyle="medium"
               >
                 <Text style={styles.secondaryButtonText}>Skip for now</Text>
-              </TouchableOpacity>
+              </HapticPressable>
             </View>
           </ScrollView>
         </View>

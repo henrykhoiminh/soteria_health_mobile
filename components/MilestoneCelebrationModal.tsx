@@ -4,10 +4,10 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   Animated,
   Dimensions,
 } from 'react-native';
+import HapticPressable from '@/components/HapticPressable';
 import { Ionicons } from '@expo/vector-icons';
 import { AppColors } from '@/constants/theme';
 import { UncelebratedMilestone } from '@/types';
@@ -194,7 +194,7 @@ export default function MilestoneCelebrationModal({
             {/* Action buttons */}
             <View style={styles.actions}>
               {onShare && (
-                <TouchableOpacity
+                <HapticPressable
                   style={[
                     styles.button,
                     styles.shareButton,
@@ -209,10 +209,10 @@ export default function MilestoneCelebrationModal({
                     color={AppColors.primaryText}
                   />
                   <Text style={styles.shareButtonText}>Share</Text>
-                </TouchableOpacity>
+                </HapticPressable>
               )}
 
-              <TouchableOpacity
+              <HapticPressable
                 style={[
                   styles.button,
                   styles.continueButton,
@@ -222,7 +222,7 @@ export default function MilestoneCelebrationModal({
                 activeOpacity={0.8}
               >
                 <Text style={styles.continueButtonText}>Continue</Text>
-              </TouchableOpacity>
+              </HapticPressable>
             </View>
           </LinearGradient>
         </Animated.View>

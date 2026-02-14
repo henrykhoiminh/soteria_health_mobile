@@ -25,11 +25,11 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
   Image,
   ActivityIndicator,
 } from 'react-native';
+import HapticPressable from '@/components/HapticPressable';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
@@ -297,7 +297,7 @@ export default function ProfileScreen() {
               </Text>
             )}
           </View>
-          <TouchableOpacity
+          <HapticPressable
             style={styles.cameraButton}
             onPress={handlePickImage}
             disabled={uploadingImage}
@@ -307,7 +307,7 @@ export default function ProfileScreen() {
             ) : (
               <Ionicons name="camera" size={20} color={AppColors.textPrimary} />
             )}
-          </TouchableOpacity>
+          </HapticPressable>
         </View>
         {isEditing ? (
           <View style={styles.nameEditContainer}>
@@ -351,10 +351,10 @@ export default function ProfileScreen() {
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Profile Information</Text>
           {!isEditing && (
-            <TouchableOpacity onPress={handleEdit} style={styles.editButton}>
+            <HapticPressable onPress={handleEdit} style={styles.editButton}>
               <Ionicons name="pencil" size={20} color={AppColors.primary} />
               <Text style={styles.editButtonText}>Edit</Text>
-            </TouchableOpacity>
+            </HapticPressable>
           )}
         </View>
 
@@ -394,7 +394,7 @@ export default function ProfileScreen() {
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>Journey Focus</Text>
           {isEditing ? (
-            <TouchableOpacity
+            <HapticPressable
               style={styles.selectButton}
               onPress={() => setShowJourneyFocusModal(true)}
             >
@@ -402,7 +402,7 @@ export default function ProfileScreen() {
                 {editedJourneyFocus || 'Select'}
               </Text>
               <Ionicons name="chevron-down" size={20} color={AppColors.textSecondary} />
-            </TouchableOpacity>
+            </HapticPressable>
           ) : (
             <Text style={styles.infoValue}>
               {profile?.journey_focus || 'Not set'}
@@ -413,14 +413,14 @@ export default function ProfileScreen() {
         {/* Save/Cancel buttons */}
         {isEditing && (
           <View style={styles.actionButtons}>
-            <TouchableOpacity
+            <HapticPressable
               style={[styles.actionButton, styles.cancelButton]}
               onPress={handleCancel}
               disabled={saving}
             >
               <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
+            </HapticPressable>
+            <HapticPressable
               style={[styles.actionButton, styles.saveButton, saving && styles.buttonDisabled]}
               onPress={handleSave}
               disabled={saving}
@@ -428,7 +428,7 @@ export default function ProfileScreen() {
               <Text style={styles.saveButtonText}>
                 {saving ? 'Saving...' : 'Save Changes'}
               </Text>
-            </TouchableOpacity>
+            </HapticPressable>
           </View>
         )}
       </View>
@@ -488,7 +488,8 @@ export default function ProfileScreen() {
             )}
 
             {/* Leave Health Team Button */}
-            <TouchableOpacity
+            <HapticPressable
+              hapticStyle="medium"
               style={styles.leaveHealthTeamButton}
               onPress={async () => {
                 Alert.alert(
@@ -518,7 +519,7 @@ export default function ProfileScreen() {
             >
               <Ionicons name="exit-outline" size={18} color="#EF4444" />
               <Text style={styles.leaveHealthTeamButtonText}>Leave Health Team</Text>
-            </TouchableOpacity>
+            </HapticPressable>
           </View>
         </View>
       )}
@@ -528,7 +529,8 @@ export default function ProfileScreen() {
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Milestones</Text>
           {milestones.length > 0 && (
-            <TouchableOpacity
+            <HapticPressable
+              hapticStyle="selection"
               onPress={() => setShowAllMilestones(!showAllMilestones)}
               style={styles.viewAllButton}
             >
@@ -540,7 +542,7 @@ export default function ProfileScreen() {
                 size={16}
                 color={AppColors.primary}
               />
-            </TouchableOpacity>
+            </HapticPressable>
           )}
         </View>
 
@@ -590,7 +592,7 @@ export default function ProfileScreen() {
               ))}
 
               {!showAllMilestones && getAchievedMilestones(milestones).length > 3 && (
-                <TouchableOpacity
+                <HapticPressable
                   style={styles.showMoreButton}
                   onPress={() => setShowAllMilestones(true)}
                 >
@@ -598,7 +600,7 @@ export default function ProfileScreen() {
                     Show {getAchievedMilestones(milestones).length - 3} more achievements
                   </Text>
                   <Ionicons name="chevron-down" size={20} color={AppColors.primary} />
-                </TouchableOpacity>
+                </HapticPressable>
               )}
             </View>
           </>
@@ -606,9 +608,9 @@ export default function ProfileScreen() {
       </View>
 
       <View style={styles.section}>
-        <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
+        <HapticPressable hapticStyle="medium" style={styles.signOutButton} onPress={handleSignOut}>
           <Text style={styles.signOutText}>Sign Out</Text>
-        </TouchableOpacity>
+        </HapticPressable>
       </View>
 
       {/* Reset Journey Section */}
@@ -617,7 +619,8 @@ export default function ProfileScreen() {
         <Text style={styles.dangerZoneSubtitle}>
           Resetting your journey will permanently delete all your progress and data
         </Text>
-        <TouchableOpacity
+        <HapticPressable
+          hapticStyle="medium"
           style={[styles.resetButton, resetting && styles.buttonDisabled]}
           onPress={handleResetJourney}
           disabled={resetting}
@@ -626,7 +629,7 @@ export default function ProfileScreen() {
           <Text style={styles.resetButtonText}>
             {resetting ? 'Resetting...' : 'Reset Journey'}
           </Text>
-        </TouchableOpacity>
+        </HapticPressable>
       </View>
 
       {/* Journey Focus Modal */}
@@ -636,7 +639,8 @@ export default function ProfileScreen() {
         animationType="fade"
         onRequestClose={() => setShowJourneyFocusModal(false)}
       >
-        <TouchableOpacity
+        <HapticPressable
+          hapticStyle="none"
           style={styles.modalOverlay}
           activeOpacity={1}
           onPress={() => setShowJourneyFocusModal(false)}
@@ -644,7 +648,8 @@ export default function ProfileScreen() {
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Select Journey Focus</Text>
             {JOURNEY_FOCUSES.map((focus) => (
-              <TouchableOpacity
+              <HapticPressable
+                hapticStyle="selection"
                 key={focus}
                 style={styles.modalOption}
                 onPress={() => {
@@ -656,10 +661,10 @@ export default function ProfileScreen() {
                 {editedJourneyFocus === focus && (
                   <Ionicons name="checkmark" size={20} color={AppColors.primary} />
                 )}
-              </TouchableOpacity>
+              </HapticPressable>
             ))}
           </View>
-        </TouchableOpacity>
+        </HapticPressable>
       </Modal>
 
     </ScrollView>

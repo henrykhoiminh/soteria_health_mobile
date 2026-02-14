@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView, FlatList } from 'react-native';
+import { View, Text, StyleSheet, Modal, ScrollView, FlatList } from 'react-native';
+import HapticPressable from '@/components/HapticPressable';
 import { Ionicons } from '@expo/vector-icons';
 import { Routine, RoutineCategory } from '@/types';
 import { AppColors } from '@/constants/theme';
@@ -50,7 +51,7 @@ export default function CompletedRoutinesModal({
     const categoryColor = getCategoryColor(routine.category);
 
     return (
-      <TouchableOpacity
+      <HapticPressable
         key={routine.id}
         style={[styles.routineCard, { borderLeftColor: categoryColor }]}
         onPress={() => {
@@ -87,7 +88,7 @@ export default function CompletedRoutinesModal({
           <Text style={styles.viewButtonText}>View</Text>
           <Ionicons name="arrow-forward" size={16} color={categoryColor} />
         </View>
-      </TouchableOpacity>
+      </HapticPressable>
     );
   };
 
@@ -132,9 +133,9 @@ export default function CompletedRoutinesModal({
                 {routines.length} unique routine{routines.length !== 1 ? 's' : ''} completed
               </Text>
             </View>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <HapticPressable onPress={onClose} style={styles.closeButton}>
               <Ionicons name="close" size={24} color={AppColors.textPrimary} />
-            </TouchableOpacity>
+            </HapticPressable>
           </View>
 
           {/* Content */}

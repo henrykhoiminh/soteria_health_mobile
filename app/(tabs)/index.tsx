@@ -31,9 +31,9 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native';
+import HapticPressable from '@/components/HapticPressable';
 import { LinearGradient } from 'expo-linear-gradient';
 
 export default function DashboardScreen() {
@@ -430,13 +430,13 @@ export default function DashboardScreen() {
               Do you want to update your daily wellness check-in? This will overwrite your current values for today.
             </Text>
             <View style={styles.confirmButtons}>
-              <TouchableOpacity
+              <HapticPressable
                 style={styles.confirmButtonCancel}
                 onPress={() => setShowUpdateCheckInConfirm(false)}
               >
                 <Text style={styles.confirmButtonCancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
+              </HapticPressable>
+              <HapticPressable
                 style={styles.confirmButtonConfirm}
                 onPress={() => {
                   setShowUpdateCheckInConfirm(false);
@@ -444,7 +444,7 @@ export default function DashboardScreen() {
                 }}
               >
                 <Text style={styles.confirmButtonConfirmText}>Update</Text>
-              </TouchableOpacity>
+              </HapticPressable>
             </View>
           </View>
         </View>
@@ -462,9 +462,9 @@ export default function DashboardScreen() {
             {/* Modal Header */}
             <View style={styles.inviteModalHeader}>
               <Text style={styles.inviteModalTitle}>Invite to Health Team</Text>
-              <TouchableOpacity onPress={() => setShowHealthTeamInviteModal(false)}>
+              <HapticPressable onPress={() => setShowHealthTeamInviteModal(false)}>
                 <Ionicons name="close" size={28} color={AppColors.textPrimary} />
-              </TouchableOpacity>
+              </HapticPressable>
             </View>
 
             {/* Search Input */}
@@ -479,9 +479,9 @@ export default function DashboardScreen() {
                 autoCapitalize="words"
               />
               {searchQuery.length > 0 && (
-                <TouchableOpacity onPress={() => handleSearchUsers('')}>
+                <HapticPressable onPress={() => handleSearchUsers('')}>
                   <Ionicons name="close-circle" size={20} color={AppColors.textSecondary} />
-                </TouchableOpacity>
+                </HapticPressable>
               )}
             </View>
 
@@ -528,7 +528,7 @@ export default function DashboardScreen() {
                     </Text>
                   </View>
                   {user.role === 'health_team' || user.role === 'admin' ? (
-                    <TouchableOpacity
+                    <HapticPressable
                       style={styles.alreadyMemberBadge}
                       onPress={() => {
                         Alert.alert(
@@ -540,20 +540,20 @@ export default function DashboardScreen() {
                     >
                       <Ionicons name="shield-checkmark" size={14} color="#10B981" />
                       <Text style={styles.alreadyMemberText}>Member</Text>
-                    </TouchableOpacity>
+                    </HapticPressable>
                   ) : invitedUsers.has(user.id) ? (
                     <View style={styles.invitedBadge}>
                       <Ionicons name="checkmark-circle" size={14} color="#10B981" />
                       <Text style={styles.invitedText}>Invited</Text>
                     </View>
                   ) : (
-                    <TouchableOpacity
+                    <HapticPressable
                       style={styles.inviteUserButton}
                       onPress={() => handleInviteToHealthTeam(user.id, getDisplayName(user))}
                     >
                       <Ionicons name="shield-checkmark" size={18} color="#FFFFFF" />
                       <Text style={styles.inviteUserButtonText}>Invite</Text>
-                    </TouchableOpacity>
+                    </HapticPressable>
                   )}
                 </View>
               ))}
@@ -574,7 +574,7 @@ export default function DashboardScreen() {
           {/* Compact Header Row: Avatar + Text */}
           <View style={styles.headerRow}>
           {/* Avatar with Journey Focus Badge */}
-          <TouchableOpacity
+          <HapticPressable
             style={styles.avatarContainer}
             onPress={() => profile?.journey_focus && setShowJourneyFocusModal(true)}
             activeOpacity={0.7}
@@ -613,7 +613,7 @@ export default function DashboardScreen() {
                 <Ionicons name="shield-checkmark" size={16} color="#FFFFFF" />
               </View>
             )}
-          </TouchableOpacity>
+          </HapticPressable>
 
           {/* Greeting Text */}
           <View style={styles.headerTextContainer}>
@@ -625,19 +625,21 @@ export default function DashboardScreen() {
             {/* Stats Row */}
             <View style={styles.statsRow}>
               {/* Current Streak */}
-              <TouchableOpacity
+              <HapticPressable
+                hapticStyle="selection"
                 style={styles.statItem}
                 onPress={() => setActiveTooltip(activeTooltip === 'streak' ? null : 'streak')}
                 activeOpacity={0.7}
               >
                 <Ionicons name="flame" size={16} color={AppColors.primary} />
                 <Text style={styles.statValue}>{stats?.current_streak || 0}</Text>
-              </TouchableOpacity>
+              </HapticPressable>
 
               <View style={styles.statDivider} />
 
               {/* Harmony Streak */}
-              <TouchableOpacity
+              <HapticPressable
+                hapticStyle="selection"
                 style={styles.statItem}
                 onPress={() => setActiveTooltip(activeTooltip === 'harmony' ? null : 'harmony')}
                 activeOpacity={0.7}
@@ -646,12 +648,13 @@ export default function DashboardScreen() {
                 <Text style={styles.statValue}>
                   {harmonyStatus?.consecutiveBalancedDays || 0}
                 </Text>
-              </TouchableOpacity>
+              </HapticPressable>
 
               <View style={styles.statDivider} />
 
               {/* Total Routines */}
-              <TouchableOpacity
+              <HapticPressable
+                hapticStyle="selection"
                 style={styles.statItem}
                 onPress={handleShowCompletedRoutines}
                 onLongPress={() => setActiveTooltip(activeTooltip === 'routines' ? null : 'routines')}
@@ -659,7 +662,7 @@ export default function DashboardScreen() {
               >
                 <Ionicons name="checkmark-circle" size={16} color={AppColors.primary} />
                 <Text style={styles.statValue}>{stats?.total_routines || 0}</Text>
-              </TouchableOpacity>
+              </HapticPressable>
             </View>
           </View>
         </View>
@@ -669,7 +672,7 @@ export default function DashboardScreen() {
           {/* Compact Header Row: Avatar + Text */}
           <View style={styles.headerRow}>
           {/* Avatar with Journey Focus Badge */}
-          <TouchableOpacity
+          <HapticPressable
             style={styles.avatarContainer}
             onPress={() => profile?.journey_focus && setShowJourneyFocusModal(true)}
             activeOpacity={0.7}
@@ -708,7 +711,7 @@ export default function DashboardScreen() {
                 <Ionicons name="shield-checkmark" size={16} color="#FFFFFF" />
               </View>
             )}
-          </TouchableOpacity>
+          </HapticPressable>
 
           {/* Greeting Text */}
           <View style={styles.headerTextContainer}>
@@ -720,19 +723,21 @@ export default function DashboardScreen() {
             {/* Stats Row */}
             <View style={styles.statsRow}>
               {/* Current Streak */}
-              <TouchableOpacity
+              <HapticPressable
+                hapticStyle="selection"
                 style={styles.statItem}
                 onPress={() => setActiveTooltip(activeTooltip === 'streak' ? null : 'streak')}
                 activeOpacity={0.7}
               >
                 <Ionicons name="flame" size={16} color={AppColors.primary} />
                 <Text style={styles.statValue}>{stats?.current_streak || 0}</Text>
-              </TouchableOpacity>
+              </HapticPressable>
 
               <View style={styles.statDivider} />
 
               {/* Harmony Streak */}
-              <TouchableOpacity
+              <HapticPressable
+                hapticStyle="selection"
                 style={styles.statItem}
                 onPress={() => setActiveTooltip(activeTooltip === 'harmony' ? null : 'harmony')}
                 activeOpacity={0.7}
@@ -741,12 +746,13 @@ export default function DashboardScreen() {
                 <Text style={styles.statValue}>
                   {harmonyStatus?.consecutiveBalancedDays || 0}
                 </Text>
-              </TouchableOpacity>
+              </HapticPressable>
 
               <View style={styles.statDivider} />
 
               {/* Total Routines */}
-              <TouchableOpacity
+              <HapticPressable
+                hapticStyle="selection"
                 style={styles.statItem}
                 onPress={handleShowCompletedRoutines}
                 onLongPress={() => setActiveTooltip(activeTooltip === 'routines' ? null : 'routines')}
@@ -754,7 +760,7 @@ export default function DashboardScreen() {
               >
                 <Ionicons name="checkmark-circle" size={16} color={AppColors.primary} />
                 <Text style={styles.statValue}>{stats?.total_routines || 0}</Text>
-              </TouchableOpacity>
+              </HapticPressable>
             </View>
           </View>
         </View>
@@ -768,7 +774,8 @@ export default function DashboardScreen() {
         transparent
         onRequestClose={() => setActiveTooltip(null)}
       >
-        <TouchableOpacity
+        <HapticPressable
+          hapticStyle="none"
           style={styles.tooltipOverlay}
           activeOpacity={1}
           onPress={() => setActiveTooltip(null)}
@@ -784,7 +791,7 @@ export default function DashboardScreen() {
             </Text>
             <Text style={styles.tooltipDismiss}>Tap anywhere to dismiss</Text>
           </View>
-        </TouchableOpacity>
+        </HapticPressable>
       </Modal>
 
       {/* Avatars Section */}
@@ -792,7 +799,8 @@ export default function DashboardScreen() {
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Awaken Your Light</Text>
           {harmonyStatus && (
-            <TouchableOpacity
+            <HapticPressable
+              hapticStyle="selection"
               style={[
                 styles.harmonyButton,
                 harmonyStatus.isInHarmony && styles.harmonyButtonActive
@@ -805,7 +813,7 @@ export default function DashboardScreen() {
               ]}>
                 Harmony
               </Text>
-            </TouchableOpacity>
+            </HapticPressable>
           )}
         </View>
         <View style={styles.avatarsGrid}>
@@ -871,7 +879,7 @@ export default function DashboardScreen() {
               </View>
 
               {/* Trend Indicator - Tap to check in */}
-              <TouchableOpacity
+              <HapticPressable
                 style={styles.trendIndicator}
                 onPress={() => setShowUpdateCheckInConfirm(true)}
                 activeOpacity={0.7}
@@ -893,7 +901,7 @@ export default function DashboardScreen() {
                   color={AppColors.textTertiary}
                   style={styles.checkInIcon}
                 />
-              </TouchableOpacity>
+              </HapticPressable>
             </View>
 
             {/* Pain Progress Chart */}
@@ -929,12 +937,12 @@ export default function DashboardScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Friend Activity</Text>
-            <TouchableOpacity onPress={() => router.push('/(tabs)/social?tab=activity')}>
+            <HapticPressable onPress={() => router.push('/(tabs)/social?tab=activity')}>
               <Text style={styles.seeAllText}>See All</Text>
-            </TouchableOpacity>
+            </HapticPressable>
           </View>
           {friendActivity.slice(0, 3).map((activity) => (
-            <TouchableOpacity
+            <HapticPressable
               key={activity.id}
               style={styles.activityCard}
               onPress={() => {
@@ -962,20 +970,20 @@ export default function DashboardScreen() {
                 </Text>
                 <Text style={styles.activityTime}>{getTimeAgo(activity.timestamp)}</Text>
               </View>
-            </TouchableOpacity>
+            </HapticPressable>
           ))}
         </View>
       )}
 
       {/* Health Team Invite Button (Bottom) */}
       {isHealthTeam && (
-        <TouchableOpacity
+        <HapticPressable
           style={styles.healthTeamInviteButton}
           onPress={() => setShowHealthTeamInviteModal(true)}
         >
           <Ionicons name="shield-checkmark" size={24} color="#FFFFFF" />
           <Text style={styles.healthTeamInviteButtonText}>Invite to Health Team</Text>
-        </TouchableOpacity>
+        </HapticPressable>
       )}
 
     </ScrollView>

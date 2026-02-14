@@ -6,6 +6,8 @@ import {
   removeRoutineFromCircle,
   getAvailableRoutinesForCircle,
 } from '@/lib/utils/social';
+import { saveRoutine, unsaveRoutine } from '@/lib/utils/routine-discovery';
+import { Routine } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -23,8 +25,10 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import HapticPressable from '@/components/HapticPressable';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import RoutineCard from '@/components/RoutineCard';
 
 interface EnhancedCircleRoutinesTabProps {
   circleId: string;
@@ -38,8 +42,9 @@ export default function EnhancedCircleRoutinesTab({
   onRefresh,
 }: EnhancedCircleRoutinesTabProps) {
   const router = useRouter();
+  const { user } = useAuth();
 
-  const [routines, setRoutines] = useState<any[]>([]);
+  const [routines, setRoutines] = useState<{ routine: Routine; circle_routine_id: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -58,13 +63,46 @@ export default function EnhancedCircleRoutinesTab({
         circleId,
         searchQuery,
         selectedCategory === 'All' ? undefined : selectedCategory,
-        sortBy
+        sortBy,
+        user?.id
       );
       setRoutines(data);
     } catch (error) {
       console.error('Error loading circle routines:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveToggle = async (routine: Routine) => {
+    if (!user) return;
+    const wasSaved = routine.is_saved;
+
+    // Optimistic UI update
+    setRoutines(prev =>
+      prev.map(item =>
+        item.routine.id === routine.id
+          ? { ...item, routine: { ...item.routine, is_saved: !wasSaved, save_count: (item.routine.save_count || 0) + (wasSaved ? -1 : 1) } }
+          : item
+      )
+    );
+
+    try {
+      if (wasSaved) {
+        await unsaveRoutine(user.id, routine.id);
+      } else {
+        await saveRoutine(user.id, routine.id);
+      }
+    } catch (error: any) {
+      // Revert on failure
+      setRoutines(prev =>
+        prev.map(item =>
+          item.routine.id === routine.id
+            ? { ...item, routine: { ...item.routine, is_saved: wasSaved, save_count: (item.routine.save_count || 0) + (wasSaved ? 1 : -1) } }
+            : item
+        )
+      );
+      console.error('Error toggling save:', error);
     }
   };
 
@@ -91,7 +129,6 @@ export default function EnhancedCircleRoutinesTab({
             } catch (error: any) {
               console.error('Error removing routine:', error);
               Alert.alert('Error', error.message || 'Failed to remove routine');
-              // Reload on error to restore state
               await loadRoutines();
             }
           },
@@ -100,23 +137,10 @@ export default function EnhancedCircleRoutinesTab({
     );
   };
 
-  const getCategoryColor = (category: string): string => {
-    switch (category) {
-      case 'Mind':
-        return AppColors.mind;
-      case 'Body':
-        return AppColors.body;
-      case 'Soul':
-        return AppColors.soul;
-      default:
-        return AppColors.primary;
-    }
-  };
-
   const renderRightActions = (
     _progress: Animated.AnimatedInterpolation<number>,
     dragX: Animated.AnimatedInterpolation<number>,
-    item: any
+    item: { routine: Routine; circle_routine_id: string }
   ) => {
     const scale = dragX.interpolate({
       inputRange: [-80, 0],
@@ -125,67 +149,16 @@ export default function EnhancedCircleRoutinesTab({
     });
 
     return (
-      <TouchableOpacity
+      <HapticPressable
         style={styles.swipeDeleteButton}
-        onPress={() => handleRemoveRoutine(item.circle_routine_id, item.routine_name)}
+        hapticStyle="medium"
+        onPress={() => handleRemoveRoutine(item.circle_routine_id, item.routine.name)}
       >
         <Animated.View style={{ transform: [{ scale }] }}>
           <Ionicons name="trash-outline" size={24} color="#fff" />
         </Animated.View>
-      </TouchableOpacity>
+      </HapticPressable>
     );
-  };
-
-  const renderRoutineCard = ({ item }: { item: any }) => {
-    const cardContent = (
-      <TouchableOpacity
-        style={styles.routineCard}
-        onPress={() => router.push(`/routines/${item.routine_id}?circleId=${circleId}`)}
-      >
-        {/* Popular Flame Badge - Top Right Corner */}
-        {item.is_popular && (
-          <View style={styles.popularBadge}>
-            <Ionicons name="flame" size={16} color="#FF6B35" />
-            <Text style={styles.popularText}>Popular</Text>
-          </View>
-        )}
-
-        {/* Routine Header - Category Dot + Name */}
-        <View style={styles.routineHeader}>
-          <View style={[styles.categoryDot, { backgroundColor: getCategoryColor(item.category) }]} />
-          <Text style={styles.routineName}>{item.routine_name}</Text>
-        </View>
-
-        {/* Routine Description */}
-        <Text style={styles.routineDescription} numberOfLines={2}>
-          {item.routine_description}
-        </Text>
-
-        {/* Routine Footer - Duration/Difficulty + Completion Stats */}
-        <View style={styles.routineFooter}>
-          <Text style={styles.routineDetails}>
-            {item.duration_minutes} min • {item.difficulty}
-          </Text>
-          <Text style={styles.completionCount}>
-            {item.completion_count || 0} {item.completion_count === 1 ? 'completion' : 'completions'}
-          </Text>
-        </View>
-      </TouchableOpacity>
-    );
-
-    // Only wrap in Swipeable if user is admin
-    if (isAdmin) {
-      return (
-        <Swipeable
-          renderRightActions={(progress, dragX) => renderRightActions(progress, dragX, item)}
-          overshootRight={false}
-        >
-          {cardContent}
-        </Swipeable>
-      );
-    }
-
-    return cardContent;
   };
 
   if (loading) {
@@ -210,27 +183,27 @@ export default function EnhancedCircleRoutinesTab({
             onChangeText={setSearchQuery}
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
+            <HapticPressable onPress={() => setSearchQuery('')}>
               <Ionicons name="close-circle" size={20} color={AppColors.textSecondary} />
-            </TouchableOpacity>
+            </HapticPressable>
           )}
         </View>
-        <TouchableOpacity
+        <HapticPressable
           style={styles.filterButton}
           onPress={() => setShowFilterModal(true)}
         >
           <Ionicons name="options-outline" size={24} color={AppColors.primary} />
-        </TouchableOpacity>
+        </HapticPressable>
       </View>
 
       {/* Add Routine Button (Members) */}
-      <TouchableOpacity
+      <HapticPressable
         style={styles.addRoutineButton}
         onPress={() => setShowAddModal(true)}
       >
         <Ionicons name="add-circle" size={20} color={AppColors.primary} />
         <Text style={styles.addRoutineButtonText}>Add Routine to Circle</Text>
-      </TouchableOpacity>
+      </HapticPressable>
 
       {/* Routines List */}
       {routines.length === 0 ? (
@@ -243,11 +216,30 @@ export default function EnhancedCircleRoutinesTab({
         </View>
       ) : (
         <View style={styles.listContent}>
-          {routines.map((item) => (
-            <View key={item.circle_routine_id}>
-              {renderRoutineCard({ item })}
-            </View>
-          ))}
+          {routines.map((item) => {
+            const card = (
+              <RoutineCard
+                key={item.circle_routine_id}
+                routine={item.routine}
+                onPress={() => router.push(`/routines/${item.routine.id}?circleId=${circleId}`)}
+                onSaveToggle={() => handleSaveToggle(item.routine)}
+              />
+            );
+
+            if (isAdmin) {
+              return (
+                <Swipeable
+                  key={item.circle_routine_id}
+                  renderRightActions={(progress, dragX) => renderRightActions(progress, dragX, item)}
+                  overshootRight={false}
+                >
+                  {card}
+                </Swipeable>
+              );
+            }
+
+            return card;
+          })}
         </View>
       )}
 
@@ -355,9 +347,9 @@ function AddRoutineModal({ visible, circleId, onClose, onSuccess }: AddRoutineMo
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Add Routine</Text>
-            <TouchableOpacity onPress={onClose}>
+            <HapticPressable onPress={onClose}>
               <Ionicons name="close" size={28} color={AppColors.textPrimary} />
-            </TouchableOpacity>
+            </HapticPressable>
           </View>
 
           {/* Search */}
@@ -387,7 +379,7 @@ function AddRoutineModal({ visible, circleId, onClose, onSuccess }: AddRoutineMo
             <ScrollView style={styles.modalScrollView} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
               <View style={{ padding: 16, paddingBottom: 32 }}>
                 {filteredRoutines.map((item) => (
-                  <TouchableOpacity
+                  <HapticPressable
                     key={item.id}
                     style={styles.availableRoutineCard}
                     onPress={() => handleAddRoutine(item.id, item.name)}
@@ -405,7 +397,7 @@ function AddRoutineModal({ visible, circleId, onClose, onSuccess }: AddRoutineMo
                       </Text>
                       <Ionicons name="add-circle" size={24} color={AppColors.primary} />
                     </View>
-                  </TouchableOpacity>
+                  </HapticPressable>
                 ))}
               </View>
             </ScrollView>
@@ -450,9 +442,9 @@ function FilterModal({
         <View style={styles.filterModalContent}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Filter & Sort</Text>
-            <TouchableOpacity onPress={onClose}>
+            <HapticPressable onPress={onClose}>
               <Ionicons name="close" size={28} color={AppColors.textPrimary} />
-            </TouchableOpacity>
+            </HapticPressable>
           </View>
 
           <ScrollView style={styles.filterModalBody}>
@@ -460,12 +452,13 @@ function FilterModal({
             <Text style={styles.filterSectionTitle}>Category</Text>
             <View style={styles.categoryButtons}>
               {categories.map((category) => (
-                <TouchableOpacity
+                <HapticPressable
                   key={category}
                   style={[
                     styles.categoryButton,
                     selectedCategory === category && styles.categoryButtonActive,
                   ]}
+                  hapticStyle="selection"
                   onPress={() => onCategoryChange(category)}
                 >
                   <Text
@@ -476,29 +469,30 @@ function FilterModal({
                   >
                     {category}
                   </Text>
-                </TouchableOpacity>
+                </HapticPressable>
               ))}
             </View>
 
             {/* Sort Options */}
             <Text style={[styles.filterSectionTitle, { marginTop: 24 }]}>Sort By</Text>
             {sortOptions.map((option) => (
-              <TouchableOpacity
+              <HapticPressable
                 key={option.value}
                 style={styles.sortOption}
+                hapticStyle="selection"
                 onPress={() => onSortChange(option.value)}
               >
                 <Text style={styles.sortOptionText}>{option.label}</Text>
                 {sortBy === option.value && (
                   <Ionicons name="checkmark-circle" size={24} color={AppColors.primary} />
                 )}
-              </TouchableOpacity>
+              </HapticPressable>
             ))}
           </ScrollView>
 
-          <TouchableOpacity style={styles.applyButton} onPress={onClose}>
+          <HapticPressable style={styles.applyButton} onPress={onClose}>
             <Text style={styles.applyButtonText}>Apply Filters</Text>
-          </TouchableOpacity>
+          </HapticPressable>
         </View>
       </View>
     </Modal>
@@ -566,36 +560,6 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 100,
   },
-  routineCard: {
-    backgroundColor: AppColors.surface,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: AppColors.cardBorder,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  popularBadge: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 107, 53, 0.15)',
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    gap: 4,
-  },
-  popularText: {
-    color: '#FF6B35',
-    fontSize: 12,
-    fontWeight: '600',
-  },
   swipeDeleteButton: {
     backgroundColor: AppColors.destructive,
     justifyContent: 'center',
@@ -605,41 +569,11 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 12,
     borderBottomRightRadius: 12,
   },
-  routineHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
   categoryDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
     marginRight: 8,
-  },
-  routineName: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: AppColors.textPrimary,
-    flex: 1,
-  },
-  routineDescription: {
-    fontSize: 14,
-    color: AppColors.textSecondary,
-    marginBottom: 12,
-  },
-  routineFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  routineDetails: {
-    fontSize: 12,
-    color: AppColors.textTertiary,
-  },
-  completionCount: {
-    fontSize: 12,
-    color: AppColors.primary,
-    fontWeight: '500',
   },
   emptyState: {
     flex: 1,

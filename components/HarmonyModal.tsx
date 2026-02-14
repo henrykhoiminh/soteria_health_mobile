@@ -3,7 +3,8 @@ import { DailyBalanceRecord, HarmonyStatus } from '@/types'
 import { setHarmonyStatusManually } from '@/lib/utils/harmony'
 import { Ionicons } from '@expo/vector-icons'
 import React, { useState } from 'react'
-import { ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, Switch, Text, View } from 'react-native'
+import HapticPressable from '@/components/HapticPressable'
 import HarmonyProgressCard from './HarmonyProgressCard'
 
 // Helper to format date for display
@@ -66,9 +67,9 @@ export default function HarmonyModal({
           {/* Header */}
           <View style={styles.header}>
             <Text style={styles.headerTitle}>Harmony</Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <HapticPressable onPress={onClose} style={styles.closeButton}>
               <Ionicons name="close" size={24} color={AppColors.textPrimary} />
-            </TouchableOpacity>
+            </HapticPressable>
           </View>
 
           <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>

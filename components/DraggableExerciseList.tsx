@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import HapticPressable from '@/components/HapticPressable';
 import { Ionicons } from '@expo/vector-icons';
 import { AppColors } from '@/constants/theme';
 import { RoutineBuilderExercise } from '@/types';
@@ -38,8 +39,9 @@ export default function DraggableExerciseList({
   return (
     <View style={styles.container}>
       {exercises.length > 1 && (
-        <TouchableOpacity
+        <HapticPressable
           style={[styles.reorderModeButton, reorderMode && styles.reorderModeButtonActive]}
+          hapticStyle="selection"
           onPress={() => {
             setReorderMode(!reorderMode);
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -53,7 +55,7 @@ export default function DraggableExerciseList({
           <Text style={[styles.reorderModeButtonText, reorderMode && styles.reorderModeButtonTextActive]}>
             {reorderMode ? 'Done Reordering' : 'Reorder Exercises'}
           </Text>
-        </TouchableOpacity>
+        </HapticPressable>
       )}
 
       {exercises.map((exercise, index) => (
@@ -111,7 +113,7 @@ function ExerciseCard({
         {/* Reorder mode: Show up/down arrows */}
         {reorderMode && (
           <View style={styles.reorderButtons}>
-            <TouchableOpacity
+            <HapticPressable
               onPress={onMoveUp}
               disabled={index === 0}
               style={styles.reorderButtonLarge}
@@ -121,8 +123,8 @@ function ExerciseCard({
                 size={28}
                 color={index === 0 ? AppColors.border : AppColors.primary}
               />
-            </TouchableOpacity>
-            <TouchableOpacity
+            </HapticPressable>
+            <HapticPressable
               onPress={onMoveDown}
               disabled={index === totalCount - 1}
               style={styles.reorderButtonLarge}
@@ -132,25 +134,26 @@ function ExerciseCard({
                 size={28}
                 color={index === totalCount - 1 ? AppColors.border : AppColors.primary}
               />
-            </TouchableOpacity>
+            </HapticPressable>
           </View>
         )}
 
         {/* Default mode: Show edit time and delete buttons */}
         {!reorderMode && (
           <>
-            <TouchableOpacity
+            <HapticPressable
               onPress={() => onEdit(exercise)}
               style={styles.editTimeButton}
             >
               <Ionicons name="time-outline" size={28} color={AppColors.primary} />
-            </TouchableOpacity>
-            <TouchableOpacity
+            </HapticPressable>
+            <HapticPressable
               onPress={() => onRemove(exercise.id)}
               style={styles.deleteIconButton}
+              hapticStyle="medium"
             >
               <Ionicons name="trash-outline" size={24} color={AppColors.destructive} />
-            </TouchableOpacity>
+            </HapticPressable>
           </>
         )}
       </View>

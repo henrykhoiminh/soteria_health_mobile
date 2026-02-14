@@ -1,8 +1,9 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AvatarLightState, RoutineCategory } from '@/types';
 import { AppColors } from '@/constants/theme';
+import HapticPressable from '@/components/HapticPressable';
 
 interface AvatarProps {
   category: RoutineCategory;
@@ -143,7 +144,7 @@ export default function Avatar({ category, lightState, name, onPress }: AvatarPr
   }, [lightState, stateConfig.glowIntensity]);
 
   return (
-    <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.7}>
+    <HapticPressable style={styles.container} onPress={onPress} activeOpacity={0.7}>
       {/* Avatar Circle with Glow */}
       <View style={styles.avatarWrapper}>
         {/* Outer Glow Effect */}
@@ -195,7 +196,7 @@ export default function Avatar({ category, lightState, name, onPress }: AvatarPr
       <Text style={[styles.statusText, { color: stateConfig.statusColor }]}>
         {stateConfig.statusText}
       </Text>
-    </TouchableOpacity>
+    </HapticPressable>
   );
 }
 

@@ -31,10 +31,10 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
   RefreshControl,
 } from 'react-native';
+import HapticPressable from '@/components/HapticPressable';
 import { getFormattedCircleActivity } from '@/lib/utils/social';
 import FriendInviteModal from '@/components/FriendInviteModal';
 import ActivityCard from '@/components/ActivityCard';
@@ -165,9 +165,9 @@ export default function CircleDetailScreen() {
       <View style={styles.errorContainer}>
         <Ionicons name="alert-circle-outline" size={48} color={AppColors.textTertiary} />
         <Text style={styles.errorText}>Please log in to view circles</Text>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.replace('/(auth)/login')}>
+        <HapticPressable style={styles.backButton} onPress={() => router.replace('/(auth)/login')}>
           <Text style={styles.backButtonText}>Go to Login</Text>
-        </TouchableOpacity>
+        </HapticPressable>
       </View>
     );
   }
@@ -177,9 +177,9 @@ export default function CircleDetailScreen() {
       <View style={styles.errorContainer}>
         <Ionicons name="alert-circle-outline" size={48} color={AppColors.textTertiary} />
         <Text style={styles.errorText}>Circle not found</Text>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        <HapticPressable style={styles.backButton} onPress={() => router.back()}>
           <Text style={styles.backButtonText}>Go Back</Text>
-        </TouchableOpacity>
+        </HapticPressable>
       </View>
     );
   }
@@ -194,17 +194,17 @@ export default function CircleDetailScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backIcon} onPress={() => router.back()}>
+          <HapticPressable style={styles.backIcon} onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={24} color={AppColors.textPrimary} />
-          </TouchableOpacity>
+          </HapticPressable>
           {isAdmin && (
             <View style={styles.headerActions}>
-              <TouchableOpacity
+              <HapticPressable
                 style={styles.actionButton}
                 onPress={() => setShowEditModal(true)}
               >
                 <Ionicons name="create-outline" size={24} color={AppColors.primary} />
-              </TouchableOpacity>
+              </HapticPressable>
             </View>
           )}
         </View>
@@ -238,40 +238,40 @@ export default function CircleDetailScreen() {
           {/* Action Buttons */}
           {!isCreator && (
             <View style={styles.actionButtons}>
-              <TouchableOpacity style={styles.leaveButton} onPress={handleLeaveCircle}>
+              <HapticPressable style={styles.leaveButton} onPress={handleLeaveCircle} hapticStyle="medium">
                 <Ionicons name="exit-outline" size={20} color={AppColors.destructive} />
                 <Text style={styles.leaveButtonText}>Leave Circle</Text>
-              </TouchableOpacity>
+              </HapticPressable>
             </View>
           )}
         </View>
 
         {/* Tab Navigation */}
         <View style={styles.tabBar}>
-          <TouchableOpacity
+          <HapticPressable
             style={[styles.tab, activeTab === 'members' && styles.tabActive]}
             onPress={() => setActiveTab('members')}
           >
             <Text style={[styles.tabText, activeTab === 'members' && styles.tabTextActive]}>
               Members
             </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
+          </HapticPressable>
+          <HapticPressable
             style={[styles.tab, activeTab === 'routines' && styles.tabActive]}
             onPress={() => setActiveTab('routines')}
           >
             <Text style={[styles.tabText, activeTab === 'routines' && styles.tabTextActive]}>
               Routines
             </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
+          </HapticPressable>
+          <HapticPressable
             style={[styles.tab, activeTab === 'activity' && styles.tabActive]}
             onPress={() => setActiveTab('activity')}
           >
             <Text style={[styles.tabText, activeTab === 'activity' && styles.tabTextActive]}>
               Activity
             </Text>
-          </TouchableOpacity>
+          </HapticPressable>
         </View>
 
         {/* Tab Content */}
@@ -368,10 +368,10 @@ function MembersTab({
     <View style={styles.tabContent}>
       {/* Invite Friends Button */}
       {isAdmin && (
-        <TouchableOpacity style={styles.inviteFriendsButton} onPress={onInviteClick}>
+        <HapticPressable style={styles.inviteFriendsButton} onPress={onInviteClick}>
           <Ionicons name="person-add" size={20} color={AppColors.primary} />
           <Text style={styles.inviteFriendsButtonText}>Invite Friends</Text>
-        </TouchableOpacity>
+        </HapticPressable>
       )}
 
       {circle.members.map((member) => (
@@ -388,7 +388,7 @@ function MembersTab({
             </Text>
           </View>
           {isAdmin && member.role !== 'admin' && member.user_id !== circle.created_by && (
-            <TouchableOpacity
+            <HapticPressable
               style={styles.removeMemberButton}
               onPress={() =>
                 handleRemoveMember(
@@ -396,9 +396,10 @@ function MembersTab({
                   member.profile ? getDisplayName(member.profile) : 'this user'
                 )
               }
+              hapticStyle="medium"
             >
               <Ionicons name="close-circle" size={24} color={AppColors.destructive} />
-            </TouchableOpacity>
+            </HapticPressable>
           )}
           {member.role === 'admin' && (
             <View style={styles.adminBadge}>
@@ -461,7 +462,7 @@ function RoutinesTab({ circleId, userId }: { circleId: string; userId: string })
         if (!routine) return null;
 
         return (
-          <TouchableOpacity
+          <HapticPressable
             key={circleRoutine.id}
             style={styles.routineCard}
             onPress={() => router.push(`/routines/${routine.id}`)}
@@ -486,7 +487,7 @@ function RoutinesTab({ circleId, userId }: { circleId: string; userId: string })
                 {new Date(circleRoutine.shared_at).toLocaleDateString()}
               </Text>
             </View>
-          </TouchableOpacity>
+          </HapticPressable>
         );
       })}
     </View>
@@ -601,9 +602,9 @@ function EditCircleModal({
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Edit Circle</Text>
-            <TouchableOpacity onPress={onClose}>
+            <HapticPressable onPress={onClose}>
               <Ionicons name="close" size={28} color={AppColors.textPrimary} />
-            </TouchableOpacity>
+            </HapticPressable>
           </View>
 
           <ScrollView style={styles.modalBody}>
@@ -629,7 +630,7 @@ function EditCircleModal({
             />
 
             <View style={styles.privacyOption}>
-              <TouchableOpacity
+              <HapticPressable
                 style={styles.privacyToggle}
                 onPress={() => setIsPrivate(!isPrivate)}
               >
@@ -648,12 +649,12 @@ function EditCircleModal({
                       : 'Anyone can discover and join'}
                   </Text>
                 </View>
-              </TouchableOpacity>
+              </HapticPressable>
             </View>
           </ScrollView>
 
           <View style={styles.modalFooter}>
-            <TouchableOpacity
+            <HapticPressable
               style={[styles.updateButton, updating && styles.updateButtonDisabled]}
               onPress={handleUpdate}
               disabled={updating}
@@ -661,19 +662,20 @@ function EditCircleModal({
               <Text style={styles.updateButtonText}>
                 {updating ? 'Updating...' : 'Update Circle'}
               </Text>
-            </TouchableOpacity>
+            </HapticPressable>
 
             {isCreator && (
-              <TouchableOpacity
+              <HapticPressable
                 style={styles.deleteButtonModal}
                 onPress={() => {
                   onClose();
                   onDelete();
                 }}
+                hapticStyle="medium"
               >
                 <Ionicons name="trash-outline" size={20} color={AppColors.destructive} />
                 <Text style={styles.deleteButtonModalText}>Delete Circle</Text>
-              </TouchableOpacity>
+              </HapticPressable>
             )}
           </View>
         </View>

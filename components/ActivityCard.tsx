@@ -2,7 +2,8 @@ import { AppColors } from '@/constants/theme';
 import { ActivityFeedItem } from '@/types';
 import { getDisplayName } from '@/lib/utils/username';
 import { Ionicons } from '@expo/vector-icons';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
+import HapticPressable from '@/components/HapticPressable';
 
 interface ActivityCardProps {
   activity: ActivityFeedItem;
@@ -79,17 +80,22 @@ export default function ActivityCard({
 
   const isInteractive = (activity.routineId && onRoutinePress) || (activity.circleId && onCirclePress);
 
-  const CardContainer = isInteractive ? TouchableOpacity : View;
+  const CardContainer = isInteractive ? HapticPressable : View;
   const containerProps = isInteractive ? { onPress: handlePress, activeOpacity: 0.7 } : {};
 
   return (
     <CardContainer style={styles.card} {...containerProps}>
       <View style={styles.iconContainer}>
-        <Ionicons
-          name={getActivityIcon(activity.activityType)}
-          size={20}
-          color={AppColors.primary}
-        />
+        {activity.user.profile_picture_url ? (
+          <Image
+            source={{ uri: activity.user.profile_picture_url }}
+            style={styles.avatarImage}
+          />
+        ) : (
+          <Text style={styles.avatarText}>
+            {(activity.user.first_name?.[0] || '?').toUpperCase()}
+          </Text>
+        )}
       </View>
       <View style={styles.content}>
         <Text style={styles.text} numberOfLines={2}>
@@ -120,6 +126,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+  },
+  avatarText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: AppColors.primary,
   },
   content: {
     flex: 1,

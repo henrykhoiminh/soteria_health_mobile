@@ -4,12 +4,12 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   SafeAreaView,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { AppColors } from '@/constants/theme';
+import HapticPressable from '@/components/HapticPressable';
 import CompanionAvatar, { Category, LightState } from '@/components/CompanionAvatar';
 
 const LIGHT_STATES: LightState[] = ['Dormant', 'Sleepy', 'Awakening', 'Glowing', 'Radiant'];
@@ -60,9 +60,9 @@ export default function CompanionDemoScreen() {
           headerStyle: { backgroundColor: AppColors.background },
           headerTintColor: AppColors.textPrimary,
           headerLeft: () => (
-            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <HapticPressable onPress={() => router.back()} style={styles.backButton}>
               <Ionicons name="arrow-back" size={24} color={AppColors.textPrimary} />
-            </TouchableOpacity>
+            </HapticPressable>
           ),
         }}
       />
@@ -100,7 +100,7 @@ export default function CompanionDemoScreen() {
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <View style={styles.stateButtons}>
                   {LIGHT_STATES.map((state) => (
-                    <TouchableOpacity
+                    <HapticPressable
                       key={state}
                       style={[
                         styles.stateButton,
@@ -116,7 +116,7 @@ export default function CompanionDemoScreen() {
                       >
                         {state}
                       </Text>
-                    </TouchableOpacity>
+                    </HapticPressable>
                   ))}
                 </View>
               </ScrollView>

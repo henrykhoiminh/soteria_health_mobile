@@ -1,16 +1,18 @@
-import { useAuth } from '@/lib/contexts/AuthContext';
 import { AppColors } from '@/constants/theme';
-import { completeRoutine, getRoutineById, getTodayProgress, getUserStats } from '@/lib/utils/dashboard';
-import { completeCircleRoutine, getFormattedFriendActivity } from '@/lib/utils/social';
-import { getAvatarLightState, getAllAvatarStates, calculateActivityStreak } from '@/lib/utils/stats';
-import { getPainStatistics, getPainCheckInHistory } from '@/lib/utils/pain-checkin';
-import { checkHarmonyRequirements } from '@/lib/utils/harmony';
-import { setDashboardCache } from '@/lib/utils/dashboard-cache';
-import { formatTime } from '@/lib/utils/time';
+import { useAuth } from '@/lib/contexts/AuthContext';
 import { initAudio, playCountdownBeep } from '@/lib/utils/audio';
+import { completeRoutine, getRoutineById, getTodayProgress, getUserStats } from '@/lib/utils/dashboard';
+import { setDashboardCache } from '@/lib/utils/dashboard-cache';
+import { checkHarmonyRequirements } from '@/lib/utils/harmony';
+import { getPainCheckInHistory, getPainStatistics } from '@/lib/utils/pain-checkin';
+import { completeCircleRoutine, getFormattedFriendActivity } from '@/lib/utils/social';
+import { calculateActivityStreak, getAllAvatarStates, getAvatarLightState } from '@/lib/utils/stats';
+import { formatTime } from '@/lib/utils/time';
 import { AvatarLightState, Exercise, Routine, RoutineCategory } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
+import { ResizeMode, Video } from 'expo-av';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import LottieView from 'lottie-react-native';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -18,15 +20,14 @@ import {
   Image,
   Modal,
   Platform,
+  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   Vibration,
   View,
 } from 'react-native';
-import LottieView from 'lottie-react-native';
-import { Video, ResizeMode } from 'expo-av';
+import HapticPressable from '@/components/HapticPressable';
 
 // Completion animation - add your Lottie JSON file to assets/animations/
 // Expected file: assets/animations/routine_complete.json
@@ -350,9 +351,9 @@ export default function ExecuteRoutineScreen() {
       <View style={styles.errorContainer}>
         <Ionicons name="alert-circle-outline" size={48} color={AppColors.textTertiary} />
         <Text style={styles.errorText}>No exercises found</Text>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        <HapticPressable style={styles.backButton} onPress={() => router.back()}>
           <Text style={styles.backButtonText}>Go Back</Text>
-        </TouchableOpacity>
+        </HapticPressable>
       </View>
     );
   }
@@ -383,12 +384,12 @@ export default function ExecuteRoutineScreen() {
             : `${newStreak} day${newStreak === 1 ? '' : 's'} in a row!`}
         </Text>
 
-        <TouchableOpacity
+        <HapticPressable
           style={styles.streakContinueButton}
           onPress={handleStreakContinue}
         >
           <Text style={styles.streakContinueButtonText}>Continue</Text>
-        </TouchableOpacity>
+        </HapticPressable>
       </View>
     );
   }
@@ -412,7 +413,7 @@ export default function ExecuteRoutineScreen() {
         <Text style={styles.completeMessage}>Great work on completing {routine.name}</Text>
 
         {/* Done Button - enabled after animation finishes AND dashboard is preloaded */}
-        <TouchableOpacity
+        <HapticPressable
           style={[
             styles.doneButton,
             !canNavigate && styles.doneButtonLoading,
@@ -428,7 +429,7 @@ export default function ExecuteRoutineScreen() {
               <Text style={styles.doneButtonText}>{loadingSeconds}s</Text>
             </View>
           )}
-        </TouchableOpacity>
+        </HapticPressable>
       </View>
     );
   }
@@ -437,12 +438,12 @@ export default function ExecuteRoutineScreen() {
   const progress = ((currentExerciseIndex + 1) / routine.exercises.length) * 100;
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={handleQuit}>
+        <HapticPressable onPress={handleQuit} hapticStyle="medium">
           <Ionicons name="close" size={28} color={AppColors.textPrimary} />
-        </TouchableOpacity>
+        </HapticPressable>
         <Text style={styles.routineName}>{routine.name}</Text>
         <View style={{ width: 28 }} />
       </View>
@@ -457,59 +458,62 @@ export default function ExecuteRoutineScreen() {
         </Text>
       </View>
 
-      {/* Avatar Circle - Awakening/Glowing Avatar */}
-      <View style={styles.avatarContainer}>
-        <View style={[
-          styles.avatarCircle,
-          {
-            borderColor: getAvatarGlowColor(avatarLightState, routine.category).borderColor,
-            shadowColor: getAvatarGlowColor(avatarLightState, routine.category).shadowColor,
-            shadowOpacity: getAvatarGlowColor(avatarLightState, routine.category).glowIntensity > 0 ? 0.8 : 0,
-            shadowRadius: getAvatarGlowColor(avatarLightState, routine.category).glowIntensity,
-            elevation: getAvatarGlowColor(avatarLightState, routine.category).glowIntensity,
-          }
-        ]}>
-          <Ionicons
-            name={getCategoryIcon(routine.category)}
-            size={100}
-            color={getAvatarGlowColor(avatarLightState, routine.category).borderColor}
-          />
-        </View>
-        <Text style={styles.avatarStateText}>{avatarLightState}</Text>
-      </View>
-
-      {/* Exercise Info */}
-      <View style={styles.exerciseContainer}>
-        <View style={styles.exerciseHeader}>
-          <Text style={styles.exerciseName}>{currentExercise.name}</Text>
-          <TouchableOpacity
-            style={styles.infoButton}
-            onPress={() => setShowInstructions(true)}
-          >
+      {/* Main Content - flex centered between header and controls */}
+      <View style={styles.mainContent}>
+        {/* Avatar Circle - Awakening/Glowing Avatar */}
+        <View style={styles.avatarContainer}>
+          <View style={[
+            styles.avatarCircle,
+            {
+              borderColor: getAvatarGlowColor(avatarLightState, routine.category).borderColor,
+              shadowColor: getAvatarGlowColor(avatarLightState, routine.category).shadowColor,
+              shadowOpacity: getAvatarGlowColor(avatarLightState, routine.category).glowIntensity > 0 ? 0.8 : 0,
+              shadowRadius: getAvatarGlowColor(avatarLightState, routine.category).glowIntensity,
+              elevation: getAvatarGlowColor(avatarLightState, routine.category).glowIntensity,
+            }
+          ]}>
             <Ionicons
-              name="information-circle-outline"
-              size={28}
-              color={AppColors.primary}
+              name={getCategoryIcon(routine.category)}
+              size={100}
+              color={getAvatarGlowColor(avatarLightState, routine.category).borderColor}
             />
-          </TouchableOpacity>
+          </View>
+          <Text style={styles.avatarStateText}>{avatarLightState}</Text>
         </View>
 
-        {/* Time Display */}
-        <View style={styles.timeDisplay}>
-          <Text style={styles.timeText}>{formatTime(timeRemaining)}</Text>
-          <Text style={styles.timeLabel}>remaining</Text>
+        {/* Exercise Info */}
+        <View style={styles.exerciseContainer}>
+          <View style={styles.exerciseHeader}>
+            <Text style={styles.exerciseName}>{currentExercise.name}</Text>
+            <HapticPressable
+              style={styles.infoButton}
+              onPress={() => setShowInstructions(true)}
+            >
+              <Ionicons
+                name="information-circle-outline"
+                size={28}
+                color={AppColors.primary}
+              />
+            </HapticPressable>
+          </View>
+
+          {/* Time Display */}
+          <View style={styles.timeDisplay}>
+            <Text style={styles.timeText}>{formatTime(timeRemaining)}</Text>
+            <Text style={styles.timeLabel}>remaining</Text>
+          </View>
         </View>
       </View>
 
-      {/* Controls */}
+      {/* Controls - pinned toward bottom */}
       <View style={styles.controls}>
-        <TouchableOpacity style={styles.pauseButton} onPress={togglePause}>
+        <HapticPressable style={styles.playPauseButton} onPress={togglePause}>
           <Ionicons
             name={isPaused ? 'play' : 'pause'}
-            size={48}
-            color={AppColors.textPrimary}
+            size={36}
+            color={AppColors.primaryText}
           />
-        </TouchableOpacity>
+        </HapticPressable>
       </View>
 
       {/* Exercise Info Modal */}
@@ -524,12 +528,12 @@ export default function ExecuteRoutineScreen() {
             {/* Modal Header */}
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{currentExercise.name}</Text>
-              <TouchableOpacity
+              <HapticPressable
                 style={styles.modalCloseButton}
                 onPress={() => setShowInstructions(false)}
               >
                 <Ionicons name="close" size={28} color={AppColors.textPrimary} />
-              </TouchableOpacity>
+              </HapticPressable>
             </View>
 
             <ScrollView
@@ -575,10 +579,7 @@ export default function ExecuteRoutineScreen() {
           </View>
         </View>
       </Modal>
-
-      {/* Bottom Spacer */}
-      <View style={{ height: 40 }} />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -667,19 +668,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingTop: 60,
-    paddingBottom: 16,
+    paddingTop: 32,
+    paddingBottom: 12,
   },
   routineName: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 24,
+    fontWeight: 'bold',
     color: AppColors.textPrimary,
     flex: 1,
     textAlign: 'center',
   },
   progressContainer: {
     paddingHorizontal: 24,
-    marginBottom: 32,
+    marginBottom: 16,
   },
   progressBar: {
     height: 8,
@@ -698,10 +699,13 @@ const styles = StyleSheet.create({
     color: AppColors.textSecondary,
     textAlign: 'center',
   },
+  mainContent: {
+    flex: 1,
+    justifyContent: 'center',
+  },
   exerciseContainer: {
     paddingHorizontal: 24,
-    marginTop: 24,
-    marginBottom: 24,
+    marginTop: 16,
   },
   exerciseHeader: {
     flexDirection: 'row',
@@ -731,7 +735,6 @@ const styles = StyleSheet.create({
   avatarContainer: {
     justifyContent: 'center',
     alignItems: 'center',
-    marginVertical: 32,
   },
   avatarCircle: {
     width: 240,
@@ -766,15 +769,21 @@ const styles = StyleSheet.create({
   },
   controls: {
     alignItems: 'center',
-    marginVertical: 32,
+    paddingTop: 16,
+    paddingBottom: 32,
   },
-  pauseButton: {
+  playPauseButton: {
     width: 80,
     height: 80,
     borderRadius: 40,
     backgroundColor: AppColors.primary,
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: AppColors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 4,
   },
   // Modal styles
   modalOverlay: {

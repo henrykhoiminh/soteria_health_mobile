@@ -1,8 +1,9 @@
 import { AppColors } from '@/constants/theme';
+import HapticPressable from '@/components/HapticPressable';
 import { PainCheckIn } from '@/types';
 import { format } from 'date-fns';
 import { useState } from 'react';
-import { Alert, Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Dimensions, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 
 type TimeRange = '7' | '30' | '90' | 'all';
@@ -287,7 +288,7 @@ function TimeRangeButton({
   };
 
   return (
-    <TouchableOpacity
+    <HapticPressable
       style={[
         styles.timeRangeButton,
         selected && styles.timeRangeButtonSelected,
@@ -307,7 +308,7 @@ function TimeRangeButton({
       >
         {label}
       </Text>
-    </TouchableOpacity>
+    </HapticPressable>
   );
 }
 

@@ -1,5 +1,6 @@
 import { AppColors } from '@/constants/theme';
 import { getUserProfile, signIn } from '@/lib/utils/auth';
+import HapticPressable from '@/components/HapticPressable';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -12,7 +13,6 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native';
 
@@ -113,7 +113,7 @@ export default function LoginScreen() {
               secureTextEntry={!showPassword}
               editable={!loading}
             />
-            <TouchableOpacity
+            <HapticPressable
               style={styles.eyeIcon}
               onPress={() => setShowPassword(!showPassword)}
             >
@@ -122,10 +122,10 @@ export default function LoginScreen() {
                 size={24}
                 color={AppColors.textSecondary}
               />
-            </TouchableOpacity>
+            </HapticPressable>
           </View>
 
-          <TouchableOpacity
+          <HapticPressable
             style={[styles.button, loading && styles.buttonDisabled]}
             onPress={handleLogin}
             disabled={loading}
@@ -133,9 +133,9 @@ export default function LoginScreen() {
             <Text style={styles.buttonText}>
               {loading ? 'Signing in...' : 'Sign In'}
             </Text>
-          </TouchableOpacity>
+          </HapticPressable>
 
-          <TouchableOpacity
+          <HapticPressable
             style={styles.linkButton}
             onPress={() => router.push('/(auth)/signup')}
             disabled={loading}
@@ -143,7 +143,7 @@ export default function LoginScreen() {
             <Text style={styles.linkText}>
               Don't have an account? Sign up
             </Text>
-          </TouchableOpacity>
+          </HapticPressable>
         </View>
       </View>
       </ScrollView>

@@ -12,6 +12,7 @@ import {
   ActivityFeedItem,
   UserSearchResult,
   Profile,
+  Routine,
 } from '@/types';
 
 // =====================================================
@@ -285,7 +286,8 @@ export async function getUserCircles(userId: string): Promise<Circle[]> {
       circle_id,
       circles (
         *,
-        creator_profile:profiles!circles_created_by_fkey(*)
+        creator_profile:profiles!circles_created_by_fkey(*),
+        circle_members(count)
       )
     `)
     .eq('user_id', userId)
@@ -293,7 +295,12 @@ export async function getUserCircles(userId: string): Promise<Circle[]> {
 
   if (error) throw error;
 
-  return data?.map(item => item.circles).flat() || [];
+  return data?.map(item => {
+    const circle = item.circles;
+    if (!circle) return null;
+    const memberCount = (circle as any).circle_members?.[0]?.count ?? 0;
+    return { ...circle, member_count: memberCount };
+  }).filter(Boolean) as Circle[] || [];
 }
 
 /**
@@ -305,14 +312,18 @@ export async function getPublicCircles(limit: number = 20): Promise<Circle[]> {
     .from('circles')
     .select(`
       *,
-      creator_profile:profiles!circles_created_by_fkey(*)
+      creator_profile:profiles!circles_created_by_fkey(*),
+      circle_members(count)
     `)
     .eq('is_private', false)
     .order('created_at', { ascending: false })
     .limit(limit);
 
   if (error) throw error;
-  return data || [];
+  return (data || []).map(circle => {
+    const memberCount = (circle as any).circle_members?.[0]?.count ?? 0;
+    return { ...circle, member_count: memberCount };
+  });
 }
 
 /**
@@ -1322,39 +1333,110 @@ export async function searchCircleRoutines(
   circleId: string,
   searchQuery?: string,
   category?: string,
-  sortBy: 'popular' | 'recent' | 'name' = 'recent'
-) {
-  let query = supabase
-    .from('circle_routine_stats')
-    .select('*')
+  sortBy: 'popular' | 'recent' | 'name' = 'recent',
+  userId?: string
+): Promise<{ routine: Routine; circle_routine_id: string }[]> {
+  // Fetch circle_routines joined with full routine data + real completion counts
+  const { data, error } = await supabase
+    .from('circle_routines')
+    .select(`
+      id,
+      shared_at,
+      completion_count,
+      is_popular,
+      routines (
+        *,
+        routine_completions(count),
+        profiles (
+          full_name,
+          username,
+          profile_picture_url
+        )
+      )
+    `)
     .eq('circle_id', circleId);
+
+  if (error) throw error;
+  if (!data) return [];
+
+  // Get user's saved routines to mark them
+  let savedRoutineIds = new Set<string>();
+  if (userId) {
+    const { data: savedRoutines } = await supabase
+      .from('routine_saves')
+      .select('routine_id')
+      .eq('user_id', userId);
+    savedRoutineIds = new Set(
+      (savedRoutines || []).map((item: any) => item.routine_id)
+    );
+  }
+
+  // Map to Routine objects
+  let results = data
+    .filter((item: any) => item.routines)
+    .map((item: any) => {
+      const r = item.routines;
+      const realCompletionCount = (r as any).routine_completions?.[0]?.count ?? r.completion_count ?? 0;
+      const routine: Routine = {
+        id: r.id,
+        name: r.name,
+        category: r.category,
+        description: r.description,
+        duration_minutes: r.duration_minutes,
+        difficulty: r.difficulty,
+        journey_focus: r.journey_focus,
+        benefits: r.benefits,
+        exercises: r.exercises,
+        completion_count: realCompletionCount,
+        is_custom: r.is_custom,
+        created_by: r.created_by,
+        created_at: r.created_at,
+        tags: r.tags,
+        body_parts: r.body_parts,
+        is_public: r.is_public,
+        save_count: r.save_count || 0,
+        is_saved: savedRoutineIds.has(r.id),
+        author_type: r.author_type,
+        official_author: r.official_author,
+        is_advanced: r.is_advanced || false,
+        badge_popular: realCompletionCount >= 100,
+        badge_new: (Date.now() - new Date(r.created_at).getTime()) < 7 * 24 * 60 * 60 * 1000,
+        creator_name: r.profiles?.full_name,
+        creator_username: r.profiles?.username,
+        creator_avatar: r.profiles?.profile_picture_url,
+        source_routine_id: r.source_routine_id || null,
+      };
+      return { routine, circle_routine_id: item.id, shared_at: item.shared_at };
+    });
 
   // Apply search filter
   if (searchQuery && searchQuery.trim()) {
-    query = query.or(`routine_name.ilike.%${searchQuery}%,routine_description.ilike.%${searchQuery}%`);
+    const q = searchQuery.toLowerCase();
+    results = results.filter(
+      (item) =>
+        item.routine.name.toLowerCase().includes(q) ||
+        item.routine.description?.toLowerCase().includes(q)
+    );
   }
 
   // Apply category filter
   if (category && category !== 'All') {
-    query = query.eq('category', category);
+    results = results.filter((item) => item.routine.category === category);
   }
 
   // Apply sorting
   switch (sortBy) {
     case 'popular':
-      query = query.order('completion_count', { ascending: false });
+      results.sort((a, b) => b.routine.completion_count - a.routine.completion_count);
       break;
     case 'name':
-      query = query.order('routine_name', { ascending: true });
+      results.sort((a, b) => a.routine.name.localeCompare(b.routine.name));
       break;
     case 'recent':
     default:
-      query = query.order('shared_at', { ascending: false });
+      results.sort((a, b) => new Date(b.shared_at).getTime() - new Date(a.shared_at).getTime());
       break;
   }
 
-  const { data, error } = await query;
-
-  if (error) throw error;
-  return data || [];
+  return results.map(({ routine, circle_routine_id }) => ({ routine, circle_routine_id }));
 }

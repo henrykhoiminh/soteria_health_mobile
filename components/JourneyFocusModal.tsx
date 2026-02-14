@@ -4,11 +4,11 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   ScrollView,
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import HapticPressable from '@/components/HapticPressable';
 import { Ionicons } from '@expo/vector-icons';
 import { AppColors } from '@/constants/theme';
 import { JourneyFocus, UPPER_BODY_AREAS, LOWER_BODY_AREAS } from '@/types';
@@ -253,7 +253,7 @@ export default function JourneyFocusModal({
             </Text>
 
             {JOURNEY_OPTIONS.filter(option => option !== currentFocus).map((option) => (
-              <TouchableOpacity
+              <HapticPressable
                 key={option}
                 style={[
                   styles.optionCard,
@@ -267,6 +267,7 @@ export default function JourneyFocusModal({
                 ]}
                 onPress={() => setSelectedFocus(option)}
                 activeOpacity={0.7}
+                hapticStyle="selection"
               >
                 <View style={styles.optionHeader}>
                   <View
@@ -295,7 +296,7 @@ export default function JourneyFocusModal({
                     />
                   )}
                 </View>
-              </TouchableOpacity>
+              </HapticPressable>
             ))}
 
             {/* Recovery Areas Section */}
@@ -311,7 +312,7 @@ export default function JourneyFocusModal({
                   const isBody = category.id === 'Body';
 
                   return (
-                    <TouchableOpacity
+                    <HapticPressable
                       key={category.id}
                       style={[
                         styles.recoveryCard,
@@ -319,6 +320,7 @@ export default function JourneyFocusModal({
                       ]}
                       onPress={() => toggleCategory(category.id)}
                       activeOpacity={0.7}
+                      hapticStyle="selection"
                     >
                       <View style={styles.recoveryCardContent}>
                         <View
@@ -356,7 +358,7 @@ export default function JourneyFocusModal({
                         </View>
                       </View>
                       {isBody && isSelected && (
-                        <TouchableOpacity
+                        <HapticPressable
                           style={styles.editBodyPartsButton}
                           onPress={() => setShowBodyPartsPicker(true)}
                         >
@@ -364,9 +366,9 @@ export default function JourneyFocusModal({
                           <Text style={styles.editBodyPartsText}>
                             {selectedBodyParts.length === 0 ? 'Select Body Parts' : 'Edit Body Parts'}
                           </Text>
-                        </TouchableOpacity>
+                        </HapticPressable>
                       )}
-                    </TouchableOpacity>
+                    </HapticPressable>
                   );
                 })}
 
@@ -395,14 +397,15 @@ export default function JourneyFocusModal({
 
           {/* Action Buttons */}
           <View style={styles.actions}>
-            <TouchableOpacity
+            <HapticPressable
               style={[styles.button, styles.cancelButton]}
               onPress={onClose}
               disabled={saving}
+              hapticStyle="medium"
             >
               <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
+            </HapticPressable>
+            <HapticPressable
               style={[
                 styles.button,
                 styles.saveButton,
@@ -421,7 +424,7 @@ export default function JourneyFocusModal({
                     : 'Save Changes'}
                 </Text>
               )}
-            </TouchableOpacity>
+            </HapticPressable>
           </View>
         </View>
       </View>
@@ -437,12 +440,12 @@ export default function JourneyFocusModal({
           <View style={styles.bodyPartsModal}>
             <View style={styles.bodyPartsHeader}>
               <Text style={styles.bodyPartsTitle}>Select Body Parts</Text>
-              <TouchableOpacity
+              <HapticPressable
                 onPress={() => setShowBodyPartsPicker(false)}
                 style={styles.doneButton}
               >
                 <Text style={styles.doneButtonText}>Done</Text>
-              </TouchableOpacity>
+              </HapticPressable>
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
@@ -452,13 +455,14 @@ export default function JourneyFocusModal({
                 {UPPER_BODY_AREAS.map((part) => {
                   const isSelected = recoveryAreas.includes(part);
                   return (
-                    <TouchableOpacity
+                    <HapticPressable
                       key={part}
                       style={[
                         styles.bodyPartChip,
                         isSelected && styles.bodyPartChipSelected,
                       ]}
                       onPress={() => toggleBodyPart(part)}
+                      hapticStyle="selection"
                     >
                       <Text
                         style={[
@@ -468,7 +472,7 @@ export default function JourneyFocusModal({
                       >
                         {part}
                       </Text>
-                    </TouchableOpacity>
+                    </HapticPressable>
                   );
                 })}
               </View>
@@ -479,13 +483,14 @@ export default function JourneyFocusModal({
                 {LOWER_BODY_AREAS.map((part) => {
                   const isSelected = recoveryAreas.includes(part);
                   return (
-                    <TouchableOpacity
+                    <HapticPressable
                       key={part}
                       style={[
                         styles.bodyPartChip,
                         isSelected && styles.bodyPartChipSelected,
                       ]}
                       onPress={() => toggleBodyPart(part)}
+                      hapticStyle="selection"
                     >
                       <Text
                         style={[
@@ -495,20 +500,21 @@ export default function JourneyFocusModal({
                       >
                         {part}
                       </Text>
-                    </TouchableOpacity>
+                    </HapticPressable>
                   );
                 })}
               </View>
 
               {/* Clear All Button */}
               {selectedBodyParts.length > 0 && (
-                <TouchableOpacity
+                <HapticPressable
                   style={styles.clearAllButton}
                   onPress={clearBodyParts}
+                  hapticStyle="medium"
                 >
                   <Ionicons name="close-circle-outline" size={18} color={AppColors.textSecondary} />
                   <Text style={styles.clearAllText}>Clear All Body Parts</Text>
-                </TouchableOpacity>
+                </HapticPressable>
               )}
             </ScrollView>
           </View>

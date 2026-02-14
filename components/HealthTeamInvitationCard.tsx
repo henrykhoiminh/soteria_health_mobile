@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Image, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppColors } from '@/constants/theme';
+import HapticPressable from '@/components/HapticPressable';
 import { HealthTeamInvitation } from '@/types';
 import { acceptHealthTeamInvitation, declineHealthTeamInvitation } from '@/lib/utils/health-team';
 
@@ -140,7 +141,7 @@ export default function HealthTeamInvitationCard({
 
       {/* Action Buttons */}
       <View style={styles.actions}>
-        <TouchableOpacity
+        <HapticPressable
           style={[styles.button, styles.declineButton]}
           onPress={handleDecline}
           disabled={loading}
@@ -153,8 +154,8 @@ export default function HealthTeamInvitationCard({
               <Text style={styles.declineText}>Decline</Text>
             </>
           )}
-        </TouchableOpacity>
-        <TouchableOpacity
+        </HapticPressable>
+        <HapticPressable
           style={[styles.button, styles.acceptButton, loading && styles.buttonDisabled]}
           onPress={handleAccept}
           disabled={loading}
@@ -167,7 +168,7 @@ export default function HealthTeamInvitationCard({
               <Text style={styles.acceptText}>Accept</Text>
             </>
           )}
-        </TouchableOpacity>
+        </HapticPressable>
       </View>
     </View>
   );

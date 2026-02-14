@@ -44,10 +44,10 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
   RefreshControl,
 } from 'react-native';
+import HapticPressable from '@/components/HapticPressable';
 
 type Tab = 'friends' | 'circles' | 'activity';
 
@@ -105,34 +105,38 @@ export default function SocialScreen() {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Social</Text>
+        <Text style={styles.headerSubtitle}>Connect with friends and wellness circles</Text>
       </View>
 
       {/* Tab Navigation */}
       <View style={styles.tabBar}>
-        <TouchableOpacity
+        <HapticPressable
+          hapticStyle="selection"
           style={[styles.tab, activeTab === 'circles' && styles.tabActive]}
           onPress={() => setActiveTab('circles')}
         >
           <Text style={[styles.tabText, activeTab === 'circles' && styles.tabTextActive]}>
             Circles
           </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
+        </HapticPressable>
+        <HapticPressable
+          hapticStyle="selection"
           style={[styles.tab, activeTab === 'friends' && styles.tabActive]}
           onPress={() => setActiveTab('friends')}
         >
           <Text style={[styles.tabText, activeTab === 'friends' && styles.tabTextActive]}>
             Friends
           </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
+        </HapticPressable>
+        <HapticPressable
+          hapticStyle="selection"
           style={[styles.tab, activeTab === 'activity' && styles.tabActive]}
           onPress={() => setActiveTab('activity')}
         >
           <Text style={[styles.tabText, activeTab === 'activity' && styles.tabTextActive]}>
             Activity
           </Text>
-        </TouchableOpacity>
+        </HapticPressable>
       </View>
 
       {/* Tab Content */}
@@ -315,9 +319,9 @@ function FriendsTab({ userId, onRefresh }: { userId: string; onRefresh: () => vo
             autoCapitalize="words"
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => handleSearch('')}>
+            <HapticPressable onPress={() => handleSearch('')}>
               <Ionicons name="close-circle" size={20} color={AppColors.textSecondary} />
-            </TouchableOpacity>
+            </HapticPressable>
           )}
         </View>
 
@@ -370,12 +374,12 @@ function FriendsTab({ userId, onRefresh }: { userId: string; onRefresh: () => vo
                 <View style={styles.userActions}>
                   {/* Health Team Invite Button (only for health_team/admin viewing non-health_team users) */}
                   {isHealthTeam && user.role === 'user' && !invitedUsers.has(user.id) && (
-                    <TouchableOpacity
+                    <HapticPressable
                       style={styles.healthTeamInviteButton}
                       onPress={() => handleInviteToHealthTeam(user.id, getDisplayName(user))}
                     >
                       <Ionicons name="shield-checkmark" size={16} color="#10B981" />
-                    </TouchableOpacity>
+                    </HapticPressable>
                   )}
                   {invitedUsers.has(user.id) && (
                     <View style={styles.invitedBadge}>
@@ -385,12 +389,12 @@ function FriendsTab({ userId, onRefresh }: { userId: string; onRefresh: () => vo
                   )}
                   {/* Friend Request Button */}
                   {!user.friendship_status && (
-                    <TouchableOpacity
+                    <HapticPressable
                       style={styles.addButton}
                       onPress={() => handleSendRequest(user.id)}
                     >
                       <Ionicons name="person-add" size={20} color={AppColors.primary} />
-                    </TouchableOpacity>
+                    </HapticPressable>
                   )}
                   {user.friendship_status === 'pending' && (
                     <Text style={styles.pendingText}>Pending</Text>
@@ -436,18 +440,18 @@ function FriendsTab({ userId, onRefresh }: { userId: string; onRefresh: () => vo
                   {new Date(request.created_at).toLocaleDateString()}
                 </Text>
               </View>
-              <TouchableOpacity
+              <HapticPressable
                 style={styles.acceptButton}
                 onPress={() => handleAcceptRequest(request.id)}
               >
                 <Text style={styles.acceptButtonText}>Accept</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
+              </HapticPressable>
+              <HapticPressable
                 style={styles.declineButton}
                 onPress={() => handleDeclineRequest(request.id)}
               >
                 <Ionicons name="close" size={20} color={AppColors.textSecondary} />
-              </TouchableOpacity>
+              </HapticPressable>
             </View>
           ))}
         </View>
@@ -490,12 +494,13 @@ function FriendsTab({ userId, onRefresh }: { userId: string; onRefresh: () => vo
                     Friends since {new Date(friendship.accepted_at!).toLocaleDateString()}
                   </Text>
                 </View>
-                <TouchableOpacity
+                <HapticPressable
+                  hapticStyle="medium"
                   style={styles.unfriendButton}
                   onPress={() => handleUnfriend(friendship.id, friend.first_name || 'this user')}
                 >
                   <Ionicons name="trash-outline" size={20} color={AppColors.destructive} />
-                </TouchableOpacity>
+                </HapticPressable>
               </View>
             );
           })
@@ -600,11 +605,7 @@ function CirclesTab({ userId, onRefresh }: { userId: string; onRefresh: () => vo
               return (
               <View key={invitation.id} style={styles.invitationCard}>
                 <View style={styles.circleIcon}>
-                  <Ionicons
-                    name="lock-closed"
-                    size={24}
-                    color={AppColors.primary}
-                  />
+                  <Ionicons name="lock-closed" size={24} color={AppColors.primary} />
                 </View>
                 <View style={styles.invitationInfo}>
                   <Text style={styles.circleName}>Circle Invitation</Text>
@@ -616,18 +617,18 @@ function CirclesTab({ userId, onRefresh }: { userId: string; onRefresh: () => vo
                   </Text>
                 </View>
                 <View style={styles.invitationActions}>
-                  <TouchableOpacity
+                  <HapticPressable
                     style={styles.acceptInviteButton}
                     onPress={() => handleAcceptInvitation(invitation.id)}
                   >
                     <Text style={styles.acceptInviteButtonText}>Accept</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
+                  </HapticPressable>
+                  <HapticPressable
                     style={styles.declineInviteButton}
                     onPress={() => handleDeclineInvitation(invitation.id)}
                   >
                     <Text style={styles.declineInviteButtonText}>Decline</Text>
-                  </TouchableOpacity>
+                  </HapticPressable>
                 </View>
               </View>
               );
@@ -646,7 +647,7 @@ function CirclesTab({ userId, onRefresh }: { userId: string; onRefresh: () => vo
             </View>
           ) : (
             myCircles.map((circle) => (
-              <TouchableOpacity
+              <HapticPressable
                 key={circle.id}
                 style={styles.circleCard}
                 onPress={() => router.push(`/circles/${circle.id}`)}
@@ -666,7 +667,7 @@ function CirclesTab({ userId, onRefresh }: { userId: string; onRefresh: () => vo
                   <Text style={styles.circleMeta}>{circle.member_count || 0} members</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={20} color={AppColors.textSecondary} />
-              </TouchableOpacity>
+              </HapticPressable>
             ))
           )}
         </View>
@@ -677,10 +678,14 @@ function CirclesTab({ userId, onRefresh }: { userId: string; onRefresh: () => vo
           {publicCircles.length === 0 ? (
             <Text style={styles.emptySubtext}>No public circles available</Text>
           ) : (
-            publicCircles
-              .filter((circle) => !myCircles.some((mc) => mc.id === circle.id))
-              .map((circle) => (
-                <View key={circle.id} style={styles.circleCard}>
+            publicCircles.map((circle) => {
+              const isMember = myCircles.some((mc) => mc.id === circle.id);
+              return (
+                <HapticPressable
+                  key={circle.id}
+                  style={styles.circleCard}
+                  onPress={() => router.push(`/circles/${circle.id}`)}
+                >
                   <View style={styles.circleIcon}>
                     <Ionicons name="globe" size={24} color={AppColors.primary} />
                   </View>
@@ -691,14 +696,19 @@ function CirclesTab({ userId, onRefresh }: { userId: string; onRefresh: () => vo
                     </Text>
                     <Text style={styles.circleMeta}>{circle.member_count || 0} members</Text>
                   </View>
-                  <TouchableOpacity
-                    style={styles.joinButton}
-                    onPress={() => handleJoinCircle(circle.id)}
-                  >
-                    <Text style={styles.joinButtonText}>Join</Text>
-                  </TouchableOpacity>
-                </View>
-              ))
+                  {isMember ? (
+                    <Ionicons name="checkmark-circle" size={18} color={AppColors.success} />
+                  ) : (
+                    <HapticPressable
+                      style={styles.joinButton}
+                      onPress={() => handleJoinCircle(circle.id)}
+                    >
+                      <Text style={styles.joinButtonText}>Join</Text>
+                    </HapticPressable>
+                  )}
+                </HapticPressable>
+              );
+            })
           )}
         </View>
 
@@ -706,13 +716,13 @@ function CirclesTab({ userId, onRefresh }: { userId: string; onRefresh: () => vo
       </ScrollView>
 
       {/* Floating Create Circle Button */}
-      <TouchableOpacity
+      <HapticPressable
         style={styles.floatingCreateButton}
         onPress={() => setShowCreateModal(true)}
       >
         <Ionicons name="add-circle" size={28} color={AppColors.primaryText} />
         <Text style={styles.floatingCreateButtonText}>Create Circle</Text>
-      </TouchableOpacity>
+      </HapticPressable>
 
       {/* Create Circle Modal */}
       <CreateCircleModal
@@ -842,9 +852,9 @@ function CreateCircleModal({
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Create Circle</Text>
-            <TouchableOpacity onPress={onClose}>
+            <HapticPressable onPress={onClose}>
               <Ionicons name="close" size={28} color={AppColors.textPrimary} />
-            </TouchableOpacity>
+            </HapticPressable>
           </View>
 
           <ScrollView style={styles.modalBody}>
@@ -870,7 +880,8 @@ function CreateCircleModal({
             />
 
             <View style={styles.privacyOption}>
-              <TouchableOpacity
+              <HapticPressable
+                hapticStyle="selection"
                 style={styles.privacyToggle}
                 onPress={() => setIsPrivate(!isPrivate)}
               >
@@ -889,12 +900,12 @@ function CreateCircleModal({
                       : 'Anyone can discover and join'}
                   </Text>
                 </View>
-              </TouchableOpacity>
+              </HapticPressable>
             </View>
           </ScrollView>
 
           <View style={styles.modalFooter}>
-            <TouchableOpacity
+            <HapticPressable
               style={[styles.createModalButton, creating && styles.createModalButtonDisabled]}
               onPress={handleCreate}
               disabled={creating}
@@ -902,7 +913,7 @@ function CreateCircleModal({
               <Text style={styles.createModalButtonText}>
                 {creating ? 'Creating...' : 'Create Circle'}
               </Text>
-            </TouchableOpacity>
+            </HapticPressable>
           </View>
         </View>
       </View>
@@ -920,17 +931,19 @@ const styles = StyleSheet.create({
     backgroundColor: AppColors.background,
   },
   header: {
-    paddingHorizontal: 24,
-    paddingTop: 60,
-    paddingBottom: 16,
+    padding: 24,
+    paddingTop: 100,
     backgroundColor: AppColors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: AppColors.borderLight,
   },
   headerTitle: {
     fontSize: 28,
     fontWeight: 'bold',
     color: AppColors.textPrimary,
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    color: AppColors.textSecondary,
+    marginTop: 4,
   },
   tabBar: {
     flexDirection: 'row',

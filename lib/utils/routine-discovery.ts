@@ -184,6 +184,7 @@ function buildDiscoverQuery(
       official_author,
       is_advanced,
       source_routine_id,
+      routine_completions(count),
       profiles (
         full_name,
         username,
@@ -348,6 +349,7 @@ export async function getDiscoverRoutines(
     let processedRoutines = routines.map((routine: any) => {
       const badges = calculateBadges(routine);
       const recentSaves = recentSavesMap.get(routine.id) || 0;
+      const realCompletionCount = routine.routine_completions?.[0]?.count ?? routine.completion_count ?? 0;
 
       return {
         id: routine.id,
@@ -359,7 +361,7 @@ export async function getDiscoverRoutines(
         journey_focus: routine.journey_focus,
         benefits: routine.benefits,
         exercises: routine.exercises,
-        completion_count: routine.completion_count,
+        completion_count: realCompletionCount,
         is_custom: routine.is_custom,
         created_by: routine.created_by,
         created_at: routine.created_at,
@@ -429,6 +431,7 @@ export async function getUserCustomRoutines(userId: string): Promise<Routine[]> 
       author_type,
       official_author,
       source_routine_id,
+      routine_completions(count),
       profiles (
         full_name,
         username,
@@ -456,10 +459,12 @@ export async function getUserCustomRoutines(userId: string): Promise<Routine[]> 
           .single();
         sourceName = sourceData?.name || null;
       }
+      const realCompletionCount = routine.routine_completions?.[0]?.count ?? routine.completion_count ?? 0;
       return {
         ...routine,
+        completion_count: realCompletionCount,
         is_saved: false,
-        badge_popular: routine.completion_count > 100,
+        badge_popular: realCompletionCount > 100,
         badge_trending: false,
         badge_new: (new Date().getTime() - new Date(routine.created_at).getTime()) / (1000 * 60 * 60 * 24) <= 7,
         badge_official: false,

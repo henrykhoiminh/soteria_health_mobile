@@ -11,6 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import HapticPressable from '@/components/HapticPressable';
 import { AppColors } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { getFriends, getPendingCircleInvitationsByCircle } from '@/lib/utils/social';
@@ -130,7 +131,7 @@ export default function FriendInviteModal({
             {friend.journey_focus || 'New User'}
           </Text>
         </View>
-        <TouchableOpacity
+        <HapticPressable
           style={[styles.inviteButton, isInviting && styles.inviteButtonDisabled]}
           onPress={() => handleInvite(item.friend_id, getDisplayName(friend))}
           disabled={isInviting}
@@ -140,7 +141,7 @@ export default function FriendInviteModal({
           ) : (
             <Ionicons name="add-circle" size={24} color={AppColors.primary} />
           )}
-        </TouchableOpacity>
+        </HapticPressable>
       </View>
     );
   };
@@ -164,9 +165,9 @@ export default function FriendInviteModal({
             {/* Header */}
             <View style={styles.header}>
               <Text style={styles.title}>Invite Friends</Text>
-              <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <HapticPressable onPress={onClose} style={styles.closeButton}>
                 <Ionicons name="close" size={28} color={AppColors.textPrimary} />
-              </TouchableOpacity>
+              </HapticPressable>
             </View>
 
             {/* Search Bar */}
@@ -183,9 +184,9 @@ export default function FriendInviteModal({
                 autoFocus
               />
               {searchQuery.length > 0 && (
-                <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
+                <HapticPressable onPress={() => setSearchQuery('')} style={styles.clearButton}>
                   <Ionicons name="close-circle" size={20} color={AppColors.textSecondary} />
-                </TouchableOpacity>
+                </HapticPressable>
               )}
             </View>
 

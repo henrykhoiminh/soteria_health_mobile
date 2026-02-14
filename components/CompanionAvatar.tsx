@@ -1,7 +1,8 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, Animated } from 'react-native';
+import { View, StyleSheet, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppColors } from '@/constants/theme';
+import HapticPressable from '@/components/HapticPressable';
 
 // Conditionally import Rive - will use fallback if not available or no .riv file
 let Rive: any = null;
@@ -231,13 +232,13 @@ export default function CompanionAvatar({
 
   if (onPress) {
     return (
-      <TouchableOpacity
+      <HapticPressable
         onPress={handlePress}
         disabled={disabled}
         activeOpacity={0.8}
       >
         {content}
-      </TouchableOpacity>
+      </HapticPressable>
     );
   }
 

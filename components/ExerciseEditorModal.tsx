@@ -29,6 +29,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native'
+import HapticPressable from '@/components/HapticPressable'
 import { AppColors } from '../constants/theme'
 import {
   uploadExerciseVideo,
@@ -420,13 +421,13 @@ export default function ExerciseEditorModal({
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+          <HapticPressable onPress={onClose} style={styles.closeButton}>
             <Ionicons name="close" size={28} color={AppColors.textPrimary} />
-          </TouchableOpacity>
+          </HapticPressable>
           <Text style={styles.headerTitle}>
             {isEditing ? 'Edit Exercise' : 'New Exercise'}
           </Text>
-          <TouchableOpacity
+          <HapticPressable
             onPress={handleSave}
             style={styles.saveButton}
             disabled={saving}
@@ -436,7 +437,7 @@ export default function ExerciseEditorModal({
             ) : (
               <Text style={styles.saveButtonText}>Save</Text>
             )}
-          </TouchableOpacity>
+          </HapticPressable>
         </View>
 
         <ScrollView
@@ -493,12 +494,13 @@ export default function ExerciseEditorModal({
                   <View style={styles.videoPlayIcon}>
                     <Ionicons name="play-circle" size={40} color="rgba(255,255,255,0.9)" />
                   </View>
-                  <TouchableOpacity
+                  <HapticPressable
                     style={styles.removeMediaButton}
                     onPress={handleRemoveVideo}
+                    hapticStyle="medium"
                   >
                     <Ionicons name="close-circle" size={24} color={AppColors.destructive} />
-                  </TouchableOpacity>
+                  </HapticPressable>
                   {uploadingVideo && (
                     <View style={styles.mediaUploadingOverlay}>
                       <ActivityIndicator size="small" color={AppColors.primary} />
@@ -528,13 +530,13 @@ export default function ExerciseEditorModal({
                   </Text>
                 </View>
               ) : (
-                <TouchableOpacity
+                <HapticPressable
                   style={styles.mediaPickerButton}
                   onPress={handleAddVideo}
                 >
                   <Ionicons name="videocam-outline" size={24} color={AppColors.primary} />
                   <Text style={styles.mediaPickerText}>Add Video</Text>
-                </TouchableOpacity>
+                </HapticPressable>
               )}
             </View>
           </View>
@@ -561,13 +563,14 @@ export default function ExerciseEditorModal({
               {(['Mind', 'Body', 'Soul'] as RoutineCategory[]).map((cat) => {
                 const categoryColor = cat === 'Mind' ? AppColors.mind : cat === 'Body' ? AppColors.body : AppColors.soul;
                 return (
-                  <TouchableOpacity
+                  <HapticPressable
                     key={cat}
                     style={[
                       styles.segmentButton,
                       category === cat && { backgroundColor: categoryColor },
                     ]}
                     onPress={() => setCategory(cat)}
+                    hapticStyle="selection"
                   >
                     <Text
                       style={[
@@ -577,7 +580,7 @@ export default function ExerciseEditorModal({
                     >
                       {cat}
                     </Text>
-                  </TouchableOpacity>
+                  </HapticPressable>
                 );
               })}
             </View>
@@ -588,13 +591,14 @@ export default function ExerciseEditorModal({
             <Text style={styles.label}>Difficulty *</Text>
             <View style={styles.segmentedControl}>
               {(['Beginner', 'Intermediate', 'Advanced'] as RoutineDifficulty[]).map((diff) => (
-                <TouchableOpacity
+                <HapticPressable
                   key={diff}
                   style={[
                     styles.segmentButton,
                     difficulty === diff && styles.segmentButtonActive,
                   ]}
                   onPress={() => setDifficulty(diff)}
+                  hapticStyle="selection"
                 >
                   <Text
                     style={[
@@ -604,7 +608,7 @@ export default function ExerciseEditorModal({
                   >
                     {diff}
                   </Text>
-                </TouchableOpacity>
+                </HapticPressable>
               ))}
             </View>
           </View>
@@ -642,7 +646,7 @@ export default function ExerciseEditorModal({
           {category === 'Body' && (
             <View style={styles.section}>
               <Text style={styles.label}>Target Body Parts</Text>
-              <TouchableOpacity
+              <HapticPressable
                 style={styles.dropdownButton}
                 onPress={() => setBodyPartsModalVisible(true)}
               >
@@ -652,7 +656,7 @@ export default function ExerciseEditorModal({
                     : 'Select body parts'}
                 </Text>
                 <Ionicons name="chevron-down" size={20} color={AppColors.textSecondary} />
-              </TouchableOpacity>
+              </HapticPressable>
 
               {/* Display Selected Body Parts */}
               {bodyParts.length > 0 && (
@@ -660,9 +664,9 @@ export default function ExerciseEditorModal({
                   {bodyParts.map((bodyPart) => (
                     <View key={bodyPart} style={styles.selectedBodyPartChip}>
                       <Text style={styles.selectedBodyPartText}>{bodyPart}</Text>
-                      <TouchableOpacity onPress={() => toggleBodyPart(bodyPart)}>
+                      <HapticPressable onPress={() => toggleBodyPart(bodyPart)}>
                         <Ionicons name="close-circle" size={18} color={AppColors.primary} />
-                      </TouchableOpacity>
+                      </HapticPressable>
                     </View>
                   ))}
                 </View>
@@ -683,18 +687,18 @@ export default function ExerciseEditorModal({
                 onSubmitEditing={addTag}
                 maxLength={50}
               />
-              <TouchableOpacity style={styles.addButton} onPress={addTag}>
+              <HapticPressable style={styles.addButton} onPress={addTag}>
                 <Ionicons name="add-circle" size={32} color={AppColors.primary} />
-              </TouchableOpacity>
+              </HapticPressable>
             </View>
             {tags.length > 0 && (
               <View style={styles.tagList}>
                 {tags.map((tag, index) => (
                   <View key={index} style={styles.tag}>
                     <Text style={styles.tagText}>{tag}</Text>
-                    <TouchableOpacity onPress={() => removeTag(tag)}>
+                    <HapticPressable onPress={() => removeTag(tag)}>
                       <Ionicons name="close-circle" size={16} color={AppColors.textSecondary} />
-                    </TouchableOpacity>
+                    </HapticPressable>
                   </View>
                 ))}
               </View>
@@ -703,9 +707,10 @@ export default function ExerciseEditorModal({
 
           {/* Equipment Toggle */}
           <View style={styles.section}>
-            <TouchableOpacity
+            <HapticPressable
               style={styles.toggleRow}
               onPress={() => setRequiresEquipment(!requiresEquipment)}
+              hapticStyle="selection"
             >
               <Text style={styles.toggleLabel}>Requires Equipment</Text>
               <View style={[styles.toggle, requiresEquipment && styles.toggleActive]}>
@@ -713,15 +718,16 @@ export default function ExerciseEditorModal({
                   <Ionicons name="checkmark" size={20} color="#fff" />
                 )}
               </View>
-            </TouchableOpacity>
+            </HapticPressable>
           </View>
 
           {/* Official Toggle (health team only) */}
           {isHealthTeam && (
             <View style={styles.section}>
-              <TouchableOpacity
+              <HapticPressable
                 style={styles.toggleRow}
                 onPress={() => setIsOfficial(!isOfficial)}
+                hapticStyle="selection"
               >
                 <Text style={styles.toggleLabel}>Official Exercise</Text>
                 <View style={[styles.toggle, isOfficial && styles.toggleActive]}>
@@ -729,7 +735,7 @@ export default function ExerciseEditorModal({
                     <Ionicons name="checkmark" size={20} color="#fff" />
                   )}
                 </View>
-              </TouchableOpacity>
+              </HapticPressable>
             </View>
           )}
         </ScrollView>
@@ -750,21 +756,22 @@ export default function ExerciseEditorModal({
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select Body Parts</Text>
-              <TouchableOpacity onPress={() => setBodyPartsModalVisible(false)}>
+              <HapticPressable onPress={() => setBodyPartsModalVisible(false)}>
                 <Ionicons name="close" size={24} color={AppColors.textSecondary} />
-              </TouchableOpacity>
+              </HapticPressable>
             </View>
 
             {/* Body Region Filter */}
             <View style={styles.filterContainer}>
               {(['All', 'Upper Body', 'Lower Body'] as BodyRegion[]).map((region) => (
-                <TouchableOpacity
+                <HapticPressable
                   key={region}
                   style={[
                     styles.filterButton,
                     bodyRegionFilter === region && styles.filterButtonActive,
                   ]}
                   onPress={() => setBodyRegionFilter(region)}
+                  hapticStyle="selection"
                 >
                   <Text
                     style={[
@@ -774,16 +781,17 @@ export default function ExerciseEditorModal({
                   >
                     {region}
                   </Text>
-                </TouchableOpacity>
+                </HapticPressable>
               ))}
             </View>
 
             <ScrollView style={styles.modalScrollView}>
               {getFilteredBodyParts().map((bodyPart) => (
-                <TouchableOpacity
+                <HapticPressable
                   key={bodyPart}
                   style={styles.modalOption}
                   onPress={() => toggleBodyPart(bodyPart)}
+                  hapticStyle="selection"
                 >
                   <Text
                     style={[
@@ -796,7 +804,7 @@ export default function ExerciseEditorModal({
                   {bodyParts.includes(bodyPart) && (
                     <Ionicons name="checkmark" size={20} color={AppColors.primary} />
                   )}
-                </TouchableOpacity>
+                </HapticPressable>
               ))}
             </ScrollView>
           </View>

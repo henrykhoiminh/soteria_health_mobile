@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Modal, ScrollView } from 'react-native';
+import HapticPressable from '@/components/HapticPressable';
 import { Ionicons } from '@expo/vector-icons';
 import { Routine, RoutineCategory } from '@/types';
 import { AppColors } from '@/constants/theme';
@@ -53,9 +54,9 @@ export default function RecommendedRoutineModal({
           {/* Header */}
           <View style={styles.header}>
             <Text style={styles.title}>Recommended Routine</Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <HapticPressable onPress={onClose} style={styles.closeButton}>
               <Ionicons name="close" size={24} color={AppColors.textPrimary} />
-            </TouchableOpacity>
+            </HapticPressable>
           </View>
 
           <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -110,19 +111,19 @@ export default function RecommendedRoutineModal({
               )}
 
               {/* Start This Routine Button */}
-              <TouchableOpacity
+              <HapticPressable
                 style={[styles.startButton, { backgroundColor: categoryColor }]}
                 onPress={onSelectRoutine}
                 activeOpacity={0.8}
               >
                 <Text style={styles.startButtonText}>Start This Routine</Text>
                 <Ionicons name="play" size={20} color="#fff" />
-              </TouchableOpacity>
+              </HapticPressable>
             </View>
           </ScrollView>
 
           {/* Browse More Button */}
-          <TouchableOpacity
+          <HapticPressable
             style={styles.browseButton}
             onPress={onBrowseMore}
             activeOpacity={0.7}
@@ -131,7 +132,7 @@ export default function RecommendedRoutineModal({
               Browse other {category} routines
             </Text>
             <Ionicons name="arrow-forward" size={20} color={categoryColor} />
-          </TouchableOpacity>
+          </HapticPressable>
         </View>
       </View>
     </Modal>

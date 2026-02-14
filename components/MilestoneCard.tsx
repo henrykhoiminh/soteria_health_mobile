@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppColors } from '@/constants/theme';
+import HapticPressable from '@/components/HapticPressable';
 import { MilestoneSummary } from '@/types';
 import {
   getRarityColor,
@@ -22,7 +23,7 @@ export default function MilestoneCard({ milestone, onPress }: MilestoneCardProps
   const isAchieved = milestone.is_achieved;
 
   return (
-    <TouchableOpacity
+    <HapticPressable
       style={styles.container}
       onPress={onPress}
       disabled={!onPress}
@@ -126,7 +127,7 @@ export default function MilestoneCard({ milestone, onPress }: MilestoneCardProps
           )}
         </View>
       </View>
-    </TouchableOpacity>
+    </HapticPressable>
   );
 }
 
