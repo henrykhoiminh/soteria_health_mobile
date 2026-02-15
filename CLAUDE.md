@@ -17,7 +17,7 @@ This file contains technical context, architectural decisions, and implementatio
 - **Framework:** Expo Router (file-based routing)
 - **Language:** TypeScript (strict mode)
 - **UI:** React Native with StyleSheet
-- **State:** React Context (AuthContext) + local useState
+- **State:** React Context (AuthContext, FilterOptionsContext) + local useState
 - **Backend:** Supabase (PostgreSQL, Auth, Storage, RLS)
 - **Icons:** @expo/vector-icons (Ionicons)
 - **Gestures:** react-native-gesture-handler (minimal usage after recent changes)
@@ -64,6 +64,8 @@ app/routines/
 
 components/
 ├── DraggableExerciseList.tsx    # Exercise cards with reorder/edit/delete (NO gestures)
+├── FilterOptionsManager.tsx     # Admin UI for managing body parts (chip-based, optimistic)
+├── FilterOptionEditorModal.tsx  # Modal for adding/editing body parts and groups
 ├── HapticPressable.tsx          # Drop-in TouchableOpacity replacement with haptic feedback
 ├── JourneyBadge.tsx             # Journey type badge with icon
 ├── PainCheckInModal.tsx         # 3-step pain check-in modal
@@ -71,6 +73,7 @@ components/
 
 lib/
 ├── contexts/AuthContext.tsx     # Global auth + profile state
+├── contexts/FilterOptionsContext.tsx # Dynamic body parts context (replaces hardcoded constants)
 ├── supabase/client.ts           # Supabase client config
 └── utils/
     ├── auth.ts                  # Auth, profile, upload
@@ -80,6 +83,7 @@ lib/
     ├── haptics.ts               # Centralized haptic feedback (light/medium/heavy/selection)
     ├── harmony.ts               # Harmony status checking
     ├── pain-checkin.ts          # Pain check-in logic
+    ├── filter-options.ts        # Filter options CRUD (body parts management)
     ├── routine-builder.ts       # Builder utilities & validation
     └── health-team.ts           # Health team functions
 
@@ -357,7 +361,86 @@ lsof -ti:8081 | xargs kill -9
   - Skip tutorial entirely and use contextual hints in actual dashboard
   - Progressive disclosure - reveal features as user engages with app
 
-### Session 27 (Latest - Exercise Library Filters & Builder UX)
+### Session 29 (Latest - Dynamic Body Parts Management System & DB Cleanup)
+- **Dynamic Body Parts Management System (Full Implementation):**
+  - Replaced hardcoded `UPPER_BODY_AREAS`/`LOWER_BODY_AREAS` constants with database-driven values
+  - Health team members can now add, edit, and remove body parts through the app
+
+- **Phase 1 - Database Layer:**
+  - Created `sql/migrations/add_filter_options_system.sql`
+  - New `filter_options` table: id, filter_type, value, group_name, group_order, item_order, is_enabled, created_by, created_at
+  - UNIQUE constraint on (filter_type, value), RLS policies (all users SELECT, health team INSERT/UPDATE, admin DELETE)
+  - Seeded 11 body parts (6 Upper Body, 5 Lower Body)
+  - RPC function `rename_body_part(old_value, new_value)` cascading to routines, exercises, profiles
+
+- **Phase 2 - Utility Functions:**
+  - Created `lib/utils/filter-options.ts` with CRUD functions
+  - `getFilterOptions`, `getGroupedFilterOptions`, `getAllFilterOptions`, `getAllGroupedFilterOptions`
+  - `createFilterOption`, `updateFilterOption`, `deleteFilterOption`, `reorderFilterOptions`
+  - `renameBodyPart`, `getBodyParts` convenience wrappers
+
+- **Phase 3 - React Context:**
+  - Created `lib/contexts/FilterOptionsContext.tsx`
+  - Provides: `bodyParts`, `upperBodyParts`, `lowerBodyParts`, `loading`, `refreshFilterOptions()`
+  - Falls back to hardcoded constants while loading or on error
+  - Added `FilterOption` and `FilterOptionGroup` interfaces to `types/index.ts`
+  - Wired `FilterOptionsProvider` into `app/_layout.tsx` inside `<AuthProvider>`
+
+- **Phase 4 - Updated 8 Consumer Files:**
+  - Replaced `UPPER_BODY_AREAS`/`LOWER_BODY_AREAS` imports with `useFilterOptions()` hook
+  - Files: `builder.tsx`, `routines.tsx`, `ExerciseLibrary.tsx`, `ExerciseEditorModal.tsx`, `JourneyFocusModal.tsx`, `recovery-areas.tsx`, `journey-focus.tsx`, `finding-soteria.tsx`
+
+- **Phase 5 - Admin UI (`components/FilterOptionsManager.tsx`):**
+  - Chip-based UI with inline TextInput per group for adding body parts
+  - Optimistic add/remove: updates local state immediately, persists to DB in background, reverts on failure
+  - Group management: pencil icon next to group name opens bottom sheet modal for rename/delete
+  - Group edit modal uses `KeyboardAvoidingView` with flex-1 dismiss area pattern
+  - Added `manage-filters` build mode to `builder.tsx` (health team only, 3rd card)
+  - Created `components/FilterOptionEditorModal.tsx` for add/edit with `mode` and `defaultGroup` props
+
+- **ExerciseEditorModal Keyboard Fix:**
+  - Added `KeyboardAvoidingView` wrapping the `ScrollView` so bottom content is accessible when keyboard opens
+  - Added `keyboardShouldPersistTaps="handled"` to ScrollView
+
+- **ExerciseEditorModal Form Reset Fix:**
+  - Fixed stale form data when opening modal for a new exercise after saving one
+  - Added `visible` to `useEffect` dependency array so form resets on every modal open
+
+- **Vacation Mode Removal (Database Cleanup):**
+  - Created `sql/migrations/remove_vacation_mode.sql`
+  - Drops 8 vacation-related functions (can_activate, request, activate, deactivate, expiry check, award, streak reward, cancel)
+  - Drops `user_stats_vacation_days_check` constraint
+  - Drops 6 columns: `vacation_days_banked`, `vacation_mode_active`, `vacation_mode_start`, `vacation_mode_end`, `last_vacation_ended_at`, `vacation_requested_at`
+  - Updated `check_harmony_requirements` to remove vacation decay logic (always uses standard 48hr decay)
+
+- **Key Fixes During Implementation:**
+  - `routines.tsx`: Moved `useFilterOptions()` hook from `RoutinesScreen` into `DiscoverTab` sub-component where body parts are actually used
+  - `builder.tsx`: Derived `isHealthTeam` synchronously from `profile?.role` instead of async `isHealthTeamMember()` call (fixed "Manage Filters" not showing on first load)
+  - `FilterOptionsManager.tsx`: Removed loading spinner on every add/remove by making operations optimistic
+
+- **Key Files Created:**
+  - `sql/migrations/add_filter_options_system.sql` - Table, RLS, seed, RPC
+  - `sql/migrations/remove_vacation_mode.sql` - Vacation cleanup migration
+  - `lib/utils/filter-options.ts` - CRUD utilities
+  - `lib/contexts/FilterOptionsContext.tsx` - Context + caching
+  - `components/FilterOptionsManager.tsx` - Admin chip-based management UI
+  - `components/FilterOptionEditorModal.tsx` - Add/edit modal
+
+- **Key Files Modified:**
+  - `types/index.ts` - Added FilterOption, FilterOptionGroup interfaces
+  - `app/_layout.tsx` - Added FilterOptionsProvider
+  - `app/(tabs)/builder.tsx` - Added manage-filters mode, useFilterOptions
+  - `app/(tabs)/routines.tsx` - useFilterOptions in DiscoverTab
+  - `components/ExerciseLibrary.tsx` - useFilterOptions
+  - `components/ExerciseEditorModal.tsx` - useFilterOptions, KeyboardAvoidingView, form reset fix
+  - `components/JourneyFocusModal.tsx` - useFilterOptions
+  - `app/onboarding/recovery-areas.tsx` - useFilterOptions
+  - `app/onboarding/journey-focus.tsx` - useFilterOptions
+  - `app/onboarding/finding-soteria.tsx` - useFilterOptions
+
+---
+
+### Session 27 (Exercise Library Filters & Builder UX)
 - **Expo Startup Troubleshooting:**
   - Created `EXPO-STARTUP-GUIDE.md` documenting slow startup causes and fixes
   - Key issue: Watchman file watches go stale after Mac sleeps
@@ -515,7 +598,7 @@ lsof -ti:8081 | xargs kill -9
 
 ---
 
-**Last Updated:** 2026-02-14
+**Last Updated:** 2026-02-15
 **Current Version:** Expo SDK 54, React Native 0.76+
 
 ## Known Issues & Pending Investigations

@@ -21,7 +21,9 @@ try {
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -85,6 +87,7 @@ export default function ExerciseEditorModal({
 
   // Load exercise data when editing
   useEffect(() => {
+    if (!visible) return
     if (exercise) {
       setName(exercise.name)
       setDescription(exercise.description)
@@ -122,7 +125,7 @@ export default function ExerciseEditorModal({
       setDemoVideoSizeMB(null)
       setExistingVideoUrl(null)
     }
-  }, [exercise, isHealthTeam])
+  }, [visible, exercise, isHealthTeam])
 
   const handleSave = async () => {
     // Validation
@@ -441,10 +444,15 @@ export default function ExerciseEditorModal({
           </HapticPressable>
         </View>
 
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ flex: 1 }}
+        >
         <ScrollView
           style={styles.content}
           contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
           {/* Name */}
           <View style={styles.section}>
@@ -740,6 +748,7 @@ export default function ExerciseEditorModal({
             </View>
           )}
         </ScrollView>
+        </KeyboardAvoidingView>
       </View>
 
       {/* Body Parts Multi-Select Modal */}
