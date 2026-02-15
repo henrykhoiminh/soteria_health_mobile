@@ -13,7 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useOnboarding } from '@/lib/contexts/OnboardingContext';
 import { AppColors } from '@/constants/theme';
-import { UPPER_BODY_AREAS, LOWER_BODY_AREAS } from '@/types';
+import { useFilterOptions } from '@/lib/contexts/FilterOptionsContext';
 import SoteriaPresence from './components/SoteriaPresence';
 import SoteriaDialogueBox from './components/SoteriaDialogueBox';
 import OnboardingButton from './components/OnboardingButton';
@@ -47,6 +47,7 @@ const RECOVERY_CATEGORIES = [
 // Screen: Recovery Areas Selection (shown only for Recovery journey)
 export default function RecoveryAreasScreen() {
   const router = useRouter();
+  const { upperBodyParts, lowerBodyParts } = useFilterOptions();
   const { data, setRecoveryAreas } = useOnboarding();
   const [selectedAreas, setSelectedAreas] = useState<string[]>(data.recoveryAreas || []);
   const [showBodyPartsPicker, setShowBodyPartsPicker] = useState(false);
@@ -57,13 +58,13 @@ export default function RecoveryAreasScreen() {
       return selectedAreas.includes(categoryId);
     }
     // Body is selected if any body part is in selectedAreas
-    const bodyParts = [...UPPER_BODY_AREAS, ...LOWER_BODY_AREAS];
+    const bodyParts = [...upperBodyParts, ...lowerBodyParts];
     return selectedAreas.some(area => bodyParts.includes(area as typeof bodyParts[number]));
   };
 
   // Get selected body parts
   const getSelectedBodyParts = (): string[] => {
-    const bodyParts = [...UPPER_BODY_AREAS, ...LOWER_BODY_AREAS];
+    const bodyParts = [...upperBodyParts, ...lowerBodyParts];
     return selectedAreas.filter(area => bodyParts.includes(area as typeof bodyParts[number]));
   };
 
@@ -95,7 +96,7 @@ export default function RecoveryAreasScreen() {
 
   // Clear all body parts
   const clearBodyParts = () => {
-    const bodyParts = [...UPPER_BODY_AREAS, ...LOWER_BODY_AREAS];
+    const bodyParts = [...upperBodyParts, ...lowerBodyParts];
     setSelectedAreas(prev => prev.filter(a => !bodyParts.includes(a as typeof bodyParts[number])));
   };
 
@@ -235,7 +236,7 @@ export default function RecoveryAreasScreen() {
               {/* Upper Body */}
               <Text style={styles.bodyRegionTitle}>Upper Body</Text>
               <View style={styles.bodyPartsGrid}>
-                {UPPER_BODY_AREAS.map((part) => {
+                {upperBodyParts.map((part) => {
                   const isSelected = selectedAreas.includes(part);
                   return (
                     <TouchableOpacity
@@ -262,7 +263,7 @@ export default function RecoveryAreasScreen() {
               {/* Lower Body */}
               <Text style={styles.bodyRegionTitle}>Lower Body</Text>
               <View style={styles.bodyPartsGrid}>
-                {LOWER_BODY_AREAS.map((part) => {
+                {lowerBodyParts.map((part) => {
                   const isSelected = selectedAreas.includes(part);
                   return (
                     <TouchableOpacity

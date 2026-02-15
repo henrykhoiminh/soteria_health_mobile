@@ -11,7 +11,8 @@ import {
 import HapticPressable from '@/components/HapticPressable';
 import { Ionicons } from '@expo/vector-icons';
 import { AppColors } from '@/constants/theme';
-import { JourneyFocus, UPPER_BODY_AREAS, LOWER_BODY_AREAS } from '@/types';
+import { JourneyFocus } from '@/types';
+import { useFilterOptions } from '@/lib/contexts/FilterOptionsContext';
 import { updateUserProfile } from '@/lib/utils/auth';
 
 interface JourneyFocusModalProps {
@@ -60,6 +61,7 @@ export default function JourneyFocusModal({
   onClose,
   onUpdate,
 }: JourneyFocusModalProps) {
+  const { upperBodyParts, lowerBodyParts } = useFilterOptions();
   const [selectedFocus, setSelectedFocus] = useState<JourneyFocus>(currentFocus);
   const [recoveryAreas, setRecoveryAreas] = useState<string[]>(currentRecoveryAreas || []);
   const [showBodyPartsPicker, setShowBodyPartsPicker] = useState(false);
@@ -88,13 +90,13 @@ export default function JourneyFocusModal({
       return recoveryAreas.includes(categoryId);
     }
     // Body is selected if any body part is in recoveryAreas
-    const bodyParts = [...UPPER_BODY_AREAS, ...LOWER_BODY_AREAS];
+    const bodyParts = [...upperBodyParts, ...lowerBodyParts];
     return recoveryAreas.some(area => bodyParts.includes(area as typeof bodyParts[number]));
   };
 
   // Get selected body parts
   const getSelectedBodyParts = (): string[] => {
-    const bodyParts = [...UPPER_BODY_AREAS, ...LOWER_BODY_AREAS];
+    const bodyParts = [...upperBodyParts, ...lowerBodyParts];
     return recoveryAreas.filter(area => bodyParts.includes(area as typeof bodyParts[number]));
   };
 
@@ -123,7 +125,7 @@ export default function JourneyFocusModal({
 
   // Clear all body parts
   const clearBodyParts = () => {
-    const bodyParts = [...UPPER_BODY_AREAS, ...LOWER_BODY_AREAS];
+    const bodyParts = [...upperBodyParts, ...lowerBodyParts];
     setRecoveryAreas(prev => prev.filter(a => !bodyParts.includes(a as typeof bodyParts[number])));
   };
 
@@ -452,7 +454,7 @@ export default function JourneyFocusModal({
               {/* Upper Body */}
               <Text style={styles.bodyRegionTitle}>Upper Body</Text>
               <View style={styles.bodyPartsGrid}>
-                {UPPER_BODY_AREAS.map((part) => {
+                {upperBodyParts.map((part) => {
                   const isSelected = recoveryAreas.includes(part);
                   return (
                     <HapticPressable
@@ -480,7 +482,7 @@ export default function JourneyFocusModal({
               {/* Lower Body */}
               <Text style={styles.bodyRegionTitle}>Lower Body</Text>
               <View style={styles.bodyPartsGrid}>
-                {LOWER_BODY_AREAS.map((part) => {
+                {lowerBodyParts.map((part) => {
                   const isSelected = recoveryAreas.includes(part);
                   return (
                     <HapticPressable

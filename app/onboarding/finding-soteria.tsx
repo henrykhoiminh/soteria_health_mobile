@@ -1,7 +1,8 @@
 import JourneyBadge from '@/components/JourneyBadge';
 import { AppColors } from '@/constants/theme';
 import { useOnboarding } from '@/lib/contexts/OnboardingContext';
-import { JourneyFocus, UPPER_BODY_AREAS, LOWER_BODY_AREAS } from '@/types';
+import { JourneyFocus } from '@/types';
+import { useFilterOptions } from '@/lib/contexts/FilterOptionsContext';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
@@ -78,6 +79,7 @@ type Phase = 'mystery' | 'name-entry' | 'reinforcement' | 'intro' | 'choices' | 
 // Screen 2: Finding Soteria
 export default function FindingSoteriaScreen() {
   const router = useRouter();
+  const { upperBodyParts, lowerBodyParts } = useFilterOptions();
   const { data, setFirstName, setLastName, setJourneyFocus, setRecoveryAreas } = useOnboarding();
 
   // Phase management
@@ -117,12 +119,12 @@ export default function FindingSoteriaScreen() {
     if (categoryId === 'Mind' || categoryId === 'Soul') {
       return selectedAreas.includes(categoryId);
     }
-    const bodyParts = [...UPPER_BODY_AREAS, ...LOWER_BODY_AREAS];
+    const bodyParts = [...upperBodyParts, ...lowerBodyParts];
     return selectedAreas.some(area => bodyParts.includes(area as typeof bodyParts[number]));
   };
 
   const getSelectedBodyParts = (): string[] => {
-    const bodyParts = [...UPPER_BODY_AREAS, ...LOWER_BODY_AREAS];
+    const bodyParts = [...upperBodyParts, ...lowerBodyParts];
     return selectedAreas.filter(area => bodyParts.includes(area as typeof bodyParts[number]));
   };
 
@@ -150,7 +152,7 @@ export default function FindingSoteriaScreen() {
   };
 
   const clearBodyParts = () => {
-    const bodyParts = [...UPPER_BODY_AREAS, ...LOWER_BODY_AREAS];
+    const bodyParts = [...upperBodyParts, ...lowerBodyParts];
     setSelectedAreas(prev => prev.filter(a => !bodyParts.includes(a as typeof bodyParts[number])));
   };
 
@@ -820,7 +822,7 @@ export default function FindingSoteriaScreen() {
                 {/* Upper Body */}
                 <Text style={styles.bodyRegionTitle}>Upper Body</Text>
                 <View style={styles.bodyPartsGrid}>
-                  {UPPER_BODY_AREAS.map((part) => {
+                  {upperBodyParts.map((part) => {
                     const isSelected = selectedAreas.includes(part);
                     return (
                       <TouchableOpacity
@@ -847,7 +849,7 @@ export default function FindingSoteriaScreen() {
                 {/* Lower Body */}
                 <Text style={styles.bodyRegionTitle}>Lower Body</Text>
                 <View style={styles.bodyPartsGrid}>
-                  {LOWER_BODY_AREAS.map((part) => {
+                  {lowerBodyParts.map((part) => {
                     const isSelected = selectedAreas.includes(part);
                     return (
                       <TouchableOpacity

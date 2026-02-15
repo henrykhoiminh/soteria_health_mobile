@@ -6,6 +6,7 @@ import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider, useAuth } from '@/lib/contexts/AuthContext';
+import { FilterOptionsProvider } from '@/lib/contexts/FilterOptionsContext';
 import WellnessCheckInModal from '@/components/WellnessCheckInModal';
 import MilestoneCelebrationModal from '@/components/MilestoneCelebrationModal';
 import { hasCheckedInToday } from '@/lib/utils/pain-checkin';
@@ -201,8 +202,10 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <AuthProvider>
-        <RootLayoutNav />
-        <StatusBar style="light" />
+        <FilterOptionsProvider>
+          <RootLayoutNav />
+          <StatusBar style="light" />
+        </FilterOptionsProvider>
       </AuthProvider>
     </ThemeProvider>
   );

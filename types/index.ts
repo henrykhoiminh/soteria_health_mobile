@@ -116,6 +116,7 @@ export interface RoutineFilters {
   durationMax?: number
   searchQuery?: string
   isAdvanced?: boolean // Filter for Advanced routines (Harmony required)
+  bodyPart?: string // Filter by body part (e.g., "Neck", "Knee")
 }
 
 export interface RoutineDiscoverParams {
@@ -300,6 +301,25 @@ export const LOWER_BODY_AREAS = [
 ] as const
 
 export type BodyRegion = 'Upper Body' | 'Lower Body' | 'All'
+
+// Dynamic Filter Options (database-driven, replaces hardcoded body parts)
+export interface FilterOption {
+  id: string
+  filter_type: string
+  value: string
+  group_name: string | null
+  group_order: number
+  item_order: number
+  is_enabled: boolean
+  created_by: string | null
+  created_at: string
+}
+
+export interface FilterOptionGroup {
+  group_name: string
+  group_order: number
+  options: FilterOption[]
+}
 
 // Social Features Types
 

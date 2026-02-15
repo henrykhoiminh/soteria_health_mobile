@@ -21,7 +21,7 @@ import {
 import HapticPressable from '@/components/HapticPressable'
 import { Ionicons } from '@expo/vector-icons'
 import type { ExerciseLibraryItem, RoutineCategory, RoutineDifficulty } from '../types'
-import { UPPER_BODY_AREAS, LOWER_BODY_AREAS } from '../types'
+import { useFilterOptions } from '../lib/contexts/FilterOptionsContext'
 import { getExercises, deleteExercise } from '../lib/utils/exercises'
 import { AppColors } from '../constants/theme'
 
@@ -52,6 +52,7 @@ export default function ExerciseLibrary({
   userId,
   isHealthTeam = false,
 }: ExerciseLibraryProps) {
+  const { upperBodyParts, lowerBodyParts } = useFilterOptions();
 
   /**
    * Check if user can edit/delete a specific exercise
@@ -619,7 +620,7 @@ export default function ExerciseLibrary({
 
               {/* Upper Body Section */}
               <Text style={styles.modalSectionHeader}>Upper Body</Text>
-              {UPPER_BODY_AREAS.map((bodyPart) => (
+              {upperBodyParts.map((bodyPart) => (
                 <HapticPressable
                   key={bodyPart}
                   style={[
@@ -648,7 +649,7 @@ export default function ExerciseLibrary({
 
               {/* Lower Body Section */}
               <Text style={styles.modalSectionHeader}>Lower Body</Text>
-              {LOWER_BODY_AREAS.map((bodyPart) => (
+              {lowerBodyParts.map((bodyPart) => (
                 <HapticPressable
                   key={bodyPart}
                   style={[

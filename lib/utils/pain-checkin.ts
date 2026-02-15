@@ -159,15 +159,17 @@ export async function submitPainCheckIn(
  */
 export function getWellnessLevelInfo(score: number): { label: string; color: string } {
   if (score === 0) {
-    return { label: 'No at all', color: '#34C759' } // Green
-  } else if (score <= 3) {
-    return { label: "Barely there", color: '#34C759' } // Green
+    return { label: 'Not at all', color: '#34C759' } // Green
+  } else if (score <= 2) {
+    return { label: 'Barely there', color: '#34C759' } // Green
+  } else if (score <= 4) {
+    return { label: 'Gets in the way', color: '#FFD60A' } // Yellow
   } else if (score <= 6) {
-    return { label: 'Dragging me down', color: '#FFD60A' } // Yellow
+    return { label: 'Dragging me down', color: '#FF9500' } // Orange
   } else if (score <= 9) {
-    return { label: 'Controling my day', color: '#FF9500' } // Orange
+    return { label: 'Controlling my day', color: '#FF3B30' } // Red
   } else {
-    return { label: "Ruining my life", color: '#FF3B30' } // Red
+    return { label: 'Ruining my life', color: '#FF3B30' } // Red
   }
 }
 

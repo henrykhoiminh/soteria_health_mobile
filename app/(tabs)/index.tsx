@@ -406,8 +406,8 @@ export default function DashboardScreen() {
             setShowWellnessCheckIn(false);
             // Show updating animation on pain progress
             setPainStatsUpdating(true);
-            // Refresh dashboard to update pain stats
-            await loadDashboardData();
+            // Silent refresh - don't show full loading spinner
+            await loadDashboardData(false);
             setPainStatsUpdating(false);
           }}
         />

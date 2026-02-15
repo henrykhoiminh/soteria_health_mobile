@@ -37,7 +37,7 @@ import {
 } from '../lib/utils/exercise-media'
 import { createExercise, updateExercise } from '../lib/utils/exercises'
 import type { BodyRegion, ExerciseLibraryItem, RoutineCategory, RoutineDifficulty } from '../types'
-import { LOWER_BODY_AREAS, UPPER_BODY_AREAS } from '../types'
+import { useFilterOptions } from '../lib/contexts/FilterOptionsContext'
 
 interface ExerciseEditorModalProps {
   visible: boolean
@@ -56,6 +56,7 @@ export default function ExerciseEditorModal({
   userId,
   isHealthTeam,
 }: ExerciseEditorModalProps) {
+  const { upperBodyParts, lowerBodyParts } = useFilterOptions();
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [instructions, setInstructions] = useState('')
@@ -407,13 +408,13 @@ export default function ExerciseEditorModal({
     setExistingVideoUrl(null)
   }
 
-  const getFilteredBodyParts = () => {
+  const getFilteredBodyParts = (): readonly string[] => {
     if (bodyRegionFilter === 'Upper Body') {
-      return UPPER_BODY_AREAS
+      return upperBodyParts
     } else if (bodyRegionFilter === 'Lower Body') {
-      return LOWER_BODY_AREAS
+      return lowerBodyParts
     }
-    return [...UPPER_BODY_AREAS, ...LOWER_BODY_AREAS]
+    return [...upperBodyParts, ...lowerBodyParts]
   }
 
   return (

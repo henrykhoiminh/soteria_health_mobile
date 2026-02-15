@@ -1,14 +1,20 @@
-import { useAuth } from '@/lib/contexts/AuthContext';
+import DraggableExerciseList from '@/components/DraggableExerciseList';
+import ExerciseEditorModal from '@/components/ExerciseEditorModal';
+import ExerciseLibrary from '@/components/ExerciseLibrary';
+import FilterOptionsManager from '@/components/FilterOptionsManager';
+import HapticPressable from '@/components/HapticPressable';
 import { AppColors } from '@/constants/theme';
-import { getRoutineById } from '@/lib/utils/dashboard';
+import { useAuth } from '@/lib/contexts/AuthContext';
+import { useFilterOptions } from '@/lib/contexts/FilterOptionsContext';
 import { supabase } from '@/lib/supabase/client';
+import { getRoutineById } from '@/lib/utils/dashboard';
 import {
+  convertToOfficial as convertRoutineToOfficial,
   getAvailableExercises,
+  isHealthTeamMember,
   publishCustomRoutine,
   updateCustomRoutine,
   validateRoutineData,
-  isHealthTeamMember,
-  convertToOfficial as convertRoutineToOfficial,
 } from '@/lib/utils/routine-builder';
 import {
   formatDuration,
@@ -16,21 +22,19 @@ import {
   secondsToMinutesSeconds,
   validateDuration,
 } from '@/lib/utils/time';
+import type { ExerciseLibraryItem } from '@/types';
 import {
+  BodyRegion,
   Exercise,
   JourneyFocusOption,
-  Routine,
   RoutineBuilderData,
   RoutineBuilderExercise,
   RoutineCategory,
-  RoutineDifficulty,
-  UPPER_BODY_AREAS,
-  LOWER_BODY_AREAS,
-  BodyRegion,
+  RoutineDifficulty
 } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -44,18 +48,14 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import HapticPressable from '@/components/HapticPressable';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import DraggableExerciseList from '@/components/DraggableExerciseList';
-import ExerciseLibrary from '@/components/ExerciseLibrary';
-import ExerciseEditorModal from '@/components/ExerciseEditorModal';
-import type { ExerciseLibraryItem } from '@/types';
 
 type BuilderStep = 'exercises' | 'details' | 'review';
-type BuildMode = 'select' | 'routine' | 'exercise';
+type BuildMode = 'select' | 'routine' | 'exercise' | 'manage-filters';
 
 export default function RoutineBuilderScreen() {
   const { user, profile } = useAuth();
+  const { upperBodyParts, lowerBodyParts, refreshFilterOptions } = useFilterOptions();
   const router = useRouter();
   const { editId, customizeId } = useLocalSearchParams<{ editId?: string; customizeId?: string }>();
 
@@ -66,7 +66,7 @@ export default function RoutineBuilderScreen() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingRoutineId, setEditingRoutineId] = useState<string | null>(null);
   const [isEditingOfficialRoutine, setIsEditingOfficialRoutine] = useState(false);
-  const [isHealthTeam, setIsHealthTeam] = useState(false);
+  const isHealthTeam = profile?.role === 'health_team' || profile?.role === 'admin';
   const [checkingHealthTeam, setCheckingHealthTeam] = useState(true); // Loading state for health team check
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [selectedRoutineType, setSelectedRoutineType] = useState<'official' | 'community' | null>(null);
@@ -111,20 +111,10 @@ export default function RoutineBuilderScreen() {
   );
 
   const checkHealthTeamStatus = async () => {
-    if (!user) {
-      setCheckingHealthTeam(false);
-      return;
-    }
-
-    const healthTeamStatus = await isHealthTeamMember(user.id);
-    setIsHealthTeam(healthTeamStatus);
-
     // Skip mode selection when editing or customizing a specific routine
     if (editId || customizeId) {
       setBuildMode('routine');
     }
-    // All users see mode selection screen first
-
     setCheckingHealthTeam(false);
   };
 
@@ -715,7 +705,35 @@ export default function RoutineBuilderScreen() {
             </View>
             <Ionicons name="chevron-forward" size={24} color={AppColors.textSecondary} />
           </HapticPressable>
+
+          {/* Manage Filters - health team only */}
+          {isHealthTeam && (
+            <HapticPressable
+              style={styles.modeCard}
+              onPress={() => setBuildMode('manage-filters')}
+            >
+              <View style={styles.modeIconContainer}>
+                <Ionicons name="options-outline" size={48} color={AppColors.primary} />
+              </View>
+              <View style={styles.modeContent}>
+                <Text style={styles.modeTitle}>Manage Filters</Text>
+                <Text style={styles.modeDescription}>
+                  Edit body parts used for tagging and filtering
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={24} color={AppColors.textSecondary} />
+            </HapticPressable>
+          )}
         </View>
+      </View>
+    );
+  }
+
+  // Manage filters - health team only
+  if (buildMode === 'manage-filters') {
+    return (
+      <View style={styles.container}>
+        <FilterOptionsManager onBack={() => setBuildMode('select')} />
       </View>
     );
   }
@@ -1368,6 +1386,7 @@ function DetailsStep({
   isEditMode?: boolean;
   isHealthTeam?: boolean;
 }) {
+  const { upperBodyParts, lowerBodyParts } = useFilterOptions();
   const [bodyRegionFilter, setBodyRegionFilter] = useState<BodyRegion>('All');
   const [bodyPartsModalVisible, setBodyPartsModalVisible] = useState(false);
   const [currentBenefitInput, setCurrentBenefitInput] = useState('');
@@ -1420,13 +1439,13 @@ function DetailsStep({
     onUpdate({ body_parts: newBodyParts });
   };
 
-  const getFilteredBodyParts = () => {
+  const getFilteredBodyParts = (): readonly string[] => {
     if (bodyRegionFilter === 'Upper Body') {
-      return UPPER_BODY_AREAS;
+      return upperBodyParts;
     } else if (bodyRegionFilter === 'Lower Body') {
-      return LOWER_BODY_AREAS;
+      return lowerBodyParts;
     }
-    return [...UPPER_BODY_AREAS, ...LOWER_BODY_AREAS];
+    return [...upperBodyParts, ...lowerBodyParts];
   };
 
   return (

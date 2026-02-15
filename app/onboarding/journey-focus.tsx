@@ -15,7 +15,8 @@ import { useOnboarding } from '@/lib/contexts/OnboardingContext';
 import SoteriaPresence from './components/SoteriaPresence';
 import SoteriaDialogueBox from './components/SoteriaDialogueBox';
 import { AppColors } from '@/constants/theme';
-import { JourneyFocus, UPPER_BODY_AREAS, LOWER_BODY_AREAS } from '@/types';
+import { JourneyFocus } from '@/types';
+import { useFilterOptions } from '@/lib/contexts/FilterOptionsContext';
 
 // Recovery category definitions
 const RECOVERY_CATEGORIES = [
@@ -45,6 +46,7 @@ const RECOVERY_CATEGORIES = [
 // Screen 3: Journey Focus Selection
 export default function JourneyFocusScreen() {
   const router = useRouter();
+  const { upperBodyParts, lowerBodyParts } = useFilterOptions();
   const { data, setJourneyFocus, setRecoveryAreas } = useOnboarding();
   const [showRecoveryModal, setShowRecoveryModal] = useState(false);
   const [showBodyPartsPicker, setShowBodyPartsPicker] = useState(false);
@@ -67,13 +69,13 @@ export default function JourneyFocusScreen() {
     if (categoryId === 'Mind' || categoryId === 'Soul') {
       return selectedAreas.includes(categoryId);
     }
-    const bodyParts = [...UPPER_BODY_AREAS, ...LOWER_BODY_AREAS];
+    const bodyParts = [...upperBodyParts, ...lowerBodyParts];
     return selectedAreas.some(area => bodyParts.includes(area as typeof bodyParts[number]));
   };
 
   // Get selected body parts
   const getSelectedBodyParts = (): string[] => {
-    const bodyParts = [...UPPER_BODY_AREAS, ...LOWER_BODY_AREAS];
+    const bodyParts = [...upperBodyParts, ...lowerBodyParts];
     return selectedAreas.filter(area => bodyParts.includes(area as typeof bodyParts[number]));
   };
 
@@ -104,7 +106,7 @@ export default function JourneyFocusScreen() {
 
   // Clear all body parts
   const clearBodyParts = () => {
-    const bodyParts = [...UPPER_BODY_AREAS, ...LOWER_BODY_AREAS];
+    const bodyParts = [...upperBodyParts, ...lowerBodyParts];
     setSelectedAreas(prev => prev.filter(a => !bodyParts.includes(a as typeof bodyParts[number])));
   };
 
@@ -360,7 +362,7 @@ export default function JourneyFocusScreen() {
                 {/* Upper Body */}
                 <Text style={styles.bodyRegionTitle}>Upper Body</Text>
                 <View style={styles.bodyPartsGrid}>
-                  {UPPER_BODY_AREAS.map((part) => {
+                  {upperBodyParts.map((part) => {
                     const isSelected = selectedAreas.includes(part);
                     return (
                       <TouchableOpacity
@@ -387,7 +389,7 @@ export default function JourneyFocusScreen() {
                 {/* Lower Body */}
                 <Text style={styles.bodyRegionTitle}>Lower Body</Text>
                 <View style={styles.bodyPartsGrid}>
-                  {LOWER_BODY_AREAS.map((part) => {
+                  {lowerBodyParts.map((part) => {
                     const isSelected = selectedAreas.includes(part);
                     return (
                       <TouchableOpacity

@@ -230,6 +230,10 @@ function buildDiscoverQuery(
     query = query.eq('is_advanced', filters.isAdvanced);
   }
 
+  if (filters.bodyPart) {
+    query = query.contains('body_parts', [filters.bodyPart]);
+  }
+
   // Apply sorting
   switch (sort) {
     case 'popular':

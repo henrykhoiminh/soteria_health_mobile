@@ -25,6 +25,7 @@ import {
   HarmonyStatus,
 } from '@/types';
 import { useAuth } from '@/lib/contexts/AuthContext';
+import { useFilterOptions } from '@/lib/contexts/FilterOptionsContext';
 import {
   getDiscoverRoutines,
   getSavedRoutines,
@@ -40,12 +41,6 @@ import RoutineAuthorBadge from '@/components/RoutineAuthorBadge';
 const CATEGORIES: RoutineCategory[] = ['Mind', 'Body', 'Soul'];
 const DIFFICULTIES: RoutineDifficulty[] = ['Beginner', 'Intermediate', 'Advanced'];
 const JOURNEY_FOCUSES: JourneyFocus[] = ['Injury Prevention', 'Recovery'];
-const SOURCE_FILTERS: { value: RoutineSourceFilter; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'official', label: 'Official' },
-  { value: 'community', label: 'Community' },
-];
-
 type TabType = 'discover' | 'my-routines';
 
 export default function RoutinesScreen() {
@@ -123,6 +118,7 @@ export default function RoutinesScreen() {
 // =====================================================
 
 function DiscoverTab({ userId, initialCategory, isInHarmony }: { userId: string; initialCategory?: RoutineCategory; isInHarmony: boolean }) {
+  const { upperBodyParts, lowerBodyParts } = useFilterOptions();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -132,8 +128,14 @@ function DiscoverTab({ userId, initialCategory, isInHarmony }: { userId: string;
   const [filters, setFilters] = useState<RoutineFilters>(
     initialCategory ? { category: initialCategory } : {}
   );
-  const [showFilterModal, setShowFilterModal] = useState(false);
+
+  // Individual dropdown modal states
   const [showSortModal, setShowSortModal] = useState(false);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [showDifficultyModal, setShowDifficultyModal] = useState(false);
+  const [showSourceModal, setShowSourceModal] = useState(false);
+  const [showJourneyModal, setShowJourneyModal] = useState(false);
+  const [showBodyPartModal, setShowBodyPartModal] = useState(false);
 
   // Update filters when initialCategory changes (e.g., navigating from dashboard)
   useEffect(() => {
@@ -202,13 +204,6 @@ function DiscoverTab({ userId, initialCategory, isInHarmony }: { userId: string;
     }
   };
 
-  const clearFilters = () => {
-    setFilters({});
-    setSearchQuery('');
-  };
-
-  const hasActiveFilters = Object.keys(filters).length > 0 || searchQuery.length > 0;
-
   if (loading && !refreshing) {
     return (
       <View style={styles.loadingContainer}>
@@ -240,85 +235,150 @@ function DiscoverTab({ userId, initialCategory, isInHarmony }: { userId: string;
         </View>
       </View>
 
-      {/* Sort and Filter Bar */}
-      <View style={styles.filterBar}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterChipsScroll}>
-          {/* Sort Dropdown */}
-          <HapticPressable
-            hapticStyle="selection"
-            style={[styles.filterChip, styles.sortChip]}
-            onPress={() => setShowSortModal(true)}
-          >
-            <Ionicons name="swap-vertical" size={16} color={AppColors.textPrimary} />
-            <Text style={styles.filterChipText}>
-              {sortBy === 'popular' && 'Popular'}
-              {sortBy === 'trending' && 'Trending'}
-              {sortBy === 'newest' && 'Newest'}
-              {sortBy === 'most_saved' && 'Most Saved'}
-            </Text>
-            <Ionicons name="chevron-down" size={14} color={AppColors.textSecondary} />
-          </HapticPressable>
+      {/* Filter Dropdowns - Horizontal Carousel */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.filtersScrollView}
+        contentContainerStyle={styles.filtersScrollViewContent}
+      >
+        {/* Sort Dropdown */}
+        <HapticPressable
+          hapticStyle="selection"
+          style={[styles.filterChip]}
+          onPress={() => setShowSortModal(true)}
+        >
+          <Ionicons name="swap-vertical" size={16} color={AppColors.textSecondary} />
+          <Text style={styles.filterChipText}>
+            {sortBy === 'popular' ? 'Popular' :
+             sortBy === 'trending' ? 'Trending' :
+             sortBy === 'newest' ? 'Newest' : 'Most Saved'}
+          </Text>
+          <Ionicons name="chevron-down" size={14} color={AppColors.textSecondary} />
+        </HapticPressable>
 
-          {/* Filter Button */}
-          <HapticPressable
-            hapticStyle="selection"
-            style={[styles.filterChip, hasActiveFilters && styles.filterChipActive]}
-            onPress={() => setShowFilterModal(true)}
-          >
-            <Ionicons
-              name="filter"
-              size={16}
-              color={hasActiveFilters ? AppColors.textPrimary : AppColors.textSecondary}
-            />
-            <Text style={[styles.filterChipText, hasActiveFilters && styles.filterChipTextActive]}>
-              Filters {hasActiveFilters && `(${Object.keys(filters).length})`}
-            </Text>
-          </HapticPressable>
+        {/* Category Dropdown */}
+        <HapticPressable
+          hapticStyle="selection"
+          style={[styles.filterChip, filters.category && styles.filterChipActive]}
+          onPress={() => setShowCategoryModal(true)}
+        >
+          <Ionicons
+            name="apps-outline"
+            size={16}
+            color={filters.category ? AppColors.primary : AppColors.textSecondary}
+          />
+          <Text style={[styles.filterChipText, filters.category && styles.filterChipTextActive]}>
+            {filters.category || 'All Categories'}
+          </Text>
+          <Ionicons
+            name="chevron-down"
+            size={14}
+            color={filters.category ? AppColors.primary : AppColors.textSecondary}
+          />
+        </HapticPressable>
 
-          {/* Active Filter Chips */}
-          {filters.category && (
-            <View style={[styles.filterChip, styles.activeFilterChip]}>
-              <Text style={styles.activeFilterText}>{filters.category}</Text>
-              <HapticPressable onPress={() => setFilters({ ...filters, category: undefined })}>
-                <Ionicons name="close-circle" size={16} color={AppColors.primary} />
-              </HapticPressable>
-            </View>
-          )}
-          {filters.difficulty && (
-            <View style={[styles.filterChip, styles.activeFilterChip]}>
-              <Text style={styles.activeFilterText}>{filters.difficulty}</Text>
-              <HapticPressable onPress={() => setFilters({ ...filters, difficulty: undefined })}>
-                <Ionicons name="close-circle" size={16} color={AppColors.primary} />
-              </HapticPressable>
-            </View>
-          )}
-          {filters.source && filters.source !== 'all' && (
-            <View style={[styles.filterChip, styles.activeFilterChip]}>
-              <Text style={styles.activeFilterText}>
-                {filters.source === 'official' ? 'Official' : 'Community'}
-              </Text>
-              <HapticPressable onPress={() => setFilters({ ...filters, source: undefined })}>
-                <Ionicons name="close-circle" size={16} color={AppColors.primary} />
-              </HapticPressable>
-            </View>
-          )}
-          {filters.isAdvanced && (
-            <View style={[styles.filterChip, styles.advancedFilterChip]}>
-              <Ionicons name="sparkles" size={14} color="#F59E0B" />
-              <Text style={styles.advancedFilterText}>Advanced</Text>
-              <HapticPressable onPress={() => setFilters({ ...filters, isAdvanced: undefined })}>
-                <Ionicons name="close-circle" size={16} color="#F59E0B" />
-              </HapticPressable>
-            </View>
-          )}
-        </ScrollView>
+        {/* Difficulty Dropdown */}
+        <HapticPressable
+          hapticStyle="selection"
+          style={[styles.filterChip, filters.difficulty && styles.filterChipActive]}
+          onPress={() => setShowDifficultyModal(true)}
+        >
+          <Ionicons
+            name="speedometer-outline"
+            size={16}
+            color={filters.difficulty ? AppColors.primary : AppColors.textSecondary}
+          />
+          <Text style={[styles.filterChipText, filters.difficulty && styles.filterChipTextActive]}>
+            {filters.difficulty || 'All Levels'}
+          </Text>
+          <Ionicons
+            name="chevron-down"
+            size={14}
+            color={filters.difficulty ? AppColors.primary : AppColors.textSecondary}
+          />
+        </HapticPressable>
 
-        {hasActiveFilters && (
-          <HapticPressable style={styles.clearFiltersButton} onPress={clearFilters}>
-            <Text style={styles.clearFiltersText}>Clear</Text>
-          </HapticPressable>
-        )}
-      </View>
+        {/* Source Dropdown */}
+        <HapticPressable
+          hapticStyle="selection"
+          style={[styles.filterChip, (filters.source && filters.source !== 'all') && styles.filterChipActive]}
+          onPress={() => setShowSourceModal(true)}
+        >
+          <Ionicons
+            name="people-outline"
+            size={16}
+            color={(filters.source && filters.source !== 'all') ? AppColors.primary : AppColors.textSecondary}
+          />
+          <Text style={[styles.filterChipText, (filters.source && filters.source !== 'all') && styles.filterChipTextActive]}>
+            {!filters.source || filters.source === 'all' ? 'All Sources' :
+             filters.source === 'official' ? 'Official' : 'Community'}
+          </Text>
+          <Ionicons
+            name="chevron-down"
+            size={14}
+            color={(filters.source && filters.source !== 'all') ? AppColors.primary : AppColors.textSecondary}
+          />
+        </HapticPressable>
+
+        {/* Journey Focus Dropdown */}
+        <HapticPressable
+          hapticStyle="selection"
+          style={[styles.filterChip, filters.journeyFocus && styles.filterChipActive]}
+          onPress={() => setShowJourneyModal(true)}
+        >
+          <Ionicons
+            name="compass-outline"
+            size={16}
+            color={filters.journeyFocus ? AppColors.primary : AppColors.textSecondary}
+          />
+          <Text style={[styles.filterChipText, filters.journeyFocus && styles.filterChipTextActive]}>
+            {filters.journeyFocus || 'All Journeys'}
+          </Text>
+          <Ionicons
+            name="chevron-down"
+            size={14}
+            color={filters.journeyFocus ? AppColors.primary : AppColors.textSecondary}
+          />
+        </HapticPressable>
+
+        {/* Body Part Dropdown */}
+        <HapticPressable
+          hapticStyle="selection"
+          style={[styles.filterChip, filters.bodyPart && styles.filterChipActive]}
+          onPress={() => setShowBodyPartModal(true)}
+        >
+          <Ionicons
+            name="body-outline"
+            size={16}
+            color={filters.bodyPart ? AppColors.primary : AppColors.textSecondary}
+          />
+          <Text style={[styles.filterChipText, filters.bodyPart && styles.filterChipTextActive]}>
+            {filters.bodyPart || 'All Body Parts'}
+          </Text>
+          <Ionicons
+            name="chevron-down"
+            size={14}
+            color={filters.bodyPart ? AppColors.primary : AppColors.textSecondary}
+          />
+        </HapticPressable>
+
+        {/* Harmony Toggle */}
+        <HapticPressable
+          hapticStyle="selection"
+          style={[styles.filterChip, filters.isAdvanced && styles.harmonyChipActive]}
+          onPress={() => setFilters({ ...filters, isAdvanced: filters.isAdvanced ? undefined : true })}
+        >
+          <Ionicons
+            name="sparkles"
+            size={16}
+            color={filters.isAdvanced ? '#F59E0B' : AppColors.textSecondary}
+          />
+          <Text style={[styles.filterChipText, filters.isAdvanced && { color: '#F59E0B', fontWeight: '600' as const }]}>
+            Harmony
+          </Text>
+        </HapticPressable>
+      </ScrollView>
 
       {/* Routines List */}
       <ScrollView
@@ -344,17 +404,6 @@ function DiscoverTab({ userId, initialCategory, isInHarmony }: { userId: string;
         )}
       </ScrollView>
 
-      {/* Filter Modal */}
-      <FilterModal
-        visible={showFilterModal}
-        filters={filters}
-        onApply={(newFilters) => {
-          setFilters(newFilters);
-          setShowFilterModal(false);
-        }}
-        onClose={() => setShowFilterModal(false)}
-      />
-
       {/* Sort Modal */}
       <SortModal
         visible={showSortModal}
@@ -365,6 +414,174 @@ function DiscoverTab({ userId, initialCategory, isInHarmony }: { userId: string;
         }}
         onClose={() => setShowSortModal(false)}
       />
+
+      {/* Category Modal */}
+      <FilterDropdownModal
+        visible={showCategoryModal}
+        title="Select Category"
+        options={[
+          { value: undefined, label: 'All Categories' },
+          ...CATEGORIES.map(c => ({ value: c, label: c })),
+        ]}
+        selected={filters.category}
+        onSelect={(value) => {
+          setFilters({ ...filters, category: value as RoutineCategory | undefined });
+          setShowCategoryModal(false);
+        }}
+        onClose={() => setShowCategoryModal(false)}
+      />
+
+      {/* Difficulty Modal */}
+      <FilterDropdownModal
+        visible={showDifficultyModal}
+        title="Select Difficulty"
+        options={[
+          { value: undefined, label: 'All Levels' },
+          ...DIFFICULTIES.map(d => ({ value: d, label: d })),
+        ]}
+        selected={filters.difficulty}
+        onSelect={(value) => {
+          setFilters({ ...filters, difficulty: value as RoutineDifficulty | undefined });
+          setShowDifficultyModal(false);
+        }}
+        onClose={() => setShowDifficultyModal(false)}
+      />
+
+      {/* Source Modal */}
+      <FilterDropdownModal
+        visible={showSourceModal}
+        title="Source"
+        options={[
+          { value: 'all', label: 'All Sources' },
+          { value: 'official', label: 'Official' },
+          { value: 'community', label: 'Community' },
+        ]}
+        selected={filters.source || 'all'}
+        onSelect={(value) => {
+          setFilters({ ...filters, source: value as RoutineSourceFilter });
+          setShowSourceModal(false);
+        }}
+        onClose={() => setShowSourceModal(false)}
+      />
+
+      {/* Journey Focus Modal */}
+      <FilterDropdownModal
+        visible={showJourneyModal}
+        title="Journey Focus"
+        options={[
+          { value: undefined, label: 'All Journeys' },
+          ...JOURNEY_FOCUSES.map(f => ({ value: f, label: f })),
+        ]}
+        selected={filters.journeyFocus}
+        onSelect={(value) => {
+          setFilters({ ...filters, journeyFocus: value as JourneyFocus | undefined });
+          setShowJourneyModal(false);
+        }}
+        onClose={() => setShowJourneyModal(false)}
+      />
+
+      {/* Body Part Modal */}
+      <Modal
+        visible={showBodyPartModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowBodyPartModal(false)}
+      >
+        <HapticPressable
+          hapticStyle="none"
+          style={styles.dropdownOverlay}
+          activeOpacity={1}
+          onPress={() => setShowBodyPartModal(false)}
+        >
+          <View style={styles.dropdownContent}>
+            <Text style={styles.dropdownTitle}>Select Body Part</Text>
+            <ScrollView>
+              {/* All option */}
+              <HapticPressable
+                style={[
+                  styles.dropdownOption,
+                  !filters.bodyPart && styles.dropdownOptionActive,
+                ]}
+                hapticStyle="selection"
+                onPress={() => {
+                  setFilters({ ...filters, bodyPart: undefined });
+                  setShowBodyPartModal(false);
+                }}
+              >
+                <Text
+                  style={[
+                    styles.dropdownOptionText,
+                    !filters.bodyPart && styles.dropdownOptionTextActive,
+                  ]}
+                >
+                  All Body Parts
+                </Text>
+                {!filters.bodyPart && (
+                  <Ionicons name="checkmark" size={20} color={AppColors.primary} />
+                )}
+              </HapticPressable>
+
+              {/* Upper Body Section */}
+              <Text style={styles.dropdownSectionHeader}>Upper Body</Text>
+              {upperBodyParts.map((bodyPart) => (
+                <HapticPressable
+                  key={bodyPart}
+                  style={[
+                    styles.dropdownOption,
+                    filters.bodyPart === bodyPart && styles.dropdownOptionActive,
+                  ]}
+                  hapticStyle="selection"
+                  onPress={() => {
+                    setFilters({ ...filters, bodyPart });
+                    setShowBodyPartModal(false);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.dropdownOptionText,
+                      filters.bodyPart === bodyPart && styles.dropdownOptionTextActive,
+                    ]}
+                  >
+                    {bodyPart}
+                  </Text>
+                  {filters.bodyPart === bodyPart && (
+                    <Ionicons name="checkmark" size={20} color={AppColors.primary} />
+                  )}
+                </HapticPressable>
+              ))}
+
+              {/* Lower Body Section */}
+              <Text style={styles.dropdownSectionHeader}>Lower Body</Text>
+              {lowerBodyParts.map((bodyPart) => (
+                <HapticPressable
+                  key={bodyPart}
+                  style={[
+                    styles.dropdownOption,
+                    filters.bodyPart === bodyPart && styles.dropdownOptionActive,
+                  ]}
+                  hapticStyle="selection"
+                  onPress={() => {
+                    setFilters({ ...filters, bodyPart });
+                    setShowBodyPartModal(false);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.dropdownOptionText,
+                      filters.bodyPart === bodyPart && styles.dropdownOptionTextActive,
+                    ]}
+                  >
+                    {bodyPart}
+                  </Text>
+                  {filters.bodyPart === bodyPart && (
+                    <Ionicons name="checkmark" size={20} color={AppColors.primary} />
+                  )}
+                </HapticPressable>
+              ))}
+            </ScrollView>
+          </View>
+        </HapticPressable>
+      </Modal>
     </View>
   );
 }
@@ -773,269 +990,66 @@ function RoutineCard({
 }
 
 // =====================================================
-// FILTER MODAL
+// FILTER DROPDOWN MODAL (Reusable)
 // =====================================================
 
-interface FilterModalProps {
+interface FilterDropdownOption {
+  value: string | undefined;
+  label: string;
+}
+
+interface FilterDropdownModalProps {
   visible: boolean;
-  filters: RoutineFilters;
-  onApply: (filters: RoutineFilters) => void;
+  title: string;
+  options: FilterDropdownOption[];
+  selected: string | undefined;
+  onSelect: (value: string | undefined) => void;
   onClose: () => void;
 }
 
-function FilterModal({ visible, filters, onApply, onClose }: FilterModalProps) {
-  const [localFilters, setLocalFilters] = useState<RoutineFilters>(filters);
-
-  useEffect(() => {
-    setLocalFilters(filters);
-  }, [filters]);
-
-  const handleApply = () => {
-    onApply(localFilters);
-  };
-
-  const handleReset = () => {
-    setLocalFilters({});
-  };
-
-  const getCategoryColor = (category: RoutineCategory): string => {
-    switch (category) {
-      case 'Mind':
-        return AppColors.mind;
-      case 'Body':
-        return AppColors.body;
-      case 'Soul':
-        return AppColors.soul;
-      default:
-        return AppColors.primary;
-    }
-  };
-
+function FilterDropdownModal({ visible, title, options, selected, onSelect, onClose }: FilterDropdownModalProps) {
   return (
     <Modal
       visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
+      transparent
+      animationType="fade"
       onRequestClose={onClose}
     >
-      <View style={styles.modalContainer}>
-        <View style={styles.modalHeader}>
-          <HapticPressable onPress={onClose}>
-            <Ionicons name="close" size={28} color={AppColors.textPrimary} />
-          </HapticPressable>
-          <Text style={styles.modalTitle}>Filter Routines</Text>
-          <HapticPressable onPress={handleReset}>
-            <Text style={styles.resetText}>Reset</Text>
-          </HapticPressable>
-        </View>
-
-        <ScrollView style={styles.modalContent}>
-          {/* Category Filter */}
-          <Text style={styles.filterSectionTitle}>Category</Text>
-          <View style={styles.filterOptions}>
-            {CATEGORIES.map((category) => {
-              const isSelected = localFilters.category === category;
-              const categoryColor = getCategoryColor(category);
-              return (
-                <HapticPressable
-                  hapticStyle="selection"
-                  key={category}
-                  style={[
-                    styles.filterOption,
-                    isSelected && {
-                      backgroundColor: categoryColor,
-                      borderColor: categoryColor,
-                    },
-                  ]}
-                  onPress={() =>
-                    setLocalFilters({
-                      ...localFilters,
-                      category: isSelected ? undefined : category,
-                    })
-                  }
-                >
-                  <Text
-                    style={[
-                      styles.filterOptionText,
-                      isSelected && styles.filterOptionTextActive,
-                    ]}
-                  >
-                    {category}
-                  </Text>
-                </HapticPressable>
-              );
-            })}
-          </View>
-
-          {/* Difficulty Filter */}
-          <Text style={styles.filterSectionTitle}>Difficulty</Text>
-          <View style={styles.filterOptions}>
-            {DIFFICULTIES.map((difficulty) => (
+      <HapticPressable
+        hapticStyle="none"
+        style={styles.dropdownOverlay}
+        activeOpacity={1}
+        onPress={onClose}
+      >
+        <View style={styles.dropdownContent}>
+          <Text style={styles.dropdownTitle}>{title}</Text>
+          <ScrollView>
+            {options.map((option) => (
               <HapticPressable
-                hapticStyle="selection"
-                key={difficulty}
+                key={option.value || 'all'}
                 style={[
-                  styles.filterOption,
-                  localFilters.difficulty === difficulty && styles.filterOptionActive,
+                  styles.dropdownOption,
+                  selected === option.value && styles.dropdownOptionActive,
                 ]}
-                onPress={() =>
-                  setLocalFilters({
-                    ...localFilters,
-                    difficulty: localFilters.difficulty === difficulty ? undefined : difficulty,
-                  })
-                }
+                hapticStyle="selection"
+                onPress={() => onSelect(option.value)}
               >
                 <Text
                   style={[
-                    styles.filterOptionText,
-                    localFilters.difficulty === difficulty && styles.filterOptionTextActive,
+                    styles.dropdownOptionText,
+                    selected === option.value && styles.dropdownOptionTextActive,
                   ]}
                 >
-                  {difficulty}
+                  {option.label}
                 </Text>
+                {selected === option.value && (
+                  <Ionicons name="checkmark" size={20} color={AppColors.primary} />
+                )}
               </HapticPressable>
             ))}
-          </View>
-
-          {/* Journey Focus Filter */}
-          <Text style={styles.filterSectionTitle}>Journey Focus</Text>
-          <View style={styles.filterOptions}>
-            {JOURNEY_FOCUSES.map((focus) => (
-              <HapticPressable
-                hapticStyle="selection"
-                key={focus}
-                style={[
-                  styles.filterOption,
-                  localFilters.journeyFocus === focus && styles.filterOptionActive,
-                ]}
-                onPress={() =>
-                  setLocalFilters({
-                    ...localFilters,
-                    journeyFocus: localFilters.journeyFocus === focus ? undefined : focus,
-                  })
-                }
-              >
-                <Text
-                  style={[
-                    styles.filterOptionText,
-                    localFilters.journeyFocus === focus && styles.filterOptionTextActive,
-                  ]}
-                >
-                  {focus}
-                </Text>
-              </HapticPressable>
-            ))}
-          </View>
-
-          {/* Source Filter */}
-          <Text style={styles.filterSectionTitle}>Source</Text>
-          <View style={styles.filterOptions}>
-            <HapticPressable
-              hapticStyle="selection"
-              style={[
-                styles.filterOption,
-                (!localFilters.source || localFilters.source === 'all') && styles.filterOptionActive,
-              ]}
-              onPress={() => setLocalFilters({ ...localFilters, source: 'all' })}
-            >
-              <Text
-                style={[
-                  styles.filterOptionText,
-                  (!localFilters.source || localFilters.source === 'all') &&
-                    styles.filterOptionTextActive,
-                ]}
-              >
-                All
-              </Text>
-            </HapticPressable>
-            <HapticPressable
-              hapticStyle="selection"
-              style={[
-                styles.filterOption,
-                localFilters.source === 'official' && styles.filterOptionActive,
-              ]}
-              onPress={() => setLocalFilters({ ...localFilters, source: 'official' })}
-            >
-              <Text
-                style={[
-                  styles.filterOptionText,
-                  localFilters.source === 'official' && styles.filterOptionTextActive,
-                ]}
-              >
-                Official
-              </Text>
-            </HapticPressable>
-            <HapticPressable
-              hapticStyle="selection"
-              style={[
-                styles.filterOption,
-                localFilters.source === 'community' && styles.filterOptionActive,
-              ]}
-              onPress={() => setLocalFilters({ ...localFilters, source: 'community' })}
-            >
-              <Text
-                style={[
-                  styles.filterOptionText,
-                  localFilters.source === 'community' && styles.filterOptionTextActive,
-                ]}
-              >
-                Community
-              </Text>
-            </HapticPressable>
-          </View>
-
-          {/* Advanced Filter (Harmony Required) */}
-          <Text style={styles.filterSectionTitle}>Harmony</Text>
-          <HapticPressable
-            hapticStyle="selection"
-            style={[
-              styles.advancedFilterOption,
-              localFilters.isAdvanced && styles.advancedFilterOptionActive,
-            ]}
-            onPress={() =>
-              setLocalFilters({
-                ...localFilters,
-                isAdvanced: localFilters.isAdvanced ? undefined : true,
-              })
-            }
-          >
-            <View style={styles.advancedFilterContent}>
-              <Ionicons
-                name="sparkles"
-                size={20}
-                color={localFilters.isAdvanced ? '#FFFFFF' : '#F59E0B'}
-              />
-              <View style={styles.advancedFilterTextContent}>
-                <Text
-                  style={[
-                    styles.advancedFilterLabel,
-                    localFilters.isAdvanced && styles.advancedFilterLabelActive,
-                  ]}
-                >
-                  Advanced Routines
-                </Text>
-                <Text
-                  style={[
-                    styles.advancedFilterDescription,
-                    localFilters.isAdvanced && styles.advancedFilterDescriptionActive,
-                  ]}
-                >
-                  Show only routines that require Harmony
-                </Text>
-              </View>
-            </View>
-            {localFilters.isAdvanced && (
-              <Ionicons name="checkmark-circle" size={24} color="#FFFFFF" />
-            )}
-          </HapticPressable>
-        </ScrollView>
-
-        <View style={styles.modalFooter}>
-          <HapticPressable style={styles.applyButton} onPress={handleApply}>
-            <Text style={styles.applyButtonText}>Apply Filters</Text>
-          </HapticPressable>
+          </ScrollView>
         </View>
-      </View>
+      </HapticPressable>
     </Modal>
   );
 }
@@ -1143,32 +1157,35 @@ const styles = StyleSheet.create({
     color: AppColors.textPrimary,
     padding: 0,
   },
-  filterBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  filtersScrollView: {
+    flexGrow: 0,
+    flexShrink: 0,
     backgroundColor: AppColors.surface,
-    paddingVertical: 10,
-    paddingLeft: 16,
     borderBottomWidth: 1,
     borderBottomColor: AppColors.borderLight,
+    minHeight: 52,
   },
-  filterChipsScroll: {
-    flex: 1,
+  filtersScrollViewContent: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    paddingRight: 8,
   },
   filterChip: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+    flexGrow: 0,
     gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    height: 40,
+    paddingHorizontal: 14,
     marginRight: 8,
-    borderRadius: 16,
+    borderRadius: 20,
     backgroundColor: AppColors.surfaceSecondary,
     borderWidth: 1,
     borderColor: AppColors.border,
-  },
-  sortChip: {
-    backgroundColor: AppColors.surface,
   },
   filterChipActive: {
     backgroundColor: AppColors.lightGold,
@@ -1178,26 +1195,16 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
     color: AppColors.textSecondary,
+    flexShrink: 0,
+    lineHeight: 18,
   },
   filterChipTextActive: {
     color: AppColors.primary,
-  },
-  activeFilterChip: {
-    backgroundColor: AppColors.lightGold,
-    borderColor: AppColors.primary,
-  },
-  activeFilterText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: AppColors.primary,
-  },
-  clearFiltersButton: {
-    paddingHorizontal: 16,
-  },
-  clearFiltersText: {
-    fontSize: 14,
     fontWeight: '600',
-    color: AppColors.primary,
+  },
+  harmonyChipActive: {
+    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    borderColor: '#F59E0B',
   },
   content: {
     flex: 1,
@@ -1410,93 +1417,6 @@ const styles = StyleSheet.create({
   saveButton: {
     padding: 4,
   },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: AppColors.background,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    paddingTop: 60,
-    backgroundColor: AppColors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: AppColors.borderLight,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: AppColors.textPrimary,
-  },
-  resetText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: AppColors.primary,
-  },
-  modalContent: {
-    flex: 1,
-    padding: 20,
-  },
-  filterSectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: AppColors.textPrimary,
-    marginTop: 16,
-    marginBottom: 12,
-  },
-  filterOptions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  filterOption: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    backgroundColor: AppColors.surface,
-    borderWidth: 1,
-    borderColor: AppColors.border,
-  },
-  filterOptionActive: {
-    backgroundColor: AppColors.primary,
-    borderColor: AppColors.primary,
-  },
-  filterOptionText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: AppColors.textSecondary,
-  },
-  filterOptionTextActive: {
-    color: AppColors.textPrimary,
-  },
-  modalFooter: {
-    padding: 20,
-    backgroundColor: AppColors.surface,
-    borderTopWidth: 1,
-    borderTopColor: AppColors.borderLight,
-  },
-  applyButton: {
-    backgroundColor: AppColors.primary,
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  applyButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: AppColors.textPrimary,
-  },
-  // Advanced filter styles for filter chips
-  advancedFilterChip: {
-    backgroundColor: 'rgba(245, 158, 11, 0.15)',
-    borderColor: '#F59E0B',
-  },
-  advancedFilterText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#F59E0B',
-  },
   // Locked routine card styles
   routineCardLocked: {
     opacity: 0.85,
@@ -1527,45 +1447,57 @@ const styles = StyleSheet.create({
   routineNameLocked: {
     color: AppColors.textSecondary,
   },
-  // Advanced filter option in modal
-  advancedFilterOption: {
+  // Dropdown modal styles (shared by filter dropdowns)
+  dropdownOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  dropdownContent: {
+    backgroundColor: AppColors.surface,
+    borderRadius: 16,
+    width: '100%',
+    maxWidth: 320,
+    maxHeight: '50%',
+    padding: 16,
+  },
+  dropdownTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: AppColors.textPrimary,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  dropdownOption: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
-    backgroundColor: 'rgba(245, 158, 11, 0.08)',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(245, 158, 11, 0.2)',
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    borderRadius: 8,
   },
-  advancedFilterOptionActive: {
-    backgroundColor: '#F59E0B',
-    borderColor: '#F59E0B',
+  dropdownOptionActive: {
+    backgroundColor: AppColors.primary + '15',
   },
-  advancedFilterContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    flex: 1,
+  dropdownOptionText: {
+    fontSize: 16,
+    color: AppColors.textPrimary,
   },
-  advancedFilterTextContent: {
-    flex: 1,
-  },
-  advancedFilterLabel: {
-    fontSize: 15,
+  dropdownOptionTextActive: {
+    color: AppColors.primary,
     fontWeight: '600',
-    color: '#F59E0B',
-    marginBottom: 2,
   },
-  advancedFilterLabelActive: {
-    color: '#FFFFFF',
-  },
-  advancedFilterDescription: {
+  dropdownSectionHeader: {
     fontSize: 13,
+    fontWeight: '600',
     color: AppColors.textSecondary,
-  },
-  advancedFilterDescriptionActive: {
-    color: 'rgba(255, 255, 255, 0.8)',
+    paddingHorizontal: 12,
+    paddingTop: 16,
+    paddingBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   // Sort Modal styles
   sortModalOverlay: {
