@@ -30,6 +30,7 @@ import {
   ActivityFeedItem,
   CircleInvitation,
 } from '@/types';
+import { getLevelFromXp } from '@/lib/utils/leveling';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import ActivityCard from '@/components/ActivityCard';
@@ -367,9 +368,16 @@ function FriendsTab({ userId, onRefresh }: { userId: string; onRefresh: () => vo
                   {user.full_name && user.username && (
                     <Text style={styles.userRealName}>{user.full_name}</Text>
                   )}
-                  <Text style={styles.userMeta}>
-                    {user.journey_focus || 'New User'}
-                  </Text>
+                  <View style={styles.userMetaRow}>
+                    <Text style={styles.userMeta}>
+                      {user.journey_focus || 'New User'}
+                    </Text>
+                    {(user.total_xp ?? 0) > 0 && (
+                      <Text style={styles.levelBadge}>
+                        Lv.{getLevelFromXp(user.total_xp ?? 0).level}
+                      </Text>
+                    )}
+                  </View>
                 </View>
                 <View style={styles.userActions}>
                   {/* Health Team Invite Button (only for health_team/admin viewing non-health_team users) */}
@@ -1079,9 +1087,19 @@ const styles = StyleSheet.create({
     color: AppColors.textSecondary,
     marginBottom: 2,
   },
+  userMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   userMeta: {
     fontSize: 13,
     color: AppColors.textSecondary,
+  },
+  levelBadge: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: AppColors.primary,
   },
   addButton: {
     padding: 8,

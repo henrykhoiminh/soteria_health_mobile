@@ -188,6 +188,11 @@ export interface UserStats {
   // Deprecated fields (still in DB but no longer used)
   health_score?: number
   harmony_score?: number
+  // Leveling System: XP tracking
+  total_xp: number
+  mind_xp: number
+  body_xp: number
+  soul_xp: number
 }
 
 // Avatar Light States (Phase 2)
@@ -450,6 +455,34 @@ export interface UserSearchResult {
   friendship_status?: FriendshipStatus | null
   match_score?: number
   role?: UserRole
+  total_xp?: number
+}
+
+// Leveling System Types
+export interface LevelInfo {
+  level: number
+  currentXp: number
+  xpForNextLevel: number
+  progress: number // 0-1 float
+  title: string
+}
+
+export interface CategoryLevelInfo extends LevelInfo {
+  category: RoutineCategory
+}
+
+export interface UserLevelSummary {
+  soteria: LevelInfo
+  mind: CategoryLevelInfo
+  body: CategoryLevelInfo
+  soul: CategoryLevelInfo
+}
+
+export interface LevelUpInfo {
+  category: 'soteria' | RoutineCategory
+  oldLevel: number
+  newLevel: number
+  newTitle: string
 }
 
 // Pain Check-In Types (Mind/Body/Soul Wellness System)

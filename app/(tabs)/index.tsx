@@ -1,5 +1,6 @@
 import Avatar from '@/components/Avatar';
 import CompletedRoutinesModal from '@/components/CompletedRoutinesModal';
+import HapticPressable from '@/components/HapticPressable';
 import HarmonyModal from '@/components/HarmonyModal';
 import JourneyFocusModal from '@/components/JourneyFocusModal';
 import PainProgressChart from '@/components/PainProgressChart';
@@ -9,16 +10,17 @@ import WellnessCheckInModal from '@/components/WellnessCheckInModal';
 import { AppColors } from '@/constants/theme';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { getCategoryRecommendation, getTodayProgress, getUniqueCompletedRoutines, getUserStats } from '@/lib/utils/dashboard';
+import { clearDashboardCache, getDashboardCache } from '@/lib/utils/dashboard-cache';
 import { checkHarmonyRequirements } from '@/lib/utils/harmony';
+import { hasPendingInvitation, sendHealthTeamInvitation } from '@/lib/utils/health-team';
+import { getUserLevelSummary } from '@/lib/utils/leveling';
 import { getPainCheckInHistory, getPainLevelInfo, getPainStatistics, getPainTrendInfo } from '@/lib/utils/pain-checkin';
-import { getFormattedFriendActivity } from '@/lib/utils/social';
+import { getFormattedFriendActivity, searchUsers } from '@/lib/utils/social';
 import { getAllAvatarStates } from '@/lib/utils/stats';
 import { getDisplayName } from '@/lib/utils/username';
-import { searchUsers } from '@/lib/utils/social';
-import { sendHealthTeamInvitation, hasPendingInvitation } from '@/lib/utils/health-team';
-import { getDashboardCache, clearDashboardCache } from '@/lib/utils/dashboard-cache';
-import { ActivityFeedItem, AvatarState, DailyProgress, HarmonyStatus, PainCheckIn, PainStatistics, Routine, RoutineCategory, UserStats, UserSearchResult } from '@/types';
+import { ActivityFeedItem, AvatarState, CategoryLevelInfo, DailyProgress, HarmonyStatus, PainCheckIn, PainStatistics, Routine, RoutineCategory, UserSearchResult, UserStats } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -33,8 +35,6 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import HapticPressable from '@/components/HapticPressable';
-import { LinearGradient } from 'expo-linear-gradient';
 
 export default function DashboardScreen() {
   const { user, profile, refreshProfile } = useAuth();
@@ -58,6 +58,8 @@ export default function DashboardScreen() {
   const [recommendationSubtitle, setRecommendationSubtitle] = useState<string>('');
   const [showCompletedRoutinesModal, setShowCompletedRoutinesModal] = useState(false);
   const [completedRoutines, setCompletedRoutines] = useState<Routine[]>([]);
+  const [levelModalCategory, setLevelModalCategory] = useState<RoutineCategory | undefined>(undefined);
+  const [levelModalInfo, setLevelModalInfo] = useState<CategoryLevelInfo | undefined>(undefined);
   const [showHealthTeamInviteModal, setShowHealthTeamInviteModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
@@ -68,7 +70,7 @@ export default function DashboardScreen() {
   const [showWellnessCheckIn, setShowWellnessCheckIn] = useState(false);
   const [showUpdateCheckInConfirm, setShowUpdateCheckInConfirm] = useState(false);
   const [cacheUsed] = useState(!!initialCache); // Track if we initialized from cache
-  const [activeTooltip, setActiveTooltip] = useState<'streak' | 'harmony' | 'routines' | null>(null);
+  const [activeTooltip, setActiveTooltip] = useState<'streak' | 'harmony' | 'routines' | 'level' | null>(null);
   const [painStatsUpdating, setPainStatsUpdating] = useState(false);
   const painUpdatePulse = useRef(new Animated.Value(1)).current;
 
@@ -213,6 +215,22 @@ export default function DashboardScreen() {
     }
   };
 
+  // Targeted refresh for pain data only (after wellness check-in)
+  // Avoids full dashboard reload and eliminates any risk of the loading spinner
+  const refreshPainData = async () => {
+    if (!user) return;
+    try {
+      const [painStatsData, painHistoryData] = await Promise.all([
+        getPainStatistics(user.id, 100),
+        getPainCheckInHistory(user.id, 100),
+      ]);
+      setPainStats(painStatsData);
+      setPainHistory(painHistoryData);
+    } catch (error) {
+      console.error('Error refreshing pain data:', error);
+    }
+  };
+
   const handleAvatarClick = async (category: RoutineCategory) => {
     try {
       // Find the avatar state for this category
@@ -276,6 +294,22 @@ export default function DashboardScreen() {
     try {
       const routines = await getUniqueCompletedRoutines(user.id);
       setCompletedRoutines(routines);
+      setLevelModalCategory(undefined);
+      setLevelModalInfo(undefined);
+      setShowCompletedRoutinesModal(true);
+    } catch (error) {
+      console.error('Error fetching completed routines:', error);
+    }
+  };
+
+  const handleLevelBadgeTap = async (category: RoutineCategory, info: CategoryLevelInfo) => {
+    if (!user) return;
+
+    try {
+      const routines = await getUniqueCompletedRoutines(user.id);
+      setCompletedRoutines(routines);
+      setLevelModalCategory(category);
+      setLevelModalInfo(info);
       setShowCompletedRoutinesModal(true);
     } catch (error) {
       console.error('Error fetching completed routines:', error);
@@ -342,6 +376,7 @@ export default function DashboardScreen() {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={AppColors.primary} />
+        <Text style={styles.loadingText}>Setting up your dashboard...</Text>
       </View>
     );
   }
@@ -378,8 +413,21 @@ export default function DashboardScreen() {
       <CompletedRoutinesModal
         visible={showCompletedRoutinesModal}
         routines={completedRoutines}
-        onClose={() => setShowCompletedRoutinesModal(false)}
+        onClose={() => {
+          setShowCompletedRoutinesModal(false);
+          setLevelModalCategory(undefined);
+          setLevelModalInfo(undefined);
+        }}
         onSelectRoutine={handleSelectCompletedRoutine}
+        categoryFilter={levelModalCategory}
+        levelInfo={levelModalInfo}
+        companionName={
+          levelModalCategory === 'Mind' ? (profile?.mind_name || undefined)
+          : levelModalCategory === 'Body' ? (profile?.body_name || undefined)
+          : levelModalCategory === 'Soul' ? (profile?.soul_name || undefined)
+          : undefined
+        }
+        userName={profile?.first_name || undefined}
       />
 
       {/* Harmony Modal */}
@@ -404,10 +452,10 @@ export default function DashboardScreen() {
           soulName={profile?.soul_name || 'Soul'}
           onComplete={async () => {
             setShowWellnessCheckIn(false);
-            // Show updating animation on pain progress
+            // Show updating animation only on pain progress chart
             setPainStatsUpdating(true);
-            // Silent refresh - don't show full loading spinner
-            await loadDashboardData(false);
+            // Only refresh pain data - no full dashboard reload needed
+            await refreshPainData();
             setPainStatsUpdating(false);
           }}
         />
@@ -652,16 +700,15 @@ export default function DashboardScreen() {
 
               <View style={styles.statDivider} />
 
-              {/* Total Routines */}
+              {/* Soteria Level */}
               <HapticPressable
                 hapticStyle="selection"
                 style={styles.statItem}
-                onPress={handleShowCompletedRoutines}
-                onLongPress={() => setActiveTooltip(activeTooltip === 'routines' ? null : 'routines')}
+                onPress={() => setActiveTooltip(activeTooltip === 'level' ? null : 'level')}
                 activeOpacity={0.7}
               >
-                <Ionicons name="checkmark-circle" size={16} color={AppColors.primary} />
-                <Text style={styles.statValue}>{stats?.total_routines || 0}</Text>
+                <Ionicons name="trophy" size={16} color={AppColors.primary} />
+                <Text style={styles.statValue}>Lv.{getUserLevelSummary(stats).soteria.level}</Text>
               </HapticPressable>
             </View>
           </View>
@@ -750,16 +797,15 @@ export default function DashboardScreen() {
 
               <View style={styles.statDivider} />
 
-              {/* Total Routines */}
+              {/* Soteria Level */}
               <HapticPressable
                 hapticStyle="selection"
                 style={styles.statItem}
-                onPress={handleShowCompletedRoutines}
-                onLongPress={() => setActiveTooltip(activeTooltip === 'routines' ? null : 'routines')}
+                onPress={() => setActiveTooltip(activeTooltip === 'level' ? null : 'level')}
                 activeOpacity={0.7}
               >
-                <Ionicons name="checkmark-circle" size={16} color={AppColors.primary} />
-                <Text style={styles.statValue}>{stats?.total_routines || 0}</Text>
+                <Ionicons name="trophy" size={16} color={AppColors.primary} />
+                <Text style={styles.statValue}>Lv.{getUserLevelSummary(stats).soteria.level}</Text>
               </HapticPressable>
             </View>
           </View>
@@ -781,14 +827,42 @@ export default function DashboardScreen() {
           onPress={() => setActiveTooltip(null)}
         >
           <View style={styles.tooltip}>
-            <Text style={styles.tooltipText}>
-              {activeTooltip === 'streak' &&
-                `Current streak: ${stats?.current_streak || 0} consecutive days with completed routines`}
-              {activeTooltip === 'harmony' &&
-                `Balanced days: ${harmonyStatus?.consecutiveBalancedDays || 0}/7 consecutive days with Mind, Body, and Soul routines`}
-              {activeTooltip === 'routines' &&
-                `Total routines completed: ${stats?.total_routines || 0}. Tap to view history.`}
-            </Text>
+            {activeTooltip === 'streak' && (
+              <>
+                <Text style={styles.tooltipTitle}>Current Streak</Text>
+                <Text style={styles.tooltipClass}>{stats?.current_streak || 0} Days</Text>
+                <Text style={styles.tooltipDetail}>Consecutive days with completed routines</Text>
+              </>
+            )}
+            {activeTooltip === 'harmony' && (
+              <>
+                <Text style={styles.tooltipTitle}>Harmony Progress</Text>
+                <Text style={styles.tooltipClass}>{harmonyStatus?.consecutiveBalancedDays || 0} / 7</Text>
+                <View style={styles.tooltipXpBar}>
+                  <View style={[styles.tooltipXpFill, { width: `${Math.round(((harmonyStatus?.consecutiveBalancedDays || 0) / 7) * 100)}%` }]} />
+                </View>
+                <Text style={styles.tooltipDetail}>Consecutive balanced days with Mind, Body, and Soul routines</Text>
+              </>
+            )}
+            {activeTooltip === 'level' && (() => {
+              const levelSummary = getUserLevelSummary(stats);
+              const s = levelSummary.soteria;
+              return (
+                <>
+                  <Text style={styles.tooltipTitle}>Soteria Level {s.level}</Text>
+                  <Text style={styles.tooltipClass}>{s.title}</Text>
+                  <View style={styles.tooltipXpBar}>
+                    <View style={[styles.tooltipXpFill, { width: `${Math.round(s.progress * 100)}%` }]} />
+                  </View>
+                  <Text style={styles.tooltipXpText}>{s.currentXp} / {s.xpForNextLevel} XP to next level</Text>
+                </>
+              );
+            })()}
+            {activeTooltip === 'routines' && (
+              <Text style={styles.tooltipText}>
+                Total routines completed: {stats?.total_routines || 0}. Tap to view history.
+              </Text>
+            )}
             <Text style={styles.tooltipDismiss}>Tap anywhere to dismiss</Text>
           </View>
         </HapticPressable>
@@ -840,6 +914,50 @@ export default function DashboardScreen() {
           })}
         </View>
       </View>
+
+      {/* Category Levels Section */}
+      {stats && (() => {
+        const levelSummary = getUserLevelSummary(stats);
+        return (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Your Levels</Text>
+            <View style={styles.levelRows}>
+              {([
+                { cat: 'Mind' as const, info: levelSummary.mind, color: AppColors.mind, icon: 'bulb-outline' as const },
+                { cat: 'Body' as const, info: levelSummary.body, color: AppColors.body, icon: 'body' as const },
+                { cat: 'Soul' as const, info: levelSummary.soul, color: AppColors.soul, icon: 'flame-outline' as const },
+              ]).map(({ cat, info, color, icon }) => (
+                <View key={cat} style={styles.levelRow}>
+                  {/* Left: Tappable icon badge */}
+                  <HapticPressable
+                    hapticStyle="selection"
+                    style={[styles.levelBadge, { borderColor: color + '40' }]}
+                    onPress={() => handleLevelBadgeTap(cat, info)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name={icon} size={18} color={color} />
+                  </HapticPressable>
+
+                  {/* Right: Lv + Title + Progress bar */}
+                  <View style={styles.levelBarSection}>
+                    <View style={styles.levelBarHeader}>
+                      <Text style={[styles.levelRowTitle, { color }]}>
+                        Lv.{info.level}
+                      </Text>
+                      <Text style={styles.levelXpText}>
+                        {info.currentXp}/{info.xpForNextLevel}
+                      </Text>
+                    </View>
+                    <View style={styles.levelBarBg}>
+                      <View style={[styles.levelBarFill, { width: `${Math.round(info.progress * 100)}%`, backgroundColor: color }]} />
+                    </View>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+        );
+      })()}
 
       {/* Pain Progress Section */}
       {painStats && (
@@ -1017,6 +1135,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: AppColors.background,
   },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 15,
+    color: AppColors.textSecondary,
+    fontWeight: '500',
+  },
   header: {
     padding: 24,
     paddingTop: 100,
@@ -1115,10 +1239,11 @@ const styles = StyleSheet.create({
   },
   tooltip: {
     backgroundColor: AppColors.surface,
-    borderRadius: 12,
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    marginHorizontal: 40,
+    borderRadius: 16,
+    paddingVertical: 24,
+    paddingHorizontal: 32,
+    marginHorizontal: 24,
+    width: '85%',
     borderWidth: 1,
     borderColor: AppColors.border,
     shadowColor: '#000',
@@ -1126,6 +1251,45 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
+  },
+  tooltipTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: AppColors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  tooltipClass: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: AppColors.primary,
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  tooltipXpBar: {
+    width: '100%',
+    height: 8,
+    backgroundColor: AppColors.border,
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginBottom: 6,
+  },
+  tooltipXpFill: {
+    height: '100%',
+    borderRadius: 4,
+    backgroundColor: AppColors.primary,
+  },
+  tooltipXpText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: AppColors.textTertiary,
+    textAlign: 'center',
+  },
+  tooltipDetail: {
+    fontSize: 13,
+    color: AppColors.textTertiary,
+    textAlign: 'center',
+    lineHeight: 18,
   },
   tooltipText: {
     fontSize: 15,
@@ -1149,6 +1313,56 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: AppColors.textPrimary,
     marginBottom: 16,
+  },
+  levelRows: {
+    gap: 10,
+  },
+  levelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  levelBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: AppColors.surfaceSecondary,
+    borderWidth: 1.5,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  levelBarSection: {
+    flex: 1,
+    gap: 4,
+  },
+  levelBarHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+  },
+  levelRowTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  levelRowTitleName: {
+    fontWeight: '500',
+    color: AppColors.textSecondary,
+  },
+  levelXpText: {
+    fontSize: 11,
+    color: AppColors.textTertiary,
+    fontWeight: '500',
+  },
+  levelBarBg: {
+    width: '100%',
+    height: 6,
+    backgroundColor: AppColors.border,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  levelBarFill: {
+    height: '100%',
+    borderRadius: 3,
   },
   progressGrid: {
     flexDirection: 'row',

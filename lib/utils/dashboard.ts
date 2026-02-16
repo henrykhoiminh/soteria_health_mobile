@@ -1,10 +1,11 @@
 import { supabase } from '../supabase/client'
-import { DailyProgress, Routine, RoutineCategory, RoutineDifficulty, UserStats, JourneyFocus, PainCheckIn } from '@/types'
+import { DailyProgress, Routine, RoutineCategory, RoutineDifficulty, UserStats, JourneyFocus, PainCheckIn, LevelUpInfo } from '@/types'
 import { format } from 'date-fns'
 import { recordActivity } from './social'
 import { updateEnhancedStats } from './stats'
 import { getLocalDateString, getCurrentTimestamp } from './timezone'
 import { getTodayCheckIn } from './pain-checkin'
+import { addXpForCompletion } from './leveling'
 
 // Wellness-aware recommendation types
 export interface WellnessContext {
@@ -469,19 +470,40 @@ export async function getRoutineById(routineId: string): Promise<Routine | null>
   }
 }
 
-export async function completeRoutine(userId: string, routineId: string, category: RoutineCategory) {
+export async function completeRoutine(
+  userId: string,
+  routineId: string,
+  category: RoutineCategory,
+  durationMinutes?: number | null
+): Promise<{ completion: any; levelUps: LevelUpInfo[] }> {
   const { data, error } = await supabase
     .from('routine_completions')
     .insert({
       user_id: userId,
       routine_id: routineId,
       category,
-      completed_at: getCurrentTimestamp(), // Use precise timestamp but local date calculations will use timezone
+      completed_at: getCurrentTimestamp(),
+      duration_minutes: durationMinutes ?? null,
     })
     .select()
     .single()
 
   if (error) throw error
+
+  // Increment the global completion count on the routine
+  try {
+    const { data: routine } = await supabase
+      .from('routines')
+      .select('completion_count')
+      .eq('id', routineId)
+      .single()
+    await supabase
+      .from('routines')
+      .update({ completion_count: (routine?.completion_count || 0) + 1 })
+      .eq('id', routineId)
+  } catch (countError) {
+    console.error('Failed to increment completion count:', countError)
+  }
 
   // Update daily progress for today's local date
   try {
@@ -506,6 +528,15 @@ export async function completeRoutine(userId: string, routineId: string, categor
     console.error('Failed to update enhanced stats:', statsError)
   }
 
+  // Add XP and check for level-ups
+  let levelUps: LevelUpInfo[] = []
+  try {
+    const xpResult = await addXpForCompletion(userId, category, durationMinutes)
+    levelUps = xpResult.levelUps
+  } catch (xpError) {
+    console.error('Failed to add XP:', xpError)
+  }
+
   // Get current user stats for streak info
   const stats = await getUserStats(userId)
   const currentStreak = stats?.current_streak || 1
@@ -518,11 +549,24 @@ export async function completeRoutine(userId: string, routineId: string, categor
       category,
     })
   } catch (activityError) {
-    // Don't fail the completion if activity recording fails
     console.error('Failed to record activity:', activityError)
   }
 
-  return data
+  // Record level-up activities for friends to see
+  for (const levelUp of levelUps) {
+    try {
+      await recordActivity(userId, 'streak_milestone', {
+        type: 'level_up',
+        level_category: levelUp.category,
+        new_level: levelUp.newLevel,
+        new_title: levelUp.newTitle,
+      })
+    } catch (activityError) {
+      console.error('Failed to record level-up activity:', activityError)
+    }
+  }
+
+  return { completion: data, levelUps }
 }
 
 export async function getUserCustomRoutines(userId: string): Promise<Routine[]> {
@@ -684,7 +728,7 @@ export async function searchRoutinesByTags(
  * Returns full routine details with completion counts
  */
 export async function getUniqueCompletedRoutines(userId: string): Promise<Routine[]> {
-  // First, get all unique routine IDs that the user has completed
+  // Get all completions for this user to compute per-user counts
   const { data: completions, error: completionsError } = await supabase
     .from('routine_completions')
     .select('routine_id')
@@ -693,8 +737,13 @@ export async function getUniqueCompletedRoutines(userId: string): Promise<Routin
   if (completionsError) throw completionsError
   if (!completions || completions.length === 0) return []
 
-  // Get unique routine IDs
-  const uniqueRoutineIds = [...new Set(completions.map(c => c.routine_id))]
+  // Count per-user completions per routine
+  const userCompletionCounts: Record<string, number> = {}
+  for (const c of completions) {
+    userCompletionCounts[c.routine_id] = (userCompletionCounts[c.routine_id] || 0) + 1
+  }
+
+  const uniqueRoutineIds = Object.keys(userCompletionCounts)
 
   // Fetch full routine details for each unique routine
   const { data: routines, error: routinesError } = await supabase
@@ -704,13 +753,17 @@ export async function getUniqueCompletedRoutines(userId: string): Promise<Routin
 
   if (routinesError) throw routinesError
 
+  // Override completion_count with the user's personal count
+  const routinesWithUserCounts = (routines || []).map(r => ({
+    ...r,
+    completion_count: userCompletionCounts[r.id] || 0,
+  }))
+
   // Sort by category (Mind, Body, Soul) then by completion count
   const categoryOrder: Record<RoutineCategory, number> = { Mind: 0, Body: 1, Soul: 2 }
-  return (routines || []).sort((a, b) => {
-    // First sort by category
+  return routinesWithUserCounts.sort((a, b) => {
     const categoryDiff = categoryOrder[a.category as RoutineCategory] - categoryOrder[b.category as RoutineCategory]
     if (categoryDiff !== 0) return categoryDiff
-    // Then by completion count (descending)
     return b.completion_count - a.completion_count
   })
 }

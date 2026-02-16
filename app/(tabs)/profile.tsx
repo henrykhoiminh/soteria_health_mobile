@@ -1,9 +1,12 @@
+import GradientHeader from '@/components/GradientHeader';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { AppColors } from '@/constants/theme';
 import { updateUserProfile, uploadProfilePicture, hardResetUserData } from '@/lib/utils/auth';
 import { validateUsername, getSuggestedUsernames } from '@/lib/utils/username';
-import { JourneyFocus, MilestoneSummary, HealthTeamInvitation, HealthTeamStats } from '@/types';
-import { useState, useCallback } from 'react';
+import { JourneyFocus, MilestoneSummary, HealthTeamInvitation, HealthTeamStats, UserStats, RoutineCategory } from '@/types';
+import { getUserLevelSummary, getCategoryTitle } from '@/lib/utils/leveling';
+import { getUserStats } from '@/lib/utils/dashboard';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useFocusEffect } from 'expo-router';
 import {
   getUserMilestones,
@@ -20,6 +23,7 @@ import UserRoleBadge from '@/components/UserRoleBadge';
 import HealthTeamInvitationCard from '@/components/HealthTeamInvitationCard';
 import {
   Alert,
+  Animated,
   Modal,
   ScrollView,
   StyleSheet,
@@ -35,6 +39,127 @@ import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 
 const JOURNEY_FOCUSES: JourneyFocus[] = ['Injury Prevention', 'Recovery'];
+
+const getCategoryColor = (category: RoutineCategory) => {
+  switch (category) {
+    case 'Mind': return AppColors.mind;
+    case 'Body': return AppColors.body;
+    case 'Soul': return AppColors.soul;
+  }
+};
+
+const getCategoryIcon = (category: RoutineCategory) => {
+  switch (category) {
+    case 'Mind': return 'bulb-outline' as const;
+    case 'Body': return 'body' as const;
+    case 'Soul': return 'flame' as const;
+  }
+};
+
+const getCategoryTale = (category: RoutineCategory): string => {
+  switch (category) {
+    case 'Mind':
+      return 'A curious creature, searching for knowledge.\nSeems to enjoy puzzles...';
+    case 'Body':
+      return 'A physical being, always pushing past its limits. Can\'t stop yelling...';
+    case 'Soul':
+      return 'A gentle one, constantly yearning for connection. Loves to hug...';
+  }
+};
+
+function CompanionStatsCard({
+  category, color, icon, companionName, level, title, currentXp, xpForNextLevel, progress, userName,
+}: {
+  category: RoutineCategory;
+  color: string;
+  icon: 'bulb-outline' | 'body' | 'flame';
+  companionName: string;
+  level: number;
+  title: string;
+  currentXp: number;
+  xpForNextLevel: number;
+  progress: number;
+  userName?: string;
+}) {
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const glowAnim = useRef(new Animated.Value(0.3)).current;
+
+  useEffect(() => {
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.08, duration: 1500, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 1500, useNativeDriver: true }),
+      ])
+    );
+    const glow = Animated.loop(
+      Animated.sequence([
+        Animated.timing(glowAnim, { toValue: 0.6, duration: 2000, useNativeDriver: false }),
+        Animated.timing(glowAnim, { toValue: 0.3, duration: 2000, useNativeDriver: false }),
+      ])
+    );
+    pulse.start();
+    glow.start();
+    return () => { pulse.stop(); glow.stop(); };
+  }, []);
+
+  return (
+    <View style={styles.companionCard}>
+      {/* Category Title */}
+      <Text style={styles.companionCardTitle}>{category}</Text>
+      <View style={[styles.companionCardDivider, { backgroundColor: color + '40' }]} />
+
+      {/* Icon + Stats Row */}
+      <View style={styles.companionCardRow}>
+        {/* Pulsating Icon */}
+        <View style={styles.companionIconWrapper}>
+          <Animated.View
+            style={[
+              styles.companionGlow,
+              { borderColor: color, opacity: glowAnim,
+                transform: [{ scale: glowAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.2] }) }] },
+            ]}
+          />
+          <Animated.View
+            style={[
+              styles.companionIcon,
+              { backgroundColor: color + '25', borderColor: color,
+                transform: [{ scale: pulseAnim }] },
+            ]}
+          >
+            <Ionicons name={icon} size={44} color={color} />
+          </Animated.View>
+        </View>
+
+        {/* Stats Report */}
+        <View style={styles.companionDetails}>
+          <Text style={styles.companionStatRow}>
+            <Text style={[styles.companionStatLabel, { color }]}>Name: </Text>
+            <Text style={styles.companionStatValue}>{companionName}</Text>
+          </Text>
+          <Text style={styles.companionStatRow}>
+            <Text style={[styles.companionStatLabel, { color }]}>Class: </Text>
+            <Text style={styles.companionStatValue}>{title}</Text>
+          </Text>
+          <Text style={styles.companionStatRow}>
+            <Text style={[styles.companionStatLabel, { color }]}>Origin: </Text>
+            <Text style={styles.companionStatValue}>{userName ? `${userName}'s ${category}` : category}</Text>
+          </Text>
+          <Text style={[styles.companionStatLabel, { color, marginBottom: 2 }]}>Description:</Text>
+          <Text style={styles.companionDescValue}>{getCategoryTale(category)}</Text>
+        </View>
+      </View>
+
+      {/* Progress Bar */}
+      <View style={styles.companionLevelRow}>
+        <Text style={[styles.companionLevelText, { color }]}>Lv.{level}</Text>
+        <Text style={styles.companionXpText}>{currentXp}/{xpForNextLevel}</Text>
+      </View>
+      <View style={styles.companionXpBar}>
+        <View style={[styles.companionXpFill, { width: `${Math.round(progress * 100)}%`, backgroundColor: color }]} />
+      </View>
+    </View>
+  );
+}
 
 export default function ProfileScreen() {
   const { user, profile, refreshProfile, signOut } = useAuth();
@@ -56,6 +181,7 @@ export default function ProfileScreen() {
   const [healthTeamInvitations, setHealthTeamInvitations] = useState<HealthTeamInvitation[]>([]);
   const [healthTeamStats, setHealthTeamStats] = useState<HealthTeamStats | null>(null);
   const [loadingHealthTeam, setLoadingHealthTeam] = useState(false);
+  const [userStats, setUserStats] = useState<UserStats | null>(null);
 
   // Load milestones and health team data when screen is focused
   useFocusEffect(
@@ -95,8 +221,19 @@ export default function ProfileScreen() {
         }
       };
 
+      const loadStats = async () => {
+        if (!user) return;
+        try {
+          const data = await getUserStats(user.id);
+          setUserStats(data);
+        } catch (error) {
+          console.error('Error loading user stats:', error);
+        }
+      };
+
       loadMilestones();
       loadHealthTeamData();
+      loadStats();
     }, [user, profile])
   );
 
@@ -283,7 +420,7 @@ export default function ProfileScreen() {
 
   return (
     <ScrollView style={styles.container}>
-      <View style={styles.header}>
+      <GradientHeader style={styles.header}>
         <View style={styles.avatarContainer}>
           <View style={styles.avatar}>
             {profile?.profile_picture_url ? (
@@ -345,7 +482,7 @@ export default function ProfileScreen() {
         {profile?.username && !isEditing && (
           <Text style={styles.username}>@{profile.username}</Text>
         )}
-      </View>
+      </GradientHeader>
 
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
@@ -432,6 +569,67 @@ export default function ProfileScreen() {
           </View>
         )}
       </View>
+
+      {/* Level & XP Section */}
+      {userStats && (() => {
+        const levelSummary = getUserLevelSummary(userStats);
+        return (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Level & XP</Text>
+
+            {/* Soteria Level Card */}
+            <View style={styles.soteriaLevelCard}>
+              <View style={styles.soteriaLevelHeader}>
+                <View style={styles.soteriaLevelLeft}>
+                  <View style={styles.soteriaLevelIconContainer}>
+                    <Ionicons name="trophy" size={28} color={AppColors.primary} />
+                  </View>
+                  <View>
+                    <Text style={styles.soteriaLevelLabel}>Soteria Level</Text>
+                    <Text style={styles.soteriaLevelValue}>Lv.{levelSummary.soteria.level}</Text>
+                  </View>
+                </View>
+                <View style={styles.soteriaLevelRight}>
+                  <Text style={styles.soteriaLevelTitleLabel}>Class</Text>
+                  <Text style={styles.soteriaLevelTitle}>{levelSummary.soteria.title}</Text>
+                </View>
+              </View>
+              <View style={styles.xpProgressContainer}>
+                <View style={styles.xpProgressBarBg}>
+                  <View style={[styles.xpProgressBarFill, { width: `${Math.round(levelSummary.soteria.progress * 100)}%` }]} />
+                </View>
+                <Text style={styles.xpProgressText}>
+                  {levelSummary.soteria.currentXp} / {levelSummary.soteria.xpForNextLevel} XP
+                </Text>
+              </View>
+            </View>
+
+            {/* Companion Stats Cards */}
+            {(['Mind', 'Body', 'Soul'] as RoutineCategory[]).map((cat) => {
+              const info = cat === 'Mind' ? levelSummary.mind : cat === 'Body' ? levelSummary.body : levelSummary.soul;
+              const color = getCategoryColor(cat);
+              const icon = getCategoryIcon(cat);
+              const companionName = cat === 'Mind' ? profile?.mind_name : cat === 'Body' ? profile?.body_name : profile?.soul_name;
+
+              return (
+                <CompanionStatsCard
+                  key={cat}
+                  category={cat}
+                  color={color}
+                  icon={icon}
+                  companionName={companionName || cat}
+                  level={info.level}
+                  title={info.title}
+                  currentXp={info.currentXp}
+                  xpForNextLevel={info.xpForNextLevel}
+                  progress={info.progress}
+                  userName={profile?.first_name || undefined}
+                />
+              );
+            })}
+          </View>
+        );
+      })()}
 
       {/* Health Team Invitations */}
       {healthTeamInvitations.length > 0 && (
@@ -679,7 +877,6 @@ const styles = StyleSheet.create({
   header: {
     padding: 24,
     paddingTop: 100,
-    backgroundColor: AppColors.surface,
     alignItems: 'center',
   },
   avatarContainer: {
@@ -752,6 +949,168 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: AppColors.textPrimary,
+    marginBottom: 12,
+  },
+  soteriaLevelCard: {
+    backgroundColor: AppColors.surfaceSecondary,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+  },
+  soteriaLevelHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  soteriaLevelLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  soteriaLevelIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: AppColors.primary + '20',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  soteriaLevelLabel: {
+    fontSize: 12,
+    color: AppColors.textTertiary,
+    fontWeight: '500',
+  },
+  soteriaLevelValue: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: AppColors.primary,
+  },
+  soteriaLevelRight: {
+    alignItems: 'flex-end',
+  },
+  soteriaLevelTitleLabel: {
+    fontSize: 12,
+    color: AppColors.textTertiary,
+    fontWeight: '500',
+  },
+  soteriaLevelTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: AppColors.primary,
+  },
+  xpProgressContainer: {
+    gap: 6,
+  },
+  xpProgressBarBg: {
+    width: '100%',
+    height: 6,
+    backgroundColor: AppColors.border,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  xpProgressBarFill: {
+    height: '100%',
+    backgroundColor: AppColors.primary,
+    borderRadius: 3,
+  },
+  xpProgressText: {
+    fontSize: 12,
+    color: AppColors.textTertiary,
+    textAlign: 'right',
+  },
+  companionCard: {
+    backgroundColor: AppColors.surfaceSecondary,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+  },
+  companionCardTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: AppColors.textPrimary,
+    marginBottom: 4,
+  },
+  companionCardDivider: {
+    height: 1,
+    marginBottom: 20,
+  },
+  companionCardRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 24,
+    marginBottom: 20,
+  },
+  companionIconWrapper: {
+    position: 'relative',
+    width: 100,
+    height: 100,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  companionGlow: {
+    position: 'absolute',
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 2.5,
+  },
+  companionIcon: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    borderWidth: 2.5,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  companionDetails: {
+    flex: 1,
+  },
+  companionStatRow: {
+    fontSize: 15,
+    color: AppColors.textSecondary,
+    marginBottom: 4,
+  },
+  companionStatLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  companionStatValue: {
+    fontSize: 15,
+    fontStyle: 'italic',
+    color: AppColors.textSecondary,
+  },
+  companionDescValue: {
+    fontSize: 13,
+    fontStyle: 'italic',
+    color: AppColors.textSecondary,
+    lineHeight: 18,
+  },
+  companionLevelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+    marginBottom: 6,
+  },
+  companionLevelText: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  companionXpText: {
+    fontSize: 13,
+    color: AppColors.textTertiary,
+    fontWeight: '600',
+  },
+  companionXpBar: {
+    width: '100%',
+    height: 8,
+    backgroundColor: AppColors.border,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  companionXpFill: {
+    height: '100%',
+    borderRadius: 3,
   },
   editButton: {
     flexDirection: 'row',

@@ -163,9 +163,9 @@ export function getWellnessLevelInfo(score: number): { label: string; color: str
   } else if (score <= 2) {
     return { label: 'Barely there', color: '#34C759' } // Green
   } else if (score <= 4) {
-    return { label: 'Gets in the way', color: '#FFD60A' } // Yellow
-  } else if (score <= 6) {
-    return { label: 'Dragging me down', color: '#FF9500' } // Orange
+    return { label: 'I feel it sometimes', color: '#FFD60A' } // Yellow
+  } else if (score <= 7) {
+    return { label: 'Gets in the way', color: '#FF9500' } // Orange
   } else if (score <= 9) {
     return { label: 'Controlling my day', color: '#FF3B30' } // Red
   } else {

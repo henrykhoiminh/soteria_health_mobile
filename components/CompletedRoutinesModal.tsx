@@ -1,15 +1,35 @@
-import React from 'react';
-import { View, Text, StyleSheet, Modal, ScrollView, FlatList } from 'react-native';
 import HapticPressable from '@/components/HapticPressable';
-import { Ionicons } from '@expo/vector-icons';
-import { Routine, RoutineCategory } from '@/types';
+import RoutineCard from '@/components/RoutineCard';
 import { AppColors } from '@/constants/theme';
+import { CategoryLevelInfo, Routine, RoutineCategory } from '@/types';
+import { Ionicons } from '@expo/vector-icons';
+import { useEffect, useRef } from 'react';
+import { Animated, Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
+
+const getCategoryTale = (category: RoutineCategory): string => {
+  switch (category) {
+    case 'Mind':
+      return 'A curious creature, searching for knowledge.\nSeems to enjoy puzzles...';
+    case 'Body':
+      return 'A physical being, always pushing past its limits. Can\'t stop yelling...';
+    case 'Soul':
+      return 'A gentle one, constantly yearning for connection. Loves to hug...';
+  }
+};
 
 interface CompletedRoutinesModalProps {
   visible: boolean;
   routines: Routine[];
   onClose: () => void;
   onSelectRoutine: (routineId: string) => void;
+  /** If set, shows only routines from this category with level info header */
+  categoryFilter?: RoutineCategory;
+  /** Level info to display when filtered by category */
+  levelInfo?: CategoryLevelInfo;
+  /** Companion name for the category */
+  companionName?: string;
+  /** User's first name for Origin field */
+  userName?: string;
 }
 
 export default function CompletedRoutinesModal({
@@ -17,15 +37,42 @@ export default function CompletedRoutinesModal({
   routines,
   onClose,
   onSelectRoutine,
+  categoryFilter,
+  levelInfo,
+  companionName,
+  userName,
 }: CompletedRoutinesModalProps) {
+  // Pulsating animation for companion icon
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const glowAnim = useRef(new Animated.Value(0.3)).current;
+
+  useEffect(() => {
+    if (visible && categoryFilter) {
+      const pulse = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, { toValue: 1.08, duration: 1500, useNativeDriver: true }),
+          Animated.timing(pulseAnim, { toValue: 1, duration: 1500, useNativeDriver: true }),
+        ])
+      );
+      const glow = Animated.loop(
+        Animated.sequence([
+          Animated.timing(glowAnim, { toValue: 0.6, duration: 2000, useNativeDriver: false }),
+          Animated.timing(glowAnim, { toValue: 0.3, duration: 2000, useNativeDriver: false }),
+        ])
+      );
+      pulse.start();
+      glow.start();
+      return () => { pulse.stop(); glow.stop(); };
+    }
+  }, [visible, categoryFilter]);
   const getCategoryColor = (category: RoutineCategory) => {
     switch (category) {
       case 'Mind':
-        return '#3B82F6';
+        return AppColors.mind;
       case 'Body':
-        return '#EF4444';
+        return AppColors.body;
       case 'Soul':
-        return '#F59E0B';
+        return AppColors.soul;
     }
   };
 
@@ -40,57 +87,19 @@ export default function CompletedRoutinesModal({
     }
   };
 
-  // Group routines by category
+  // Filter routines if a category filter is set
+  const displayRoutines = categoryFilter
+    ? routines.filter(r => r.category === categoryFilter)
+    : routines;
+
+  // Group routines by category (only used when unfiltered)
   const groupedRoutines = {
-    Mind: routines.filter(r => r.category === 'Mind'),
-    Body: routines.filter(r => r.category === 'Body'),
-    Soul: routines.filter(r => r.category === 'Soul'),
+    Mind: displayRoutines.filter(r => r.category === 'Mind'),
+    Body: displayRoutines.filter(r => r.category === 'Body'),
+    Soul: displayRoutines.filter(r => r.category === 'Soul'),
   };
 
-  const renderRoutineCard = (routine: Routine) => {
-    const categoryColor = getCategoryColor(routine.category);
-
-    return (
-      <HapticPressable
-        key={routine.id}
-        style={[styles.routineCard, { borderLeftColor: categoryColor }]}
-        onPress={() => {
-          onClose();
-          onSelectRoutine(routine.id);
-        }}
-        activeOpacity={0.7}
-      >
-        <View style={styles.routineHeader}>
-          <View style={[styles.categoryBadge, { backgroundColor: categoryColor }]}>
-            <Ionicons name={getCategoryIcon(routine.category)} size={14} color="#fff" />
-            <Text style={styles.categoryText}>{routine.category}</Text>
-          </View>
-          <View style={styles.completionBadge}>
-            <Ionicons name="checkmark-circle" size={14} color={AppColors.success} />
-            <Text style={styles.completionText}>{routine.completion_count}</Text>
-          </View>
-        </View>
-
-        <Text style={styles.routineName}>{routine.name}</Text>
-
-        <View style={styles.metaContainer}>
-          <View style={styles.metaItem}>
-            <Ionicons name="time-outline" size={14} color={AppColors.textSecondary} />
-            <Text style={styles.metaText}>{routine.duration_minutes} min</Text>
-          </View>
-          <View style={styles.metaItem}>
-            <Ionicons name="barbell-outline" size={14} color={AppColors.textSecondary} />
-            <Text style={styles.metaText}>{routine.difficulty}</Text>
-          </View>
-        </View>
-
-        <View style={styles.viewButton}>
-          <Text style={styles.viewButtonText}>View</Text>
-          <Ionicons name="arrow-forward" size={16} color={categoryColor} />
-        </View>
-      </HapticPressable>
-    );
-  };
+  const filterColor = categoryFilter ? getCategoryColor(categoryFilter) : undefined;
 
   const renderCategorySection = (category: RoutineCategory) => {
     const categoryRoutines = groupedRoutines[category];
@@ -111,7 +120,17 @@ export default function CompletedRoutinesModal({
             </Text>
           </View>
         </View>
-        {categoryRoutines.map(routine => renderRoutineCard(routine))}
+        {categoryRoutines.map(routine => (
+          <RoutineCard
+            key={routine.id}
+            routine={routine}
+            onPress={() => {
+              onClose();
+              onSelectRoutine(routine.id);
+            }}
+            compact
+          />
+        ))}
       </View>
     );
   };
@@ -127,11 +146,67 @@ export default function CompletedRoutinesModal({
         <View style={styles.modalContainer}>
           {/* Header */}
           <View style={styles.header}>
-            <View>
-              <Text style={styles.title}>Completed Routines</Text>
-              <Text style={styles.subtitle}>
-                {routines.length} unique routine{routines.length !== 1 ? 's' : ''} completed
-              </Text>
+            <View style={styles.headerContent}>
+              {categoryFilter && levelInfo ? (
+              <>
+                <Text style={styles.title}>{categoryFilter}</Text>
+                <View style={[styles.headerDivider, { backgroundColor: filterColor + '40' }]} />
+                {/* Companion + Stats Card Row */}
+                <View style={styles.companionRow}>
+                  {/* Pulsating Icon */}
+                  <View style={styles.companionIconWrapper}>
+                    <Animated.View
+                      style={[
+                        styles.companionGlow,
+                        { borderColor: filterColor, opacity: glowAnim,
+                          transform: [{ scale: glowAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.2] }) }] },
+                      ]}
+                    />
+                    <Animated.View
+                      style={[
+                        styles.companionIcon,
+                        { backgroundColor: filterColor + '25', borderColor: filterColor,
+                          transform: [{ scale: pulseAnim }] },
+                      ]}
+                    >
+                      <Ionicons name={getCategoryIcon(categoryFilter)} size={66} color={filterColor} />
+                    </Animated.View>
+                  </View>
+                  {/* Stats Card */}
+                  <View style={styles.companionDetails}>
+                    <Text style={styles.companionStatRow}>
+                      <Text style={[styles.companionStatLabel, { color: filterColor }]}>Name: </Text>
+                      <Text style={styles.companionStatValue}>{companionName || categoryFilter}</Text>
+                    </Text>
+                    <Text style={styles.companionStatRow}>
+                      <Text style={[styles.companionStatLabel, { color: filterColor }]}>Class: </Text>
+                      <Text style={styles.companionStatValue}>{levelInfo.title}</Text>
+                    </Text>
+                    <Text style={styles.companionStatRow}>
+                      <Text style={[styles.companionStatLabel, { color: filterColor }]}>Origin: </Text>
+                      <Text style={styles.companionStatValue}>{userName ? `${userName}'s ${categoryFilter}` : categoryFilter}</Text>
+                    </Text>
+                    <Text style={[styles.companionStatLabel, { color: filterColor, marginBottom: 2 }]}>Description:</Text>
+                    <Text style={styles.companionDescValue}>{getCategoryTale(categoryFilter)}</Text>
+                  </View>
+                </View>
+                {/* Progress Bar */}
+                <View style={styles.headerLevelRow}>
+                  <Text style={[styles.headerLevelText, { color: filterColor }]}>Lv.{levelInfo.level}</Text>
+                  <Text style={styles.headerXpText}>{levelInfo.currentXp}/{levelInfo.xpForNextLevel}</Text>
+                </View>
+                <View style={styles.headerXpBar}>
+                  <View style={[styles.headerXpFill, { width: `${Math.round(levelInfo.progress * 100)}%`, backgroundColor: filterColor }]} />
+                </View>
+              </>
+            ) : (
+              <>
+                <Text style={styles.title}>Completed Routines</Text>
+                <Text style={styles.subtitle}>
+                  {displayRoutines.length} unique routine{displayRoutines.length !== 1 ? 's' : ''} completed
+                </Text>
+              </>
+            )}
             </View>
             <HapticPressable onPress={onClose} style={styles.closeButton}>
               <Ionicons name="close" size={24} color={AppColors.textPrimary} />
@@ -144,14 +219,36 @@ export default function CompletedRoutinesModal({
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.contentContainer}
           >
-            {routines.length === 0 ? (
+            {/* Routines sub-header */}
+            {categoryFilter && displayRoutines.length > 0 && (
+              <Text style={styles.routinesSubheader}>
+                {displayRoutines.length} Unique Routine{displayRoutines.length !== 1 ? 's' : ''} Completed
+              </Text>
+            )}
+
+            {displayRoutines.length === 0 ? (
               <View style={styles.emptyState}>
                 <Ionicons name="checkmark-circle-outline" size={64} color={AppColors.textTertiary} />
                 <Text style={styles.emptyStateTitle}>No Routines Yet</Text>
                 <Text style={styles.emptyStateText}>
-                  Complete your first routine to see it here!
+                  {categoryFilter
+                    ? `Complete your first ${categoryFilter} routine to see it here!`
+                    : 'Complete your first routine to see it here!'}
                 </Text>
               </View>
+            ) : categoryFilter ? (
+              /* When filtered, render RoutineCards directly without category headers */
+              displayRoutines.map(routine => (
+                <RoutineCard
+                  key={routine.id}
+                  routine={routine}
+                  onPress={() => {
+                    onClose();
+                    onSelectRoutine(routine.id);
+                  }}
+                  compact
+                />
+              ))
             ) : (
               <>
                 {renderCategorySection('Mind')}
@@ -183,22 +280,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: AppColors.border,
+    padding: 24,
+    paddingBottom: 16,
+  },
+  headerContent: {
+    flex: 1,
+  },
+  closeButton: {
+    padding: 4,
+    marginLeft: 12,
   },
   title: {
-    fontSize: 22,
-    fontWeight: '700',
+    fontSize: 30,
+    fontWeight: '800',
     color: AppColors.textPrimary,
     marginBottom: 4,
   },
   subtitle: {
     fontSize: 14,
     color: AppColors.textSecondary,
-  },
-  closeButton: {
-    padding: 4,
   },
   content: {
     flex: 1,
@@ -228,73 +328,96 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
-  routineCard: {
-    backgroundColor: AppColors.cardBackground,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderLeftWidth: 4,
+  companionRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 32,
+    marginBottom: 24,
   },
-  routineHeader: {
+  companionIconWrapper: {
+    position: 'relative',
+    width: 150,
+    height: 150,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  companionGlow: {
+    position: 'absolute',
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    borderWidth: 3,
+  },
+  companionIcon: {
+    width: 132,
+    height: 132,
+    borderRadius: 66,
+    borderWidth: 3,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  companionDetails: {
+    flex: 1,
+  },
+  companionStatRow: {
+    fontSize: 15,
+    color: AppColors.textSecondary,
+    marginBottom: 4,
+  },
+  companionStatLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  companionStatValue: {
+    fontSize: 15,
+    fontStyle: 'italic',
+    color: AppColors.textSecondary,
+  },
+  companionDescValue: {
+    fontSize: 13,
+    fontStyle: 'italic',
+    color: AppColors.textSecondary,
+    lineHeight: 18,
+  },
+  headerDivider: {
+    height: 1,
+    backgroundColor: AppColors.border,
+    marginTop: 12,
+    marginBottom: 28,
+  },
+  headerLevelRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
+    alignItems: 'baseline',
+    marginBottom: 6,
   },
-  categoryBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  categoryText: {
-    color: '#fff',
-    fontSize: 11,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-  },
-  completionBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  completionText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: AppColors.textSecondary,
-  },
-  routineName: {
+  headerLevelText: {
     fontSize: 16,
     fontWeight: '700',
-    color: AppColors.textPrimary,
-    marginBottom: 8,
   },
-  metaContainer: {
-    flexDirection: 'row',
-    gap: 16,
-    marginBottom: 12,
-  },
-  metaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  metaText: {
+  headerXpText: {
     fontSize: 13,
-    color: AppColors.textSecondary,
-  },
-  viewButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: 4,
-  },
-  viewButtonText: {
-    fontSize: 14,
+    color: AppColors.textTertiary,
     fontWeight: '600',
-    color: AppColors.textPrimary,
+  },
+  headerXpBar: {
+    width: '100%',
+    height: 8,
+    backgroundColor: AppColors.border,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  headerXpFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  routinesSubheader: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: AppColors.textTertiary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 16,
   },
   emptyState: {
     alignItems: 'center',

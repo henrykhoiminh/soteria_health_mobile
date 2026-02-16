@@ -8,7 +8,7 @@ import { getPainCheckInHistory, getPainStatistics } from '@/lib/utils/pain-check
 import { completeCircleRoutine, getFormattedFriendActivity } from '@/lib/utils/social';
 import { calculateActivityStreak, getAllAvatarStates, getAvatarLightState } from '@/lib/utils/stats';
 import { formatTime } from '@/lib/utils/time';
-import { AvatarLightState, Exercise, Routine, RoutineCategory } from '@/types';
+import { AvatarLightState, Exercise, LevelUpInfo, Routine, RoutineCategory } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import { ResizeMode, Video } from 'expo-av';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -28,6 +28,7 @@ import {
   View,
 } from 'react-native';
 import HapticPressable from '@/components/HapticPressable';
+import LevelUpCelebrationModal from '@/components/LevelUpCelebrationModal';
 
 // Completion animation - add your Lottie JSON file to assets/animations/
 // Expected file: assets/animations/routine_complete.json
@@ -92,6 +93,11 @@ export default function ExecuteRoutineScreen() {
   const [showStreakUpdate, setShowStreakUpdate] = useState(false);
   const [previousStreak, setPreviousStreak] = useState<number>(0);
   const [newStreak, setNewStreak] = useState<number>(0);
+
+  // Level-up tracking
+  const [levelUpData, setLevelUpData] = useState<LevelUpInfo[]>([]);
+  const [showLevelUp, setShowLevelUp] = useState(false);
+  const [currentLevelUpIndex, setCurrentLevelUpIndex] = useState(0);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const loadingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -238,7 +244,12 @@ export default function ExecuteRoutineScreen() {
       setPreviousStreak(streakBefore.currentStreak);
 
       // Complete routine for individual daily progress
-      await completeRoutine(user.id, routine.id, routine.category);
+      const result = await completeRoutine(user.id, routine.id, routine.category, routine.duration_minutes);
+
+      // Store level-up data if any
+      if (result.levelUps.length > 0) {
+        setLevelUpData(result.levelUps);
+      }
 
       // If executed from a circle, also track circle completion
       if (circleId) {
@@ -257,8 +268,12 @@ export default function ExecuteRoutineScreen() {
       // Show streak update screen if streak changed
       if (streakAfter.currentStreak !== streakBefore.currentStreak) {
         setShowStreakUpdate(true);
+      } else if (result.levelUps.length > 0) {
+        // No streak change but level-up occurred - show level-up celebration
+        setCurrentLevelUpIndex(0);
+        setShowLevelUp(true);
       } else {
-        // Skip streak screen, go directly to completion
+        // Skip streak and level-up screens, go directly to completion
         setIsComplete(true);
       }
 
@@ -314,9 +329,25 @@ export default function ExecuteRoutineScreen() {
   };
 
   const handleStreakContinue = () => {
-    // Move from streak update screen to completion screen
     setShowStreakUpdate(false);
-    setIsComplete(true);
+    // Show level-up celebration if there are level-ups, otherwise go to completion
+    if (levelUpData.length > 0) {
+      setCurrentLevelUpIndex(0);
+      setShowLevelUp(true);
+    } else {
+      setIsComplete(true);
+    }
+  };
+
+  const handleLevelUpDismiss = () => {
+    if (currentLevelUpIndex < levelUpData.length - 1) {
+      // Show next level-up
+      setCurrentLevelUpIndex(currentLevelUpIndex + 1);
+    } else {
+      // All level-ups shown, go to completion screen
+      setShowLevelUp(false);
+      setIsComplete(true);
+    }
   };
 
   const handleQuit = () => {
@@ -391,6 +422,17 @@ export default function ExecuteRoutineScreen() {
           <Text style={styles.streakContinueButtonText}>Continue</Text>
         </HapticPressable>
       </View>
+    );
+  }
+
+  // Level-Up Celebration - shown after streak screen (or directly if no streak change)
+  if (showLevelUp && levelUpData.length > 0) {
+    return (
+      <LevelUpCelebrationModal
+        visible={true}
+        levelUp={levelUpData[currentLevelUpIndex]}
+        onContinue={handleLevelUpDismiss}
+      />
     );
   }
 
