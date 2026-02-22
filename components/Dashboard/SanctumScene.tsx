@@ -54,7 +54,7 @@ export default function SanctumScene({
 
 const styles = StyleSheet.create({
   container: {
-    paddingTop: 200,
+    paddingTop: 195,
     paddingBottom: 24,
   },
   topGradient: {
