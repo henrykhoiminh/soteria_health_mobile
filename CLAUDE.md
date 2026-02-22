@@ -46,11 +46,12 @@ This file contains technical context, architectural decisions, and implementatio
 
 ```
 app/(tabs)/
+├── _layout.tsx         # Tab layout with SwipeableTabs (icon-only nav, fill/outline states)
 ├── index.tsx           # Dashboard - Today's progress, pain tracking, recommendations
 ├── routines.tsx        # Browse/search routines with filters
-├── builder.tsx         # 4-step routine builder (Journey → Exercises → Metadata → Review)
-│                       # Metadata includes Advanced Tags: tags, body_parts, benefits
-└── profile.tsx         # User profile with settings and Reset Journey
+├── builder.tsx         # Mode select → 3 category exercise libraries + routine builder
+│                       # Modes: Mind/Body/Soul Exercises, Routine Builder, Manage Filters
+└── profile.tsx         # User profile with GlassCard sections over SanctumBackground
 
 app/(auth)/
 ├── login.tsx           # Login with logo
@@ -63,13 +64,19 @@ app/routines/
 └── [id]/execute.tsx    # Routine execution with timer
 
 components/
-├── DraggableExerciseList.tsx    # Exercise cards with reorder/edit/delete (NO gestures)
-├── FilterOptionsManager.tsx     # Admin UI for managing body parts (chip-based, optimistic)
-├── FilterOptionEditorModal.tsx  # Modal for adding/editing body parts and groups
-├── HapticPressable.tsx          # Drop-in TouchableOpacity replacement with haptic feedback
-├── JourneyBadge.tsx             # Journey type badge with icon
-├── PainCheckInModal.tsx         # 3-step pain check-in modal
-└── HealthTeamInvitationCard.tsx # Health team invitation UI
+├── Dashboard/
+│   ├── GlassCard.tsx              # Frosted glass card with gold top edge glow (blur on iOS)
+│   ├── SanctumBackground.tsx      # Time-of-day background with dark overlay + fade gradient
+│   └── SanctumScene.tsx           # Companion avatars scene with top gradient overlay
+├── SwipeableTabs.tsx              # PagerView-based tab navigation (icon-only, fill/outline)
+├── ExerciseLibrary.tsx            # Exercise browser with filters (category, difficulty, body parts, tags)
+├── DraggableExerciseList.tsx      # Exercise cards with reorder/edit/delete (NO gestures)
+├── FilterOptionsManager.tsx       # Admin UI for managing body parts (chip-based, optimistic)
+├── FilterOptionEditorModal.tsx    # Modal for adding/editing body parts and groups
+├── HapticPressable.tsx            # Drop-in TouchableOpacity replacement with haptic feedback
+├── JourneyBadge.tsx               # Journey type badge with icon
+├── PainCheckInModal.tsx           # 3-step pain check-in modal
+└── HealthTeamInvitationCard.tsx   # Health team invitation UI
 
 lib/
 ├── contexts/AuthContext.tsx     # Global auth + profile state
@@ -205,7 +212,63 @@ lsof -ti:8081 | xargs kill -9
 
 ## Session History Summary
 
-### Session 28 (Latest - Save from Circles, Optimistic UI & App-Wide Haptic Feedback)
+### Session 30 (Latest - Profile Redesign, Tab Bar Polish, Builder Exercise Library Split)
+
+- **Profile Tab Redesign - Inner Sanctum Aesthetic:**
+  - Removed opaque `GradientHeader` in favor of transparent profile hero over SanctumBackground
+  - Added `LinearGradient` top overlay for status bar readability (matches SanctumScene pattern)
+  - Wrapped all 6 data sections in `GlassCard` components (frosted glass with gold top edge)
+  - Combined Sign Out + Danger Zone into a single GlassCard
+  - Added `glassCardsContainer` wrapper with padding for scroll area
+  - Profile avatar, name, email, role badge now float over sanctum background
+
+- **Overscroll Bounce Fix (Dashboard + Profile):**
+  - Added `overscrollCover` View (600px, positioned at `top: -600`) to both `index.tsx` and `profile.tsx`
+  - Prevents raw sanctum background from being revealed during iOS scroll bounce
+  - Uses `rgba(0,0,0,0.7)` matching the top gradient's darkest color for seamless blending
+
+- **Tab Bar Polish - Icon-Only Navigation:**
+  - Removed text labels from bottom tab bar in `SwipeableTabs.tsx`
+  - Added `iconOutline` to `TabConfig` interface for inactive state icons
+  - Active tabs show filled icons, inactive tabs show outline variants
+  - Icon mappings: `house`/`house.fill`, `plus.circle`/`plus.circle.fill`, `person.3`/`person.3.fill`, `person`/`person.fill`
+  - `list.bullet` (Routines) has no fill variant — changes color only
+  - Removed `tabLabel` style and `Text` import from SwipeableTabs
+
+- **Builder Tab - Category Exercise Libraries:**
+  - Replaced single "Exercise Library" card with 3 category-specific cards (Mind, Body, Soul)
+  - Each card uses `modeCard` layout (same as Routine Builder and Manage Filters) for visual consistency
+  - Category-colored icons: `bulb-outline` (Mind/blue), `body` (Body/red), `flame-outline` (Soul/amber)
+  - Titles: "Mind Exercises", "Body Exercises", "Soul Exercises" with descriptive subtitles
+  - Each card opens `ExerciseLibrary` pre-filtered by `category` prop
+  - Header title shows `"{Category} Exercises"` when viewing a specific category
+  - Added `exerciseCategory` state to track selected category
+
+- **Exercise Library - Conditional Body Parts Filter:**
+  - Body parts filter chip + modal now only renders when `selectedCategory` is `'Body'` or unset
+  - Mind and Soul exercise views show: Created By, Category (if not pre-filtered), Difficulty, Tags
+  - Body exercise view additionally shows: Body Part filter
+
+- **Exercise Library - Tags Filter (New):**
+  - Added `selectedTag` state and `tagModalVisible` modal state
+  - `availableTags` derived via `useMemo` from loaded exercises (unique, sorted)
+  - Tags filter chip with `pricetag-outline` icon — shows for all categories when tags exist
+  - Tags modal with flat list of available tags + "All Tags" option
+  - Tag list auto-adjusts per category since it's derived from category-filtered exercises
+
+- **Key Files Modified:**
+  - `app/(tabs)/profile.tsx` - GradientHeader → transparent hero + GlassCard sections + overscroll cover
+  - `app/(tabs)/index.tsx` - Added overscroll cover
+  - `app/(tabs)/_layout.tsx` - Added `iconOutline` to all tab configs
+  - `components/SwipeableTabs.tsx` - Icon-only tabs with fill/outline state switching
+  - `app/(tabs)/builder.tsx` - 3 category exercise cards replacing single Exercise Library card
+  - `components/ExerciseLibrary.tsx` - Conditional body parts filter, new tags filter
+
+- **Imports Changed:**
+  - `profile.tsx`: Removed `GradientHeader`, added `GlassCard`, `LinearGradient`
+  - `SwipeableTabs.tsx`: Removed `Text` import
+
+### Session 28 (Save from Circles, Optimistic UI & App-Wide Haptic Feedback)
 - **Save/Unsave Routines from Circle Routine Cards:**
   - Extended `searchCircleRoutines()` in `lib/utils/social.ts` to accept optional `userId` parameter
   - Fetches user's saved routine IDs from `routine_saves` table, sets `is_saved` on each routine
@@ -290,7 +353,7 @@ lsof -ti:8081 | xargs kill -9
   - `app/onboarding/traveler-name.tsx` - Removed redundant name caption
   - 25+ additional files for button text color updates
 
-### Session 24 (Latest - Dashboard Tutorial Onboarding)
+### Session 24 (Dashboard Tutorial Onboarding)
 - **Dashboard Tutorial Implementation (Work in Progress):**
   - Replaced abstract narrative screens (world-intro, three-lights, the-offer) with interactive dashboard tutorial
   - Goal: Show users the actual dashboard layout during onboarding with guided tour
@@ -361,7 +424,7 @@ lsof -ti:8081 | xargs kill -9
   - Skip tutorial entirely and use contextual hints in actual dashboard
   - Progressive disclosure - reveal features as user engages with app
 
-### Session 29 (Latest - Dynamic Body Parts Management System & DB Cleanup)
+### Session 29 (Dynamic Body Parts Management System & DB Cleanup)
 - **Dynamic Body Parts Management System (Full Implementation):**
   - Replaced hardcoded `UPPER_BODY_AREAS`/`LOWER_BODY_AREAS` constants with database-driven values
   - Health team members can now add, edit, and remove body parts through the app
@@ -598,12 +661,34 @@ lsof -ti:8081 | xargs kill -9
 
 ---
 
-**Last Updated:** 2026-02-15
+**Last Updated:** 2026-02-22
 **Current Version:** Expo SDK 54, React Native 0.76+
+
+## Next Objectives
+
+### 1. Circle Chat Functionality
+- Add real-time chat/messaging within Circles (social groups)
+- Likely requires new `circle_messages` table in Supabase with RLS policies
+- Consider Supabase Realtime for live message delivery
+- UI: Chat tab within circle detail view, message input, message list with timestamps
+- Handle read receipts, typing indicators (optional)
+
+### 2. User Profile Modal in Circles
+- When tapping on a friend/member within a Circle, show a profile modal
+- Display: profile picture, name, username, journey focus, level/XP summary
+- Action buttons: view full profile, send message (if chat is implemented), remove from circle (admin only)
+- Reuse existing profile data patterns from social tab
+
+### 3. Push Notifications (Mobile)
+- Implement push notifications using `expo-notifications`
+- Register device push tokens and store in Supabase (new `push_tokens` table)
+- Notification triggers: friend requests, circle invitations, health team invitations, streak reminders
+- Handle notification permissions, foreground/background handling
+- Deep linking from notifications to relevant screens
 
 ## Known Issues & Pending Investigations
 
-### Audio Playback (High Priority - Next Session)
+### Audio Playback (Medium Priority)
 - **Issue:** Audio playback for `extraction_mystical.mp3` during character summoning may not be working
 - **Background:** Attempted migration from `expo-av` to `expo-audio` broke sound; reverted to `expo-av`
 - **Files involved:** `lib/utils/audio.ts`, `assets/sounds/extraction_mystical.mp3`
