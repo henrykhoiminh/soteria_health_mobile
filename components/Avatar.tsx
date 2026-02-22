@@ -5,6 +5,9 @@ import { AvatarLightState, RoutineCategory } from '@/types';
 import { AppColors } from '@/constants/theme';
 import HapticPressable from '@/components/HapticPressable';
 
+// Toggle to hide light state labels (e.g. "Glowing", "Dormant") for testing
+const HIDE_LIGHT_STATE_LABELS = true;
+
 interface AvatarProps {
   category: RoutineCategory;
   lightState: AvatarLightState;
@@ -193,9 +196,11 @@ export default function Avatar({ category, lightState, name, onPress }: AvatarPr
       <Text style={[styles.label, { color: config.color }]}>{name || config.label}</Text>
 
       {/* Light State Status */}
-      <Text style={[styles.statusText, { color: stateConfig.statusColor }]}>
-        {stateConfig.statusText}
-      </Text>
+      {!HIDE_LIGHT_STATE_LABELS && (
+        <Text style={[styles.statusText, { color: stateConfig.statusColor }]}>
+          {stateConfig.statusText}
+        </Text>
+      )}
     </HapticPressable>
   );
 }

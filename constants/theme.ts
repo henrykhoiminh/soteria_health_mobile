@@ -70,6 +70,11 @@ export const AppColors = {
   headerMind: '#1E3A5F',      // Dark blue for Mind category completion
   headerBody: '#4A1F1F',      // Dark red for Body category completion
   headerSoul: '#4A3A1F',      // Dark amber for Soul category completion
+
+  // Sanctum / Glass Card Theme
+  sanctumOverlay: 'rgba(20, 20, 25, 0.5)',   // Content overlay on glass cards
+  glassBackground: 'rgba(44, 44, 44, 0.85)', // Android fallback for BlurView
+  glassEdge: 'rgba(247, 221, 111, 0.15)',    // Subtle gold border on glass cards
 };
 
 // Card Elevation Style (for consistent card appearance) - Dark Mode Adjusted

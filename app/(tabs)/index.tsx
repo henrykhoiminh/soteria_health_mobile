@@ -1,9 +1,13 @@
-import Avatar from '@/components/Avatar';
 import CompletedRoutinesModal from '@/components/CompletedRoutinesModal';
+import FriendActivitySection from '@/components/Dashboard/FriendActivitySection';
+import GlassCard from '@/components/Dashboard/GlassCard';
+import LevelsSection from '@/components/Dashboard/LevelsSection';
+import PainProgressSection from '@/components/Dashboard/PainProgressSection';
+import SanctumScene from '@/components/Dashboard/SanctumScene';
+import UserStatsSection from '@/components/Dashboard/UserStatsSection';
 import HapticPressable from '@/components/HapticPressable';
 import HarmonyModal from '@/components/HarmonyModal';
 import JourneyFocusModal from '@/components/JourneyFocusModal';
-import PainProgressChart from '@/components/PainProgressChart';
 import RecommendedRoutineModal from '@/components/RecommendedRoutineModal';
 import UsernameSetupModal from '@/components/UsernameSetupModal';
 import WellnessCheckInModal from '@/components/WellnessCheckInModal';
@@ -13,8 +17,7 @@ import { getCategoryRecommendation, getTodayProgress, getUniqueCompletedRoutines
 import { clearDashboardCache, getDashboardCache } from '@/lib/utils/dashboard-cache';
 import { checkHarmonyRequirements } from '@/lib/utils/harmony';
 import { hasPendingInvitation, sendHealthTeamInvitation } from '@/lib/utils/health-team';
-import { getUserLevelSummary } from '@/lib/utils/leveling';
-import { getPainCheckInHistory, getPainLevelInfo, getPainStatistics, getPainTrendInfo } from '@/lib/utils/pain-checkin';
+import { getPainCheckInHistory, getPainStatistics } from '@/lib/utils/pain-checkin';
 import { getFormattedFriendActivity, searchUsers } from '@/lib/utils/social';
 import { getAllAvatarStates } from '@/lib/utils/stats';
 import { getDisplayName } from '@/lib/utils/username';
@@ -27,7 +30,8 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
-  Image,
+  Dimensions,
+  ImageBackground,
   Modal,
   ScrollView,
   StyleSheet,
@@ -35,6 +39,24 @@ import {
   TextInput,
   View,
 } from 'react-native';
+
+const SCREEN_HEIGHT = Dimensions.get('window').height;
+
+// Pre-require all sanctum backgrounds (Metro resolves at build time)
+const SANCTUM_BACKGROUNDS = {
+  sunrise: require('@/assets/images/sanctum-bg-sunrise.png'),
+  day: require('@/assets/images/sanctum-bg-1.png'),
+  twilight: require('@/assets/images/sanctum-bg-twilight.png'),
+  midnight: require('@/assets/images/sanctum-bg-midnight.png'),
+};
+
+function getSanctumBackground() {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 11) return SANCTUM_BACKGROUNDS.sunrise;
+  if (hour >= 11 && hour < 17) return SANCTUM_BACKGROUNDS.day;
+  if (hour >= 17 && hour < 21) return SANCTUM_BACKGROUNDS.twilight;
+  return SANCTUM_BACKGROUNDS.midnight;
+}
 
 export default function DashboardScreen() {
   const { user, profile, refreshProfile } = useAuth();
@@ -69,7 +91,7 @@ export default function DashboardScreen() {
   const [showHarmonyModal, setShowHarmonyModal] = useState(false);
   const [showWellnessCheckIn, setShowWellnessCheckIn] = useState(false);
   const [showUpdateCheckInConfirm, setShowUpdateCheckInConfirm] = useState(false);
-  const [cacheUsed] = useState(!!initialCache); // Track if we initialized from cache
+  const [cacheUsed] = useState(!!initialCache);
   const [activeTooltip, setActiveTooltip] = useState<'streak' | 'harmony' | 'routines' | 'level' | null>(null);
   const [painStatsUpdating, setPainStatsUpdating] = useState(false);
   const painUpdatePulse = useRef(new Animated.Value(1)).current;
@@ -100,70 +122,14 @@ export default function DashboardScreen() {
     }
   }, [painStatsUpdating]);
 
-  /**
-   * Determines the header background based on completed avatar states.
-   * Returns an object with either a solid color or gradient configuration.
-   */
-  const getHeaderBackground = ():
-    | { type: 'solid'; color: string }
-    | { type: 'gradient'; colors: [string, string, ...string[]]; start: { x: number; y: number }; end: { x: number; y: number } } => {
-    // Check which avatars are completed (Glowing or Radiant)
-    const completedCategories = avatarStates.filter(
-      state => state.lightState === 'Glowing' || state.lightState === 'Radiant'
-    );
-
-    const categoryColorMap: Record<string, string> = {
-      Mind: AppColors.headerMind,
-      Body: AppColors.headerBody,
-      Soul: AppColors.headerSoul,
-    };
-
-    // If no routines completed today, use neutral surface color
-    if (completedCategories.length === 0) {
-      return { type: 'solid' as const, color: AppColors.surface };
-    }
-
-    // If only one category complete, use solid color
-    if (completedCategories.length === 1) {
-      return {
-        type: 'solid' as const,
-        color: categoryColorMap[completedCategories[0].category],
-      };
-    }
-
-    // If 2 or more categories are complete, use gradient of those colors
-    // Build gradient colors array in Mind → Body → Soul order for consistency
-    const gradientColors: string[] = [];
-    const categoryOrder = ['Mind', 'Body', 'Soul'];
-
-    for (const category of categoryOrder) {
-      const isCompleted = completedCategories.some(state => state.category === category);
-      if (isCompleted) {
-        gradientColors.push(categoryColorMap[category]);
-      }
-    }
-
-    return {
-      type: 'gradient' as const,
-      colors: gradientColors as [string, string, ...string[]],
-      start: { x: 0, y: 0 },
-      end: { x: 1, y: 0 }, // Horizontal gradient
-    };
-  };
-
-  const headerBackground = getHeaderBackground();
-
   useEffect(() => {
-    // If we initialized from cache, clear it and skip the initial load
     if (cacheUsed) {
       clearDashboardCache();
       return;
     }
     loadDashboardData();
 
-    // Show username setup modal if user doesn't have a username
     if (profile && !profile.username) {
-      // Delay showing the modal to avoid showing it immediately on app start
       const timer = setTimeout(() => {
         setShowUsernameSetup(true);
       }, 1000);
@@ -171,12 +137,10 @@ export default function DashboardScreen() {
     }
   }, [user, profile]);
 
-  // Refresh data when screen comes into focus (e.g., after completing a routine)
-  // Use silent refresh (no loading indicator) for better UX
   useFocusEffect(
     useCallback(() => {
       if (user) {
-        loadDashboardData(false); // Silent refresh on focus
+        loadDashboardData(false);
       }
     }, [user, profile])
   );
@@ -185,7 +149,6 @@ export default function DashboardScreen() {
     if (!user) return;
 
     try {
-      // Only show loading indicator on initial load, not on focus refresh
       if (showLoading) {
         setLoading(true);
       }
@@ -193,14 +156,14 @@ export default function DashboardScreen() {
       const [progressData, statsData, activityData, avatarsData, painStatsData, painHistoryData, harmonyData] = await Promise.all([
         getTodayProgress(user.id),
         getUserStats(user.id),
-        getFormattedFriendActivity(user.id, 5), // Get latest 5 activities
-        getAllAvatarStates(user.id), // Load avatar states
-        getPainStatistics(user.id, 100), // Get pain statistics for up to 100 days
-        getPainCheckInHistory(user.id, 100), // Get last 100 days for chart
-        checkHarmonyRequirements(user.id), // Load harmony status
+        getFormattedFriendActivity(user.id, 5),
+        getAllAvatarStates(user.id),
+        getPainStatistics(user.id, 100),
+        getPainCheckInHistory(user.id, 100),
+        checkHarmonyRequirements(user.id),
       ]);
 
-      console.log('Today Progress:', progressData); // Debug log
+      console.log('Today Progress:', progressData);
       setTodayProgress(progressData);
       setStats(statsData);
       setFriendActivity(activityData);
@@ -215,8 +178,6 @@ export default function DashboardScreen() {
     }
   };
 
-  // Targeted refresh for pain data only (after wellness check-in)
-  // Avoids full dashboard reload and eliminates any risk of the loading spinner
   const refreshPainData = async () => {
     if (!user) return;
     try {
@@ -233,17 +194,13 @@ export default function DashboardScreen() {
 
   const handleAvatarClick = async (category: RoutineCategory) => {
     try {
-      // Find the avatar state for this category
       const avatarState = avatarStates.find(state => state.category === category);
 
-      // If user has already completed this category today (Glowing or Radiant),
-      // skip the recommendation modal and go straight to browse
       if (avatarState && (avatarState.lightState === 'Glowing' || avatarState.lightState === 'Radiant')) {
         router.push(`/(tabs)/routines?category=${category}`);
         return;
       }
 
-      // Get wellness-aware recommendation with personalized messaging
       const recommendation = await getCategoryRecommendation(
         category,
         user!.id,
@@ -252,19 +209,16 @@ export default function DashboardScreen() {
       );
 
       if (recommendation.routines && recommendation.routines.length > 0) {
-        // Show modal with the first (most appropriate) routine and messaging
         setSelectedRoutine(recommendation.routines[0]);
         setSelectedCategory(category);
         setRecommendationMessage(recommendation.message);
         setRecommendationSubtitle(recommendation.subtitle);
         setShowRecommendedModal(true);
       } else {
-        // If no routines available, navigate to routines tab filtered by category
         router.push(`/(tabs)/routines?category=${category}`);
       }
     } catch (error) {
       console.error('Error fetching routine:', error);
-      // Fallback to routines tab
       router.push(`/(tabs)/routines?category=${category}`);
     }
   };
@@ -286,20 +240,6 @@ export default function DashboardScreen() {
     setSelectedRoutine(null);
     setRecommendationMessage('');
     setRecommendationSubtitle('');
-  };
-
-  const handleShowCompletedRoutines = async () => {
-    if (!user) return;
-
-    try {
-      const routines = await getUniqueCompletedRoutines(user.id);
-      setCompletedRoutines(routines);
-      setLevelModalCategory(undefined);
-      setLevelModalInfo(undefined);
-      setShowCompletedRoutinesModal(true);
-    } catch (error) {
-      console.error('Error fetching completed routines:', error);
-    }
   };
 
   const handleLevelBadgeTap = async (category: RoutineCategory, info: CategoryLevelInfo) => {
@@ -370,8 +310,6 @@ export default function DashboardScreen() {
     }
   };
 
-  // Only show full loading screen on initial load when there's no data yet
-  // This allows returning from routine completion to show existing data while refreshing
   if (loading && !todayProgress && !stats) {
     return (
       <View style={styles.loadingContainer}>
@@ -395,7 +333,6 @@ export default function DashboardScreen() {
         userId={user?.id || ''}
         onClose={() => setShowJourneyFocusModal(false)}
         onUpdate={async () => {
-          // Refresh profile to get updated recovery_areas, then reload dashboard
           await refreshProfile();
           loadDashboardData();
         }}
@@ -421,16 +358,8 @@ export default function DashboardScreen() {
         onSelectRoutine={handleSelectCompletedRoutine}
         categoryFilter={levelModalCategory}
         levelInfo={levelModalInfo}
-        companionName={
-          levelModalCategory === 'Mind' ? (profile?.mind_name || undefined)
-          : levelModalCategory === 'Body' ? (profile?.body_name || undefined)
-          : levelModalCategory === 'Soul' ? (profile?.soul_name || undefined)
-          : undefined
-        }
-        userName={profile?.first_name || undefined}
       />
 
-      {/* Harmony Modal */}
       {harmonyStatus && (
         <HarmonyModal
           visible={showHarmonyModal}
@@ -442,7 +371,6 @@ export default function DashboardScreen() {
         />
       )}
 
-      {/* Wellness Check-In Modal */}
       {user && (
         <WellnessCheckInModal
           visible={showWellnessCheckIn}
@@ -452,9 +380,7 @@ export default function DashboardScreen() {
           soulName={profile?.soul_name || 'Soul'}
           onComplete={async () => {
             setShowWellnessCheckIn(false);
-            // Show updating animation only on pain progress chart
             setPainStatsUpdating(true);
-            // Only refresh pain data - no full dashboard reload needed
             await refreshPainData();
             setPainStatsUpdating(false);
           }}
@@ -507,7 +433,6 @@ export default function DashboardScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.inviteModalContent}>
-            {/* Modal Header */}
             <View style={styles.inviteModalHeader}>
               <Text style={styles.inviteModalTitle}>Invite to Health Team</Text>
               <HapticPressable onPress={() => setShowHealthTeamInviteModal(false)}>
@@ -515,7 +440,6 @@ export default function DashboardScreen() {
               </HapticPressable>
             </View>
 
-            {/* Search Input */}
             <View style={styles.inviteSearchContainer}>
               <Ionicons name="search" size={20} color={AppColors.textSecondary} />
               <TextInput
@@ -533,7 +457,6 @@ export default function DashboardScreen() {
               )}
             </View>
 
-            {/* Search Results */}
             <ScrollView style={styles.inviteResultsContainer}>
               {searching && (
                 <View style={styles.inviteLoadingContainer}>
@@ -610,524 +533,129 @@ export default function DashboardScreen() {
         </View>
       </Modal>
 
-      <ScrollView style={styles.container}>
-      {/* Dynamic Header Background - Solid or Gradient based on completion */}
-      {headerBackground.type === 'gradient' ? (
-        <LinearGradient
-          colors={headerBackground.colors}
-          start={headerBackground.start}
-          end={headerBackground.end}
-          style={styles.header}
+      <View style={styles.outerContainer}>
+        {/* Background image - absolutely positioned behind scroll content */}
+        <ImageBackground
+          source={getSanctumBackground()}
+          style={styles.backgroundContainer}
+          imageStyle={styles.backgroundImage}
         >
-          {/* Compact Header Row: Avatar + Text */}
-          <View style={styles.headerRow}>
-          {/* Avatar with Journey Focus Badge */}
-          <HapticPressable
-            style={styles.avatarContainer}
-            onPress={() => profile?.journey_focus && setShowJourneyFocusModal(true)}
-            activeOpacity={0.7}
-          >
-            <View style={[
-              styles.avatar,
-              (profile?.role === 'health_team' || profile?.role === 'admin') && styles.avatarHealthTeam
-            ]}>
-              {profile?.profile_picture_url ? (
-                <Image
-                  source={{ uri: profile.profile_picture_url }}
-                  style={styles.avatarImage}
+          {/* Dark overlay to let content pop */}
+          <View style={styles.darkOverlay} />
+
+          {/* Long fade-to-black gradient covering bottom 60% of the bg image */}
+          <LinearGradient
+            colors={['transparent', 'rgba(26, 26, 26, 0.5)', 'rgba(26, 26, 26, 0.85)', AppColors.background]}
+            locations={[0, 0.3, 0.6, 1]}
+            style={styles.fadeGradient}
+          />
+        </ImageBackground>
+
+        <ScrollView style={styles.container}>
+          {/* Sanctum Scene: Companions only */}
+          <SanctumScene
+            profile={profile}
+            avatarStates={avatarStates}
+            onAvatarClick={handleAvatarClick}
+          />
+
+          {/* Glass Card Data Sections */}
+          <View style={styles.glassCardsContainer}>
+            {/* Companion Stats - Mind/Body/Soul XP */}
+            {stats && (
+              <GlassCard>
+                <LevelsSection
+                  stats={stats}
+                  onLevelBadgeTap={handleLevelBadgeTap}
                 />
-              ) : (
-                <Text style={styles.avatarText}>
-                  {profile?.first_name?.charAt(0).toUpperCase() || 'U'}
-                </Text>
-              )}
-            </View>
-            {/* Journey Focus Badge (top-right) */}
-            {profile?.journey_focus && (
-              <View style={[
-                styles.journeyBadge,
-                { backgroundColor: profile.journey_focus === 'Recovery' ? AppColors.body : AppColors.mind }
-              ]}>
-                <Ionicons
-                  name={profile.journey_focus === 'Recovery' ? 'heart' : 'shield-checkmark'}
-                  size={14}
-                  color="#FFFFFF"
+              </GlassCard>
+            )}
+
+            {/* User Journey - Profile, Streak, Harmony, Level */}
+            <GlassCard>
+              <UserStatsSection
+                profile={profile}
+                stats={stats}
+                harmonyStatus={harmonyStatus}
+                activeTooltip={activeTooltip}
+                onSetActiveTooltip={setActiveTooltip}
+                onJourneyFocusPress={() => setShowJourneyFocusModal(true)}
+              />
+            </GlassCard>
+
+            {painStats && (
+              <GlassCard>
+                <PainProgressSection
+                  painStats={painStats}
+                  painHistory={painHistory}
+                  painStatsUpdating={painStatsUpdating}
+                  painUpdatePulse={painUpdatePulse}
+                  onCheckInPress={() => setShowUpdateCheckInConfirm(true)}
                 />
-              </View>
+              </GlassCard>
             )}
-            {/* Health Team Shield Badge (bottom-right) */}
-            {(profile?.role === 'health_team' || profile?.role === 'admin') && (
-              <View style={styles.shieldBadge}>
-                <Ionicons name="shield-checkmark" size={16} color="#FFFFFF" />
-              </View>
-            )}
-          </HapticPressable>
 
-          {/* Greeting Text */}
-          <View style={styles.headerTextContainer}>
-            <Text style={styles.greeting}>
-              {profile?.role === 'health_team' || profile?.role === 'admin' ? 'Welcome back, ' : 'Hello, '}
-              {profile?.first_name || 'there'}
-            </Text>
-
-            {/* Stats Row */}
-            <View style={styles.statsRow}>
-              {/* Current Streak */}
-              <HapticPressable
-                hapticStyle="selection"
-                style={styles.statItem}
-                onPress={() => setActiveTooltip(activeTooltip === 'streak' ? null : 'streak')}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="flame" size={16} color={AppColors.primary} />
-                <Text style={styles.statValue}>{stats?.current_streak || 0}</Text>
-              </HapticPressable>
-
-              <View style={styles.statDivider} />
-
-              {/* Harmony Streak */}
-              <HapticPressable
-                hapticStyle="selection"
-                style={styles.statItem}
-                onPress={() => setActiveTooltip(activeTooltip === 'harmony' ? null : 'harmony')}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="sparkles" size={16} color={AppColors.primary} />
-                <Text style={styles.statValue}>
-                  {harmonyStatus?.consecutiveBalancedDays || 0}
-                </Text>
-              </HapticPressable>
-
-              <View style={styles.statDivider} />
-
-              {/* Soteria Level */}
-              <HapticPressable
-                hapticStyle="selection"
-                style={styles.statItem}
-                onPress={() => setActiveTooltip(activeTooltip === 'level' ? null : 'level')}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="trophy" size={16} color={AppColors.primary} />
-                <Text style={styles.statValue}>Lv.{getUserLevelSummary(stats).soteria.level}</Text>
-              </HapticPressable>
-            </View>
+            <GlassCard>
+              <FriendActivitySection
+                friendActivity={friendActivity}
+                onSeeAll={() => router.push('/(tabs)/social?tab=activity')}
+                onActivityPress={(routineId) => {
+                  if (routineId) {
+                    router.push(`/routines/${routineId}`);
+                  }
+                }}
+              />
+            </GlassCard>
           </View>
-        </View>
-        </LinearGradient>
-      ) : (
-        <View style={[styles.header, { backgroundColor: headerBackground.color }]}>
-          {/* Compact Header Row: Avatar + Text */}
-          <View style={styles.headerRow}>
-          {/* Avatar with Journey Focus Badge */}
-          <HapticPressable
-            style={styles.avatarContainer}
-            onPress={() => profile?.journey_focus && setShowJourneyFocusModal(true)}
-            activeOpacity={0.7}
-          >
-            <View style={[
-              styles.avatar,
-              (profile?.role === 'health_team' || profile?.role === 'admin') && styles.avatarHealthTeam
-            ]}>
-              {profile?.profile_picture_url ? (
-                <Image
-                  source={{ uri: profile.profile_picture_url }}
-                  style={styles.avatarImage}
-                />
-              ) : (
-                <Text style={styles.avatarText}>
-                  {profile?.first_name?.charAt(0).toUpperCase() || 'U'}
-                </Text>
-              )}
-            </View>
-            {/* Journey Focus Badge (top-right) */}
-            {profile?.journey_focus && (
-              <View style={[
-                styles.journeyBadge,
-                { backgroundColor: profile.journey_focus === 'Recovery' ? AppColors.body : AppColors.mind }
-              ]}>
-                <Ionicons
-                  name={profile.journey_focus === 'Recovery' ? 'heart' : 'shield-checkmark'}
-                  size={14}
-                  color="#FFFFFF"
-                />
-              </View>
-            )}
-            {/* Health Team Shield Badge (bottom-right) */}
-            {(profile?.role === 'health_team' || profile?.role === 'admin') && (
-              <View style={styles.shieldBadge}>
-                <Ionicons name="shield-checkmark" size={16} color="#FFFFFF" />
-              </View>
-            )}
-          </HapticPressable>
 
-          {/* Greeting Text */}
-          <View style={styles.headerTextContainer}>
-            <Text style={styles.greeting}>
-              {profile?.role === 'health_team' || profile?.role === 'admin' ? 'Welcome back, ' : 'Hello, '}
-              {profile?.first_name || 'there'}
-            </Text>
-
-            {/* Stats Row */}
-            <View style={styles.statsRow}>
-              {/* Current Streak */}
-              <HapticPressable
-                hapticStyle="selection"
-                style={styles.statItem}
-                onPress={() => setActiveTooltip(activeTooltip === 'streak' ? null : 'streak')}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="flame" size={16} color={AppColors.primary} />
-                <Text style={styles.statValue}>{stats?.current_streak || 0}</Text>
-              </HapticPressable>
-
-              <View style={styles.statDivider} />
-
-              {/* Harmony Streak */}
-              <HapticPressable
-                hapticStyle="selection"
-                style={styles.statItem}
-                onPress={() => setActiveTooltip(activeTooltip === 'harmony' ? null : 'harmony')}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="sparkles" size={16} color={AppColors.primary} />
-                <Text style={styles.statValue}>
-                  {harmonyStatus?.consecutiveBalancedDays || 0}
-                </Text>
-              </HapticPressable>
-
-              <View style={styles.statDivider} />
-
-              {/* Soteria Level */}
-              <HapticPressable
-                hapticStyle="selection"
-                style={styles.statItem}
-                onPress={() => setActiveTooltip(activeTooltip === 'level' ? null : 'level')}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="trophy" size={16} color={AppColors.primary} />
-                <Text style={styles.statValue}>Lv.{getUserLevelSummary(stats).soteria.level}</Text>
-              </HapticPressable>
-            </View>
-          </View>
-        </View>
-        </View>
-      )}
-
-      {/* Stat Tooltip Modal */}
-      <Modal
-        visible={activeTooltip !== null}
-        animationType="fade"
-        transparent
-        onRequestClose={() => setActiveTooltip(null)}
-      >
-        <HapticPressable
-          hapticStyle="none"
-          style={styles.tooltipOverlay}
-          activeOpacity={1}
-          onPress={() => setActiveTooltip(null)}
-        >
-          <View style={styles.tooltip}>
-            {activeTooltip === 'streak' && (
-              <>
-                <Text style={styles.tooltipTitle}>Current Streak</Text>
-                <Text style={styles.tooltipClass}>{stats?.current_streak || 0} Days</Text>
-                <Text style={styles.tooltipDetail}>Consecutive days with completed routines</Text>
-              </>
-            )}
-            {activeTooltip === 'harmony' && (
-              <>
-                <Text style={styles.tooltipTitle}>Harmony Progress</Text>
-                <Text style={styles.tooltipClass}>{harmonyStatus?.consecutiveBalancedDays || 0} / 7</Text>
-                <View style={styles.tooltipXpBar}>
-                  <View style={[styles.tooltipXpFill, { width: `${Math.round(((harmonyStatus?.consecutiveBalancedDays || 0) / 7) * 100)}%` }]} />
-                </View>
-                <Text style={styles.tooltipDetail}>Consecutive balanced days with Mind, Body, and Soul routines</Text>
-              </>
-            )}
-            {activeTooltip === 'level' && (() => {
-              const levelSummary = getUserLevelSummary(stats);
-              const s = levelSummary.soteria;
-              return (
-                <>
-                  <Text style={styles.tooltipTitle}>Soteria Level {s.level}</Text>
-                  <Text style={styles.tooltipClass}>{s.title}</Text>
-                  <View style={styles.tooltipXpBar}>
-                    <View style={[styles.tooltipXpFill, { width: `${Math.round(s.progress * 100)}%` }]} />
-                  </View>
-                  <Text style={styles.tooltipXpText}>{s.currentXp} / {s.xpForNextLevel} XP to next level</Text>
-                </>
-              );
-            })()}
-            {activeTooltip === 'routines' && (
-              <Text style={styles.tooltipText}>
-                Total routines completed: {stats?.total_routines || 0}. Tap to view history.
-              </Text>
-            )}
-            <Text style={styles.tooltipDismiss}>Tap anywhere to dismiss</Text>
-          </View>
-        </HapticPressable>
-      </Modal>
-
-      {/* Avatars Section */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Awaken Your Light</Text>
-          {harmonyStatus && (
+          {/* Health Team Invite Button (Bottom) */}
+          {isHealthTeam && (
             <HapticPressable
-              hapticStyle="selection"
-              style={[
-                styles.harmonyButton,
-                harmonyStatus.isInHarmony && styles.harmonyButtonActive
-              ]}
-              onPress={() => setShowHarmonyModal(true)}
+              style={styles.healthTeamInviteButton}
+              onPress={() => setShowHealthTeamInviteModal(true)}
             >
-              <Text style={[
-                styles.harmonyButtonText,
-                harmonyStatus.isInHarmony && styles.harmonyButtonTextActive
-              ]}>
-                Harmony
-              </Text>
+              <Ionicons name="shield-checkmark" size={24} color="#FFFFFF" />
+              <Text style={styles.healthTeamInviteButtonText}>Invite to Health Team</Text>
             </HapticPressable>
           )}
-        </View>
-        <View style={styles.avatarsGrid}>
-          {avatarStates.map((avatarState) => {
-            // Get the companion name based on category
-            const getCompanionName = () => {
-              switch (avatarState.category) {
-                case 'Mind': return profile?.mind_name;
-                case 'Body': return profile?.body_name;
-                case 'Soul': return profile?.soul_name;
-                default: return null;
-              }
-            };
 
-            return (
-              <Avatar
-                key={avatarState.category}
-                category={avatarState.category}
-                lightState={avatarState.lightState}
-                name={getCompanionName()}
-                onPress={() => handleAvatarClick(avatarState.category)}
-              />
-            );
-          })}
-        </View>
+        </ScrollView>
       </View>
-
-      {/* Category Levels Section */}
-      {stats && (() => {
-        const levelSummary = getUserLevelSummary(stats);
-        return (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Your Levels</Text>
-            <View style={styles.levelRows}>
-              {([
-                { cat: 'Mind' as const, info: levelSummary.mind, color: AppColors.mind, icon: 'bulb-outline' as const },
-                { cat: 'Body' as const, info: levelSummary.body, color: AppColors.body, icon: 'body' as const },
-                { cat: 'Soul' as const, info: levelSummary.soul, color: AppColors.soul, icon: 'flame-outline' as const },
-              ]).map(({ cat, info, color, icon }) => (
-                <View key={cat} style={styles.levelRow}>
-                  {/* Left: Tappable icon badge */}
-                  <HapticPressable
-                    hapticStyle="selection"
-                    style={[styles.levelBadge, { borderColor: color + '40' }]}
-                    onPress={() => handleLevelBadgeTap(cat, info)}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons name={icon} size={18} color={color} />
-                  </HapticPressable>
-
-                  {/* Right: Lv + Title + Progress bar */}
-                  <View style={styles.levelBarSection}>
-                    <View style={styles.levelBarHeader}>
-                      <Text style={[styles.levelRowTitle, { color }]}>
-                        Lv.{info.level}
-                      </Text>
-                      <Text style={styles.levelXpText}>
-                        {info.currentXp}/{info.xpForNextLevel}
-                      </Text>
-                    </View>
-                    <View style={styles.levelBarBg}>
-                      <View style={[styles.levelBarFill, { width: `${Math.round(info.progress * 100)}%`, backgroundColor: color }]} />
-                    </View>
-                  </View>
-                </View>
-              ))}
-            </View>
-          </View>
-        );
-      })()}
-
-      {/* Pain Progress Section */}
-      {painStats && (
-        <View style={styles.section}>
-          <View style={styles.painProgressHeader}>
-            <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>Pain Progress</Text>
-            {painStatsUpdating && (
-              <View style={styles.updatingBadge}>
-                <ActivityIndicator size="small" color={AppColors.primary} />
-                <Text style={styles.updatingText}>Updating...</Text>
-              </View>
-            )}
-          </View>
-          <Animated.View style={[styles.painProgressCard, { opacity: painStatsUpdating ? painUpdatePulse : 1 }]}>
-            {/* Current Pain Level */}
-            <View style={styles.painLevelSection}>
-              <View style={styles.painLevelLeft}>
-                <Text style={styles.painLevelLabel}>Current Pain</Text>
-                <View style={styles.painLevelDisplay}>
-                  <Text
-                    style={[
-                      styles.painLevelNumber,
-                      { color: getPainLevelInfo(painStats.current_pain).color },
-                    ]}
-                  >
-                    {painStats.current_pain}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.painLevelText,
-                      { color: getPainLevelInfo(painStats.current_pain).color },
-                    ]}
-                  >
-                    {getPainLevelInfo(painStats.current_pain).label}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Trend Indicator - Tap to check in */}
-              <HapticPressable
-                style={styles.trendIndicator}
-                onPress={() => setShowUpdateCheckInConfirm(true)}
-                activeOpacity={0.7}
-              >
-                <Text
-                  style={[
-                    styles.trendIcon,
-                    { color: getPainTrendInfo(painStats.trend).color },
-                  ]}
-                >
-                  {getPainTrendInfo(painStats.trend).icon}
-                </Text>
-                <Text style={styles.trendText}>
-                  {getPainTrendInfo(painStats.trend).description}
-                </Text>
-                <Ionicons
-                  name="add-circle-outline"
-                  size={16}
-                  color={AppColors.textTertiary}
-                  style={styles.checkInIcon}
-                />
-              </HapticPressable>
-            </View>
-
-            {/* Pain Progress Chart */}
-            <PainProgressChart painHistory={painHistory} maxDays={100} />
-
-            {/* Stats Row */}
-            <View style={styles.painStatsRow}>
-              <View style={styles.painStatItem}>
-                <Text style={styles.painStatValue}>
-                  {painStats.avg_7_days.toFixed(1)}
-                </Text>
-                <Text style={styles.painStatLabel}>7-Day Avg</Text>
-              </View>
-              <View style={styles.painStatDivider} />
-              <View style={styles.painStatItem}>
-                <Text style={styles.painStatValue}>
-                  {painStats.avg_30_days.toFixed(1)}
-                </Text>
-                <Text style={styles.painStatLabel}>30-Day Avg</Text>
-              </View>
-              <View style={styles.painStatDivider} />
-              <View style={styles.painStatItem}>
-                <Text style={styles.painStatValue}>{painStats.pain_free_days}</Text>
-                <Text style={styles.painStatLabel}>Pain-Free Days</Text>
-              </View>
-            </View>
-          </Animated.View>
-        </View>
-      )}
-
-      {/* Friend Activity */}
-      {friendActivity.length > 0 && (
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Friend Activity</Text>
-            <HapticPressable onPress={() => router.push('/(tabs)/social?tab=activity')}>
-              <Text style={styles.seeAllText}>See All</Text>
-            </HapticPressable>
-          </View>
-          {friendActivity.slice(0, 3).map((activity) => (
-            <HapticPressable
-              key={activity.id}
-              style={styles.activityCard}
-              onPress={() => {
-                if (activity.routineId) {
-                  router.push(`/routines/${activity.routineId}`);
-                }
-              }}
-            >
-              <View style={styles.activityAvatar}>
-                {activity.user.profile_picture_url ? (
-                  <Image
-                    source={{ uri: activity.user.profile_picture_url }}
-                    style={styles.activityAvatarImage}
-                  />
-                ) : (
-                  <Text style={styles.activityAvatarText}>
-                    {activity.user.first_name?.charAt(0).toUpperCase() || 'U'}
-                  </Text>
-                )}
-              </View>
-              <View style={styles.activityContent}>
-                <Text style={styles.activityText} numberOfLines={2}>
-                  <Text style={styles.activityUserName}>{getDisplayName(activity.user)}</Text>{' '}
-                  {activity.message}
-                </Text>
-                <Text style={styles.activityTime}>{getTimeAgo(activity.timestamp)}</Text>
-              </View>
-            </HapticPressable>
-          ))}
-        </View>
-      )}
-
-      {/* Health Team Invite Button (Bottom) */}
-      {isHealthTeam && (
-        <HapticPressable
-          style={styles.healthTeamInviteButton}
-          onPress={() => setShowHealthTeamInviteModal(true)}
-        >
-          <Ionicons name="shield-checkmark" size={24} color="#FFFFFF" />
-          <Text style={styles.healthTeamInviteButtonText}>Invite to Health Team</Text>
-        </HapticPressable>
-      )}
-
-    </ScrollView>
     </>
   );
 }
 
-function getTimeAgo(timestamp: string): string {
-  const now = new Date();
-  const past = new Date(timestamp);
-  const diffMs = now.getTime() - past.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
-  return past.toLocaleDateString();
-}
-
 const styles = StyleSheet.create({
-  container: {
+  outerContainer: {
     flex: 1,
     backgroundColor: AppColors.background,
+  },
+  backgroundContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: SCREEN_HEIGHT * 0.85,
+    zIndex: 0,
+  },
+  backgroundImage: {
+    resizeMode: 'cover',
+    top: -70,
+  },
+  darkOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+  },
+  fadeGradient: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: '60%',
+  },
+  container: {
+    flex: 1,
+    backgroundColor: 'transparent',
   },
   loadingContainer: {
     flex: 1,
@@ -1141,492 +669,8 @@ const styles = StyleSheet.create({
     color: AppColors.textSecondary,
     fontWeight: '500',
   },
-  header: {
-    padding: 24,
-    paddingTop: 100,
-    // backgroundColor applied dynamically based on completed categories
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-  },
-  avatarContainer: {
-    position: 'relative',
-  },
-  avatar: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: AppColors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
-  avatarHealthTeam: {
-    borderWidth: 3,
-    borderColor: '#10B981',
-  },
-  journeyBadge: {
-    position: 'absolute',
-    top: -2,
-    right: -2,
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: AppColors.surface,
-  },
-  shieldBadge: {
-    position: 'absolute',
-    bottom: -2,
-    right: -2,
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: '#10B981',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: AppColors.surface,
-  },
-  avatarImage: {
-    width: '100%',
-    height: '100%',
-  },
-  avatarText: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: AppColors.textPrimary,
-  },
-  headerTextContainer: {
-    flex: 1,
-  },
-  greeting: {
-    fontSize: 26,
-    fontWeight: 'bold',
-    color: AppColors.textPrimary,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 6,
-    gap: 12,
-  },
-  statItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingVertical: 2,
-  },
-  statValue: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: AppColors.textSecondary,
-  },
-  statDivider: {
-    width: 1,
-    height: 14,
-    backgroundColor: AppColors.border,
-  },
-  tooltipOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  tooltip: {
-    backgroundColor: AppColors.surface,
-    borderRadius: 16,
-    paddingVertical: 24,
-    paddingHorizontal: 32,
-    marginHorizontal: 24,
-    width: '85%',
-    borderWidth: 1,
-    borderColor: AppColors.border,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  tooltipTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: AppColors.textSecondary,
-    textAlign: 'center',
-    marginBottom: 4,
-  },
-  tooltipClass: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: AppColors.primary,
-    textAlign: 'center',
-    marginBottom: 12,
-  },
-  tooltipXpBar: {
-    width: '100%',
-    height: 8,
-    backgroundColor: AppColors.border,
-    borderRadius: 4,
-    overflow: 'hidden',
-    marginBottom: 6,
-  },
-  tooltipXpFill: {
-    height: '100%',
-    borderRadius: 4,
-    backgroundColor: AppColors.primary,
-  },
-  tooltipXpText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: AppColors.textTertiary,
-    textAlign: 'center',
-  },
-  tooltipDetail: {
-    fontSize: 13,
-    color: AppColors.textTertiary,
-    textAlign: 'center',
-    lineHeight: 18,
-  },
-  tooltipText: {
-    fontSize: 15,
-    lineHeight: 22,
-    color: AppColors.textPrimary,
-    textAlign: 'center',
-  },
-  tooltipDismiss: {
-    fontSize: 12,
-    color: AppColors.textTertiary,
-    textAlign: 'center',
-    marginTop: 12,
-  },
-  section: {
-    marginTop: 16,
-    padding: 24,
-    backgroundColor: AppColors.surface,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: AppColors.textPrimary,
-    marginBottom: 16,
-  },
-  levelRows: {
-    gap: 10,
-  },
-  levelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  levelBadge: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: AppColors.surfaceSecondary,
-    borderWidth: 1.5,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  levelBarSection: {
-    flex: 1,
-    gap: 4,
-  },
-  levelBarHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'baseline',
-  },
-  levelRowTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  levelRowTitleName: {
-    fontWeight: '500',
-    color: AppColors.textSecondary,
-  },
-  levelXpText: {
-    fontSize: 11,
-    color: AppColors.textTertiary,
-    fontWeight: '500',
-  },
-  levelBarBg: {
-    width: '100%',
-    height: 6,
-    backgroundColor: AppColors.border,
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  levelBarFill: {
-    height: '100%',
-    borderRadius: 3,
-  },
-  progressGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  progressCard: {
-    flex: 1,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 2,
-    alignItems: 'center',
-  },
-  progressTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: AppColors.textPrimary,
-    marginBottom: 8,
-  },
-  progressIndicator: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: AppColors.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkmark: {
-    color: AppColors.textPrimary,
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  // Avatar Section Styles
-  avatarsGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    gap: 16,
-    marginTop: 16,
-    marginBottom: 16,
-  },
-  routineCard: {
-    padding: 16,
-    borderRadius: 12,
-    backgroundColor: AppColors.surfaceSecondary,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: AppColors.cardBorder,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  routineHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  routineName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: AppColors.textPrimary,
-    flex: 1,
-  },
-  categoryBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  categoryText: {
-    color: AppColors.textPrimary,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  routineDescription: {
-    fontSize: 14,
-    color: AppColors.textSecondary,
-    marginBottom: 8,
-  },
-  routineDetails: {
-    fontSize: 12,
-    color: AppColors.textTertiary,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  seeAllText: {
-    fontSize: 14,
-    color: AppColors.primary,
-    fontWeight: '600',
-  },
-  harmonyButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 16,
-    backgroundColor: AppColors.border,
-  },
-  harmonyButtonActive: {
-    backgroundColor: AppColors.primary,
-  },
-  harmonyButtonText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: AppColors.textSecondary,
-  },
-  harmonyButtonTextActive: {
-    color: '#FFFFFF',
-  },
-  activityCard: {
-    flexDirection: 'row',
-    backgroundColor: AppColors.surfaceSecondary,
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: AppColors.cardBorder,
-  },
-  activityAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: AppColors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-    overflow: 'hidden',
-  },
-  activityAvatarImage: {
-    width: '100%',
-    height: '100%',
-  },
-  activityAvatarText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: AppColors.textPrimary,
-  },
-  activityContent: {
-    flex: 1,
-  },
-  activityText: {
-    fontSize: 14,
-    color: AppColors.textPrimary,
-    lineHeight: 20,
-    marginBottom: 4,
-  },
-  activityUserName: {
-    fontWeight: '600',
-  },
-  activityTime: {
-    fontSize: 12,
-    color: AppColors.textTertiary,
-  },
-  // Pain Progress Section Styles
-  painProgressHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  updatingBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: AppColors.surfaceSecondary,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-  },
-  updatingText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: AppColors.primary,
-  },
-  painProgressCard: {
-    padding: 20,
-    borderRadius: 12,
-    backgroundColor: AppColors.surfaceSecondary,
-    borderWidth: 1,
-    borderColor: AppColors.cardBorder,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  painLevelSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  painLevelLeft: {
-    flex: 1,
-  },
-  painLevelLabel: {
-    fontSize: 12,
-    color: AppColors.textSecondary,
-    marginBottom: 8,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  painLevelDisplay: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 8,
-  },
-  painLevelNumber: {
-    fontSize: 40,
-    fontWeight: 'bold',
-  },
-  painLevelText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  trendIndicator: {
-    alignItems: 'center',
-    backgroundColor: AppColors.surface,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: AppColors.border,
-  },
-  trendIcon: {
-    fontSize: 28,
-    marginBottom: 4,
-  },
-  trendText: {
-    fontSize: 11,
-    color: AppColors.textSecondary,
-    textAlign: 'center',
-  },
-  checkInIcon: {
-    marginTop: 6,
-  },
-  painStatsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-  },
-  painStatItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  painStatValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: AppColors.textPrimary,
-    marginBottom: 4,
-  },
-  painStatLabel: {
-    fontSize: 11,
-    color: AppColors.textSecondary,
-    textAlign: 'center',
-  },
-  painStatDivider: {
-    width: 1,
-    height: 30,
-    backgroundColor: AppColors.border,
+  glassCardsContainer: {
+    paddingTop: 8,
   },
   // Health Team Invite Button (Bottom)
   healthTeamInviteButton: {
