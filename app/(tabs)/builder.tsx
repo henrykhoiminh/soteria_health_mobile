@@ -2,6 +2,7 @@ import DraggableExerciseList from '@/components/DraggableExerciseList';
 import ExerciseEditorModal from '@/components/ExerciseEditorModal';
 import ExerciseLibrary from '@/components/ExerciseLibrary';
 import FilterOptionsManager from '@/components/FilterOptionsManager';
+import SanctumBackground from '@/components/Dashboard/SanctumBackground';
 import HapticPressable from '@/components/HapticPressable';
 import { AppColors } from '@/constants/theme';
 import { useAuth } from '@/lib/contexts/AuthContext';
@@ -77,6 +78,7 @@ export default function RoutineBuilderScreen() {
   const [exerciseEditorVisible, setExerciseEditorVisible] = useState(false);
   const [selectedExercise, setSelectedExercise] = useState<ExerciseLibraryItem | null>(null);
   const [exerciseRefreshKey, setExerciseRefreshKey] = useState(0);
+  const [exerciseCategory, setExerciseCategory] = useState<RoutineCategory | null>(null);
 
   // Builder state
   const [routineData, setRoutineData] = useState<RoutineBuilderData>({
@@ -664,6 +666,7 @@ export default function RoutineBuilderScreen() {
   // Mode selection screen - available to all users
   if (buildMode === 'select') {
     return (
+      <SanctumBackground>
       <View style={styles.container}>
         <View style={styles.modeSelectionHeader}>
           <Text style={styles.modeSelectionTitle}>Build</Text>
@@ -674,21 +677,35 @@ export default function RoutineBuilderScreen() {
 
         <View style={styles.modeSelectionContainer}>
 
-          <HapticPressable
-            style={styles.modeCard}
-            onPress={() => setBuildMode('exercise')}
-          >
-            <View style={styles.modeIconContainer}>
-              <Ionicons name="fitness" size={48} color={AppColors.primary} />
-            </View>
-            <View style={styles.modeContent}>
-              <Text style={styles.modeTitle}>Exercise Library</Text>
-              <Text style={styles.modeDescription}>
-                Create and manage individual exercises that can be used in routines
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color={AppColors.textSecondary} />
-          </HapticPressable>
+          {/* Exercise Library Cards - one per category */}
+          {(['Mind', 'Body', 'Soul'] as RoutineCategory[]).map((cat) => {
+            const color = cat === 'Mind' ? AppColors.mind : cat === 'Body' ? AppColors.body : AppColors.soul;
+            const icon = cat === 'Mind' ? 'bulb-outline' as const : cat === 'Body' ? 'body' as const : 'flame-outline' as const;
+            const desc = cat === 'Mind'
+              ? 'Meditation, focus, and cognitive exercises'
+              : cat === 'Body'
+                ? 'Physical movement, strength, and flexibility'
+                : 'Breathwork, gratitude, and spiritual practices';
+            return (
+              <HapticPressable
+                key={cat}
+                style={styles.modeCard}
+                onPress={() => {
+                  setExerciseCategory(cat);
+                  setBuildMode('exercise');
+                }}
+              >
+                <View style={[styles.modeIconContainer, { backgroundColor: color + '20' }]}>
+                  <Ionicons name={icon} size={48} color={color} />
+                </View>
+                <View style={styles.modeContent}>
+                  <Text style={styles.modeTitle}>{cat} Exercises</Text>
+                  <Text style={styles.modeDescription}>{desc}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={24} color={AppColors.textSecondary} />
+              </HapticPressable>
+            );
+          })}
 
           <HapticPressable
             style={styles.modeCard}
@@ -726,6 +743,7 @@ export default function RoutineBuilderScreen() {
           )}
         </View>
       </View>
+      </SanctumBackground>
     );
   }
 
@@ -745,12 +763,17 @@ export default function RoutineBuilderScreen() {
         {/* Header */}
         <View style={styles.header}>
           <HapticPressable
-            onPress={() => setBuildMode('select')}
+            onPress={() => {
+              setBuildMode('select');
+              setExerciseCategory(null);
+            }}
             style={styles.headerButton}
           >
             <Ionicons name="arrow-back" size={28} color={AppColors.textSecondary} />
           </HapticPressable>
-          <Text style={styles.title}>Exercise Library</Text>
+          <Text style={styles.title}>
+            {exerciseCategory ? `${exerciseCategory} Exercises` : 'Exercise Library'}
+          </Text>
           <HapticPressable
             onPress={handleAddExercise}
             style={styles.headerButton}
@@ -762,7 +785,8 @@ export default function RoutineBuilderScreen() {
         {/* Exercise Library */}
         <View style={styles.exerciseLibraryContainer}>
           <ExerciseLibrary
-            key={exerciseRefreshKey}
+            key={`${exerciseRefreshKey}-${exerciseCategory}`}
+            category={exerciseCategory ?? undefined}
             onEditExercise={handleEditExercise}
             onDeleteExercise={(exerciseId) => {
               setExerciseRefreshKey(prev => prev + 1);
@@ -1944,13 +1968,13 @@ function getCategoryColor(category: string): string {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: AppColors.background,
+    backgroundColor: 'transparent',
   },
   // Mode selection styles
   modeSelectionHeader: {
     padding: 24,
     paddingTop: 100,
-    backgroundColor: AppColors.surface,
+    backgroundColor: AppColors.glassBackground,
   },
   modeSelectionContainer: {
     flex: 1,
@@ -1970,17 +1994,12 @@ const styles = StyleSheet.create({
   modeCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: AppColors.surface,
+    backgroundColor: AppColors.glassBackground,
     borderRadius: 16,
     padding: 20,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: AppColors.borderLight,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    borderColor: AppColors.glassEdge,
   },
   modeIconContainer: {
     width: 64,
@@ -2035,9 +2054,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 24,
     paddingTop: 100,
-    backgroundColor: AppColors.surface,
+    backgroundColor: AppColors.glassBackground,
     borderBottomWidth: 1,
-    borderBottomColor: AppColors.borderLight,
+    borderBottomColor: AppColors.glassEdge,
   },
   title: {
     fontSize: 28,
@@ -2054,7 +2073,7 @@ const styles = StyleSheet.create({
   },
   progressContainer: {
     padding: 16,
-    backgroundColor: AppColors.surface,
+    backgroundColor: AppColors.glassBackground,
   },
   progressBar: {
     height: 8,
@@ -2111,15 +2130,15 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   optionCard: {
-    backgroundColor: AppColors.surface,
+    backgroundColor: AppColors.glassBackground,
     borderRadius: 12,
     padding: 20,
     borderWidth: 2,
-    borderColor: AppColors.border,
+    borderColor: AppColors.glassEdge,
   },
   optionCardSelected: {
     borderColor: AppColors.primary,
-    backgroundColor: AppColors.surfaceSecondary,
+    backgroundColor: AppColors.glassBackground,
   },
   optionHeader: {
     flexDirection: 'row',
@@ -2159,16 +2178,11 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   selectedExerciseCard: {
-    backgroundColor: AppColors.surface,
+    backgroundColor: AppColors.glassBackground,
     borderRadius: 12,
     padding: 12,
     borderWidth: 1,
-    borderColor: AppColors.cardBorder,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 2,
+    borderColor: AppColors.glassEdge,
   },
   selectedExerciseHeader: {
     flexDirection: 'row',
@@ -2225,9 +2239,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     paddingTop: 60,
-    backgroundColor: AppColors.surface,
+    backgroundColor: AppColors.glassBackground,
     borderBottomWidth: 1,
-    borderBottomColor: AppColors.borderLight,
+    borderBottomColor: AppColors.glassEdge,
   },
   modalTitle: {
     fontSize: 18,
@@ -2397,17 +2411,12 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   exerciseListItem: {
-    backgroundColor: AppColors.surface,
+    backgroundColor: AppColors.glassBackground,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: AppColors.cardBorder,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 2,
+    borderColor: AppColors.glassEdge,
   },
   exerciseListItemName: {
     fontSize: 16,
@@ -2476,16 +2485,11 @@ const styles = StyleSheet.create({
     gap: 24,
   },
   reviewSection: {
-    backgroundColor: AppColors.surface,
+    backgroundColor: AppColors.glassBackground,
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: AppColors.cardBorder,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 2,
+    borderColor: AppColors.glassEdge,
   },
   reviewSectionTitle: {
     fontSize: 18,
@@ -2641,11 +2645,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: AppColors.surfaceSecondary,
+    backgroundColor: AppColors.glassBackground,
     borderRadius: 8,
     padding: 16,
     borderWidth: 1,
-    borderColor: AppColors.cardBorder,
+    borderColor: AppColors.glassEdge,
   },
   advancedTagsToggleContent: {
     flex: 1,
@@ -2663,10 +2667,10 @@ const styles = StyleSheet.create({
   advancedTagsContainer: {
     gap: 12,
     padding: 16,
-    backgroundColor: AppColors.surfaceSecondary,
+    backgroundColor: AppColors.glassBackground,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: AppColors.cardBorder,
+    borderColor: AppColors.glassEdge,
   },
   fieldHint: {
     fontSize: 12,
@@ -2765,12 +2769,14 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   modalContent: {
-    backgroundColor: AppColors.surface,
+    backgroundColor: AppColors.glassBackground,
     borderRadius: 12,
     width: '100%',
     maxWidth: 400,
     maxHeight: '70%',
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: AppColors.glassEdge,
   },
   modalScrollView: {
     maxHeight: 400,
@@ -2799,16 +2805,13 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   publishModalContent: {
-    backgroundColor: AppColors.surface,
+    backgroundColor: AppColors.glassBackground,
     borderRadius: 20,
     width: '100%',
     maxWidth: 500,
     padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
+    borderWidth: 1,
+    borderColor: AppColors.glassEdge,
   },
   publishModalHeader: {
     alignItems: 'center',
@@ -2908,16 +2911,13 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   editDurationModalContent: {
-    backgroundColor: AppColors.surface,
+    backgroundColor: AppColors.glassBackground,
     borderRadius: 20,
     width: '100%',
     maxWidth: 400,
     padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
+    borderWidth: 1,
+    borderColor: AppColors.glassEdge,
   },
   editDurationModalHeader: {
     flexDirection: 'row',

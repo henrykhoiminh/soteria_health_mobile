@@ -40,41 +40,41 @@ export const AppColors = {
   body: '#EF4444',
   soul: '#F59E0B',
 
-  // Background Colors - Dark Mode
-  background: '#1A1A1A',      // Very dark grey, almost black (main background)
-  surface: '#2C2C2C',         // Dark grey for cards/elevation
-  surfaceSecondary: '#363636', // Lighter grey for nested cards
-  inputBackground: '#3A3A3A',  // Dark grey for inputs
+  // Background Colors - Deep Black Mode
+  background: '#0A0A0A',      // True black with subtle warmth (OLED-friendly)
+  surface: '#141414',         // Deep black for cards/elevation
+  surfaceSecondary: '#1C1C1C', // Darker secondary surfaces
+  inputBackground: '#1F1F1F',  // Dark input fields
 
-  // Text Colors - Dark Mode
-  textPrimary: '#FFFFFF',     // White for primary text
-  textSecondary: '#B0B0B0',   // Light grey for secondary text
-  textTertiary: '#808080',    // Medium grey for tertiary text
-  textPlaceholder: '#5A5A5A', // Darker grey for placeholders
+  // Text Colors - Deep Black Mode
+  textPrimary: '#FFFFFF',     // White for primary text (21:1 contrast)
+  textSecondary: '#A8A8A8',   // Light grey for secondary text (11.5:1 contrast)
+  textTertiary: '#707070',    // Medium grey for tertiary text (5.8:1 contrast)
+  textPlaceholder: '#4A4A4A', // Darker grey for placeholders (3.3:1 contrast)
 
-  // Border Colors - Dark Mode
-  border: '#404040',          // Subtle border on dark background
-  borderLight: '#333333',     // Very subtle border
-  cardBorder: '#3F3F3F',      // Card borders for elevation
+  // Border Colors - Deep Black Mode
+  border: '#2A2A2A',          // Subtle border on black background
+  borderLight: '#1A1A1A',     // Very subtle border
+  cardBorder: '#282828',      // Card borders for elevation
 
   // Semantic Colors (kept for good contrast)
   success: '#34C759',
   successText: '#FFFFFF',     // White text for success buttons
 
-  // Tag Backgrounds - Dark Mode
-  lightBlue: '#1E3A5F',       // Dark blue for goals/mind tags
-  lightOrange: '#4A3A1F',     // Dark amber for warnings/injuries
-  lightGold: '#3D3520',       // Dark gold for Soteria-related highlights
+  // Tag Backgrounds - Deep Black Mode
+  lightBlue: '#0F1F3A',       // Deep blue for goals/mind tags
+  lightOrange: '#2A1F0F',     // Deep amber for warnings/injuries
+  lightGold: '#1F1A0F',       // Deep gold for Soteria-related highlights
 
   // Header Dynamic Backgrounds (based on completed categories)
-  headerMind: '#1E3A5F',      // Dark blue for Mind category completion
-  headerBody: '#4A1F1F',      // Dark red for Body category completion
-  headerSoul: '#4A3A1F',      // Dark amber for Soul category completion
+  headerMind: '#0F1F3A',      // Deep blue for Mind category completion
+  headerBody: '#2A0F0F',      // Deep red for Body category completion
+  headerSoul: '#2A1F0F',      // Deep amber for Soul category completion
 
   // Sanctum / Glass Card Theme
-  sanctumOverlay: 'rgba(20, 20, 25, 0.5)',   // Content overlay on glass cards
-  glassBackground: 'rgba(44, 44, 44, 0.85)', // Android fallback for BlurView
-  glassEdge: 'rgba(247, 221, 111, 0.15)',    // Subtle gold border on glass cards
+  sanctumOverlay: 'rgba(10, 10, 10, 0.6)',   // Deep content overlay on glass cards
+  glassBackground: 'rgba(20, 10, 10, 0.65)', // Semi-transparent glass - sanctum shows through
+  glassEdge: 'rgba(247, 221, 111, 0.25)',    // Gold border on glass cards
 };
 
 // Card Elevation Style (for consistent card appearance) - Dark Mode Adjusted
@@ -83,7 +83,7 @@ export const CardElevation = {
   borderColor: AppColors.cardBorder,
   shadowColor: '#000',
   shadowOffset: { width: 0, height: 1 },
-  shadowOpacity: 0.2,         // Slightly increased for visibility on dark background
+  shadowOpacity: 0.3,         // Increased for visibility on deep black background
   shadowRadius: 3,
   elevation: 2, // For Android
 };

@@ -149,14 +149,9 @@ const styles = StyleSheet.create({
   painProgressCard: {
     padding: 20,
     borderRadius: 12,
-    backgroundColor: AppColors.surfaceSecondary,
+    backgroundColor: AppColors.glassBackground,
     borderWidth: 1,
-    borderColor: AppColors.cardBorder,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 2,
+    borderColor: AppColors.glassEdge,
   },
   painLevelSection: {
     flexDirection: 'row',

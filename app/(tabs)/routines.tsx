@@ -10,6 +10,7 @@ import {
   RefreshControl,
   Alert,
 } from 'react-native';
+import SanctumBackground from '@/components/Dashboard/SanctumBackground';
 import HapticPressable from '@/components/HapticPressable';
 import { AppColors } from '@/constants/theme';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -66,6 +67,7 @@ export default function RoutinesScreen() {
   }, [user]);
 
   return (
+    <SanctumBackground>
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
@@ -110,6 +112,7 @@ export default function RoutinesScreen() {
       {activeTab === 'discover' && user && <DiscoverTab userId={user.id} initialCategory={params.category as RoutineCategory | undefined} isInHarmony={harmonyStatus?.isInHarmony || false} />}
       {activeTab === 'my-routines' && user && <MyRoutinesTab userId={user.id} isInHarmony={harmonyStatus?.isInHarmony || false} />}
     </View>
+    </SanctumBackground>
   );
 }
 
@@ -1078,7 +1081,7 @@ function getCategoryColor(category: string): string {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: AppColors.background,
+    backgroundColor: 'transparent',
   },
   loadingContainer: {
     flex: 1,
@@ -1089,7 +1092,7 @@ const styles = StyleSheet.create({
   header: {
     padding: 24,
     paddingTop: 100,
-    backgroundColor: AppColors.surface,
+    backgroundColor: AppColors.glassBackground,
   },
   title: {
     fontSize: 28,
@@ -1103,9 +1106,9 @@ const styles = StyleSheet.create({
   },
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: AppColors.surface,
+    backgroundColor: AppColors.glassBackground,
     borderBottomWidth: 1,
-    borderBottomColor: AppColors.borderLight,
+    borderBottomColor: AppColors.glassEdge,
   },
   tab: {
     flex: 1,
@@ -1132,11 +1135,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   searchSection: {
-    backgroundColor: AppColors.surface,
+    backgroundColor: AppColors.glassBackground,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: AppColors.borderLight,
+    borderBottomColor: AppColors.glassEdge,
   },
   searchContainer: {
     flexDirection: 'row',
@@ -1160,9 +1163,9 @@ const styles = StyleSheet.create({
   filtersScrollView: {
     flexGrow: 0,
     flexShrink: 0,
-    backgroundColor: AppColors.surface,
+    backgroundColor: AppColors.glassBackground,
     borderBottomWidth: 1,
-    borderBottomColor: AppColors.borderLight,
+    borderBottomColor: AppColors.glassEdge,
     minHeight: 52,
   },
   filtersScrollViewContent: {
@@ -1280,17 +1283,12 @@ const styles = StyleSheet.create({
     color: AppColors.primary,
   },
   routineCard: {
-    backgroundColor: AppColors.surface,
+    backgroundColor: AppColors.glassBackground,
     borderRadius: 12,
     padding: 14,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: AppColors.cardBorder,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 2,
+    borderColor: AppColors.glassEdge,
   },
   routineCardCompact: {
     padding: 10,
@@ -1456,12 +1454,14 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   dropdownContent: {
-    backgroundColor: AppColors.surface,
+    backgroundColor: AppColors.glassBackground,
     borderRadius: 16,
     width: '100%',
     maxWidth: 320,
     maxHeight: '50%',
     padding: 16,
+    borderWidth: 1,
+    borderColor: AppColors.glassEdge,
   },
   dropdownTitle: {
     fontSize: 18,
@@ -1508,11 +1508,13 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   sortModalContent: {
-    backgroundColor: AppColors.surface,
+    backgroundColor: AppColors.glassBackground,
     borderRadius: 16,
     padding: 20,
     width: '100%',
     maxWidth: 320,
+    borderWidth: 1,
+    borderColor: AppColors.glassEdge,
   },
   sortModalTitle: {
     fontSize: 18,

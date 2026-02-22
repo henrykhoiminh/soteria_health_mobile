@@ -467,17 +467,12 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   exerciseCard: {
-    backgroundColor: AppColors.surface,
+    backgroundColor: AppColors.glassBackground,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: AppColors.cardBorder,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 2,
+    borderColor: AppColors.glassEdge,
   },
   exerciseHeader: {
     flexDirection: 'row',
@@ -523,9 +518,9 @@ const styles = StyleSheet.create({
   footer: {
     padding: 24,
     paddingBottom: 40,
-    backgroundColor: AppColors.surface,
+    backgroundColor: AppColors.glassBackground,
     borderTopWidth: 1,
-    borderTopColor: AppColors.borderLight,
+    borderTopColor: AppColors.glassEdge,
   },
   startButton: {
     backgroundColor: AppColors.primary,

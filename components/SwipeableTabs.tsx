@@ -2,7 +2,6 @@ import React, { useRef, useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
-  Text,
   Platform,
   Dimensions,
 } from 'react-native';
@@ -17,7 +16,8 @@ import * as Haptics from 'expo-haptics';
 interface TabConfig {
   name: string;
   title: string;
-  icon: any; // Icon name from IconSymbol
+  icon: any; // Icon name from IconSymbol (active/filled state)
+  iconOutline?: any; // Icon name for inactive/outline state
   component: React.ComponentType<any>;
 }
 
@@ -101,17 +101,9 @@ export default function SwipeableTabs({ tabs, initialPage = 0 }: SwipeableTabsPr
             >
               <IconSymbol
                 size={28}
-                name={tab.icon}
+                name={isActive ? tab.icon : (tab.iconOutline ?? tab.icon)}
                 color={isActive ? activeColor : inactiveColor}
               />
-              <Text
-                style={[
-                  styles.tabLabel,
-                  { color: isActive ? activeColor : inactiveColor },
-                ]}
-              >
-                {tab.title}
-              </Text>
             </HapticPressable>
           );
         })}
@@ -147,10 +139,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingTop: 8,
-  },
-  tabLabel: {
-    fontSize: 11,
-    marginTop: 4,
-    fontWeight: '500',
   },
 });

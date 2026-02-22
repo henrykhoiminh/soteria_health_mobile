@@ -48,6 +48,7 @@ import {
   View,
   RefreshControl,
 } from 'react-native';
+import SanctumBackground from '@/components/Dashboard/SanctumBackground';
 import HapticPressable from '@/components/HapticPressable';
 
 type Tab = 'friends' | 'circles' | 'activity';
@@ -102,6 +103,7 @@ export default function SocialScreen() {
   }
 
   return (
+    <SanctumBackground>
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
@@ -145,6 +147,7 @@ export default function SocialScreen() {
       {activeTab === 'friends' && <FriendsTab userId={user.id} onRefresh={onRefresh} />}
       {activeTab === 'activity' && <ActivityTab userId={user.id} onRefresh={onRefresh} />}
     </View>
+    </SanctumBackground>
   );
 }
 
@@ -936,12 +939,12 @@ function CreateCircleModal({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: AppColors.background,
+    backgroundColor: 'transparent',
   },
   header: {
     padding: 24,
     paddingTop: 100,
-    backgroundColor: AppColors.surface,
+    backgroundColor: AppColors.glassBackground,
   },
   headerTitle: {
     fontSize: 28,
@@ -955,9 +958,9 @@ const styles = StyleSheet.create({
   },
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: AppColors.surface,
+    backgroundColor: AppColors.glassBackground,
     borderBottomWidth: 1,
-    borderBottomColor: AppColors.borderLight,
+    borderBottomColor: AppColors.glassEdge,
   },
   tab: {
     flex: 1,
@@ -1047,12 +1050,12 @@ const styles = StyleSheet.create({
   userCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: AppColors.surface,
+    backgroundColor: AppColors.glassBackground,
     borderRadius: 12,
     padding: 12,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: AppColors.cardBorder,
+    borderColor: AppColors.glassEdge,
   },
   userAvatar: {
     width: 48,
@@ -1112,7 +1115,7 @@ const styles = StyleSheet.create({
   requestCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: AppColors.surface,
+    backgroundColor: AppColors.glassBackground,
     borderRadius: 12,
     padding: 12,
     marginBottom: 8,
@@ -1137,12 +1140,12 @@ const styles = StyleSheet.create({
   friendCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: AppColors.surface,
+    backgroundColor: AppColors.glassBackground,
     borderRadius: 12,
     padding: 12,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: AppColors.cardBorder,
+    borderColor: AppColors.glassEdge,
   },
   unfriendButton: {
     padding: 8,
@@ -1191,12 +1194,12 @@ const styles = StyleSheet.create({
   circleCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: AppColors.surface,
+    backgroundColor: AppColors.glassBackground,
     borderRadius: 12,
     padding: 12,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: AppColors.cardBorder,
+    borderColor: AppColors.glassEdge,
   },
   circleIcon: {
     width: 48,
@@ -1239,7 +1242,7 @@ const styles = StyleSheet.create({
   invitationCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: AppColors.surface,
+    backgroundColor: AppColors.glassBackground,
     borderRadius: 12,
     padding: 12,
     marginBottom: 8,
@@ -1290,13 +1293,13 @@ const styles = StyleSheet.create({
   },
   activityCard: {
     flexDirection: 'row',
-    backgroundColor: AppColors.surface,
+    backgroundColor: AppColors.glassBackground,
     borderRadius: 12,
     padding: 12,
     marginHorizontal: 16,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: AppColors.cardBorder,
+    borderColor: AppColors.glassEdge,
   },
   activityIconContainer: {
     width: 40,
@@ -1329,7 +1332,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: AppColors.surface,
+    backgroundColor: AppColors.glassBackground,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: '80%',

@@ -75,12 +75,23 @@ export default function ExerciseLibrary({
   const [selectedDifficulty, setSelectedDifficulty] = useState<RoutineDifficulty | undefined>()
   const [selectedOwnership, setSelectedOwnership] = useState<'all' | 'official' | 'mine' | 'community'>('all')
   const [selectedBodyPart, setSelectedBodyPart] = useState<string | undefined>()
+  const [selectedTag, setSelectedTag] = useState<string | undefined>()
 
   // Dropdown modal state
   const [categoryModalVisible, setCategoryModalVisible] = useState(false)
   const [difficultyModalVisible, setDifficultyModalVisible] = useState(false)
   const [ownershipModalVisible, setOwnershipModalVisible] = useState(false)
   const [bodyPartModalVisible, setBodyPartModalVisible] = useState(false)
+  const [tagModalVisible, setTagModalVisible] = useState(false)
+
+  // Derive available tags from loaded exercises
+  const availableTags = React.useMemo(() => {
+    const tagSet = new Set<string>()
+    exercises.forEach((ex) => {
+      ex.tags?.forEach((tag) => tagSet.add(tag))
+    })
+    return Array.from(tagSet).sort()
+  }, [exercises])
 
   // Load exercises
   useEffect(() => {
@@ -131,8 +142,15 @@ export default function ExerciseLibrary({
       )
     }
 
+    // Tags filter
+    if (selectedTag) {
+      filtered = filtered.filter((ex) =>
+        ex.tags?.includes(selectedTag)
+      )
+    }
+
     setFilteredExercises(filtered)
-  }, [exercises, searchQuery, selectedDifficulty, selectedOwnership, selectedBodyPart, userId])
+  }, [exercises, searchQuery, selectedDifficulty, selectedOwnership, selectedBodyPart, selectedTag, userId])
 
   const loadExercises = async () => {
     setLoading(true)
@@ -380,32 +398,63 @@ export default function ExerciseLibrary({
           />
         </HapticPressable>
 
-        {/* Body Part Dropdown */}
-        <HapticPressable
-          style={[
-            styles.filterChip,
-            selectedBodyPart && styles.filterChipActive
-          ]}
-          hapticStyle="selection"
-          onPress={() => setBodyPartModalVisible(true)}
-        >
-          <Ionicons
-            name="body-outline"
-            size={16}
-            color={selectedBodyPart ? AppColors.primary : AppColors.textSecondary}
-          />
-          <Text style={[
-            styles.filterChipText,
-            selectedBodyPart && styles.filterChipTextActive
-          ]}>
-            {selectedBodyPart || 'All Body Parts'}
-          </Text>
-          <Ionicons
-            name="chevron-down"
-            size={14}
-            color={selectedBodyPart ? AppColors.primary : AppColors.textSecondary}
-          />
-        </HapticPressable>
+        {/* Body Part Dropdown - only for Body category */}
+        {(!selectedCategory || selectedCategory === 'Body') && (
+          <HapticPressable
+            style={[
+              styles.filterChip,
+              selectedBodyPart && styles.filterChipActive
+            ]}
+            hapticStyle="selection"
+            onPress={() => setBodyPartModalVisible(true)}
+          >
+            <Ionicons
+              name="body-outline"
+              size={16}
+              color={selectedBodyPart ? AppColors.primary : AppColors.textSecondary}
+            />
+            <Text style={[
+              styles.filterChipText,
+              selectedBodyPart && styles.filterChipTextActive
+            ]}>
+              {selectedBodyPart || 'All Body Parts'}
+            </Text>
+            <Ionicons
+              name="chevron-down"
+              size={14}
+              color={selectedBodyPart ? AppColors.primary : AppColors.textSecondary}
+            />
+          </HapticPressable>
+        )}
+
+        {/* Tags Dropdown */}
+        {availableTags.length > 0 && (
+          <HapticPressable
+            style={[
+              styles.filterChip,
+              selectedTag && styles.filterChipActive
+            ]}
+            hapticStyle="selection"
+            onPress={() => setTagModalVisible(true)}
+          >
+            <Ionicons
+              name="pricetag-outline"
+              size={16}
+              color={selectedTag ? AppColors.primary : AppColors.textSecondary}
+            />
+            <Text style={[
+              styles.filterChipText,
+              selectedTag && styles.filterChipTextActive
+            ]}>
+              {selectedTag || 'All Tags'}
+            </Text>
+            <Ionicons
+              name="chevron-down"
+              size={14}
+              color={selectedTag ? AppColors.primary : AppColors.textSecondary}
+            />
+          </HapticPressable>
+        )}
       </ScrollView>
 
       {/* Results Count */}
@@ -578,99 +627,172 @@ export default function ExerciseLibrary({
         </TouchableOpacity>
       </Modal>
 
-      {/* Body Part Modal */}
+      {/* Body Part Modal - only for Body category */}
+      {(!selectedCategory || selectedCategory === 'Body') && (
+        <Modal
+          visible={bodyPartModalVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setBodyPartModalVisible(false)}
+        >
+          <TouchableOpacity
+            style={styles.modalOverlay}
+            activeOpacity={1}
+            onPress={() => setBodyPartModalVisible(false)}
+          >
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Select Body Part</Text>
+              <ScrollView>
+                {/* All option */}
+                <HapticPressable
+                  style={[
+                    styles.modalOption,
+                    !selectedBodyPart && styles.modalOptionActive,
+                  ]}
+                  hapticStyle="selection"
+                  onPress={() => {
+                    setSelectedBodyPart(undefined)
+                    setBodyPartModalVisible(false)
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.modalOptionText,
+                      !selectedBodyPart && styles.modalOptionTextActive,
+                    ]}
+                  >
+                    All Body Parts
+                  </Text>
+                  {!selectedBodyPart && (
+                    <Ionicons name="checkmark" size={20} color={AppColors.primary} />
+                  )}
+                </HapticPressable>
+
+                {/* Upper Body Section */}
+                <Text style={styles.modalSectionHeader}>Upper Body</Text>
+                {upperBodyParts.map((bodyPart) => (
+                  <HapticPressable
+                    key={bodyPart}
+                    style={[
+                      styles.modalOption,
+                      selectedBodyPart === bodyPart && styles.modalOptionActive,
+                    ]}
+                    hapticStyle="selection"
+                    onPress={() => {
+                      setSelectedBodyPart(bodyPart)
+                      setBodyPartModalVisible(false)
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.modalOptionText,
+                        selectedBodyPart === bodyPart && styles.modalOptionTextActive,
+                      ]}
+                    >
+                      {bodyPart}
+                    </Text>
+                    {selectedBodyPart === bodyPart && (
+                      <Ionicons name="checkmark" size={20} color={AppColors.primary} />
+                    )}
+                  </HapticPressable>
+                ))}
+
+                {/* Lower Body Section */}
+                <Text style={styles.modalSectionHeader}>Lower Body</Text>
+                {lowerBodyParts.map((bodyPart) => (
+                  <HapticPressable
+                    key={bodyPart}
+                    style={[
+                      styles.modalOption,
+                      selectedBodyPart === bodyPart && styles.modalOptionActive,
+                    ]}
+                    hapticStyle="selection"
+                    onPress={() => {
+                      setSelectedBodyPart(bodyPart)
+                      setBodyPartModalVisible(false)
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.modalOptionText,
+                        selectedBodyPart === bodyPart && styles.modalOptionTextActive,
+                      ]}
+                    >
+                      {bodyPart}
+                    </Text>
+                    {selectedBodyPart === bodyPart && (
+                      <Ionicons name="checkmark" size={20} color={AppColors.primary} />
+                    )}
+                  </HapticPressable>
+                ))}
+              </ScrollView>
+            </View>
+          </TouchableOpacity>
+        </Modal>
+      )}
+
+      {/* Tags Modal */}
       <Modal
-        visible={bodyPartModalVisible}
+        visible={tagModalVisible}
         transparent
         animationType="fade"
-        onRequestClose={() => setBodyPartModalVisible(false)}
+        onRequestClose={() => setTagModalVisible(false)}
       >
         <TouchableOpacity
           style={styles.modalOverlay}
           activeOpacity={1}
-          onPress={() => setBodyPartModalVisible(false)}
+          onPress={() => setTagModalVisible(false)}
         >
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Select Body Part</Text>
+            <Text style={styles.modalTitle}>Select Tag</Text>
             <ScrollView>
               {/* All option */}
               <HapticPressable
                 style={[
                   styles.modalOption,
-                  !selectedBodyPart && styles.modalOptionActive,
+                  !selectedTag && styles.modalOptionActive,
                 ]}
                 hapticStyle="selection"
                 onPress={() => {
-                  setSelectedBodyPart(undefined)
-                  setBodyPartModalVisible(false)
+                  setSelectedTag(undefined)
+                  setTagModalVisible(false)
                 }}
               >
                 <Text
                   style={[
                     styles.modalOptionText,
-                    !selectedBodyPart && styles.modalOptionTextActive,
+                    !selectedTag && styles.modalOptionTextActive,
                   ]}
                 >
-                  All Body Parts
+                  All Tags
                 </Text>
-                {!selectedBodyPart && (
+                {!selectedTag && (
                   <Ionicons name="checkmark" size={20} color={AppColors.primary} />
                 )}
               </HapticPressable>
 
-              {/* Upper Body Section */}
-              <Text style={styles.modalSectionHeader}>Upper Body</Text>
-              {upperBodyParts.map((bodyPart) => (
+              {availableTags.map((tag) => (
                 <HapticPressable
-                  key={bodyPart}
+                  key={tag}
                   style={[
                     styles.modalOption,
-                    selectedBodyPart === bodyPart && styles.modalOptionActive,
+                    selectedTag === tag && styles.modalOptionActive,
                   ]}
                   hapticStyle="selection"
                   onPress={() => {
-                    setSelectedBodyPart(bodyPart)
-                    setBodyPartModalVisible(false)
+                    setSelectedTag(tag)
+                    setTagModalVisible(false)
                   }}
                 >
                   <Text
                     style={[
                       styles.modalOptionText,
-                      selectedBodyPart === bodyPart && styles.modalOptionTextActive,
+                      selectedTag === tag && styles.modalOptionTextActive,
                     ]}
                   >
-                    {bodyPart}
+                    {tag}
                   </Text>
-                  {selectedBodyPart === bodyPart && (
-                    <Ionicons name="checkmark" size={20} color={AppColors.primary} />
-                  )}
-                </HapticPressable>
-              ))}
-
-              {/* Lower Body Section */}
-              <Text style={styles.modalSectionHeader}>Lower Body</Text>
-              {lowerBodyParts.map((bodyPart) => (
-                <HapticPressable
-                  key={bodyPart}
-                  style={[
-                    styles.modalOption,
-                    selectedBodyPart === bodyPart && styles.modalOptionActive,
-                  ]}
-                  hapticStyle="selection"
-                  onPress={() => {
-                    setSelectedBodyPart(bodyPart)
-                    setBodyPartModalVisible(false)
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.modalOptionText,
-                      selectedBodyPart === bodyPart && styles.modalOptionTextActive,
-                    ]}
-                  >
-                    {bodyPart}
-                  </Text>
-                  {selectedBodyPart === bodyPart && (
+                  {selectedTag === tag && (
                     <Ionicons name="checkmark" size={20} color={AppColors.primary} />
                   )}
                 </HapticPressable>

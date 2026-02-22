@@ -171,11 +171,11 @@ export default function HarmonyProgressCard({ harmonyStatus }: HarmonyProgressCa
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: AppColors.surfaceSecondary,
+    backgroundColor: AppColors.glassBackground,
     borderRadius: 16,
     padding: 20,
     borderWidth: 1,
-    borderColor: AppColors.cardBorder,
+    borderColor: AppColors.glassEdge,
   },
   containerHarmony: {
     borderColor: AppColors.primary,
@@ -265,7 +265,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   todaySection: {
-    backgroundColor: AppColors.surface,
+    backgroundColor: AppColors.glassBackground,
     borderRadius: 12,
     padding: 12,
   },

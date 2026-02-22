@@ -1,4 +1,5 @@
-import GradientHeader from '@/components/GradientHeader';
+import SanctumBackground from '@/components/Dashboard/SanctumBackground';
+import GlassCard from '@/components/Dashboard/GlassCard';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { AppColors } from '@/constants/theme';
 import { updateUserProfile, uploadProfilePicture, hardResetUserData } from '@/lib/utils/auth';
@@ -35,6 +36,7 @@ import {
 } from 'react-native';
 import HapticPressable from '@/components/HapticPressable';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 
@@ -419,8 +421,17 @@ export default function ProfileScreen() {
   };
 
   return (
+    <SanctumBackground>
     <ScrollView style={styles.container}>
-      <GradientHeader style={styles.header}>
+      {/* Overscroll cover - prevents background reveal on bounce */}
+      <View style={styles.overscrollCover} />
+      {/* Top gradient for status bar readability */}
+      <LinearGradient
+        colors={['rgba(0,0,0,0.7)', 'rgba(0,0,0,0.2)', 'transparent']}
+        style={styles.topGradient}
+      />
+
+      <View style={styles.header}>
         <View style={styles.avatarContainer}>
           <View style={styles.avatar}>
             {profile?.profile_picture_url ? (
@@ -482,9 +493,11 @@ export default function ProfileScreen() {
         {profile?.username && !isEditing && (
           <Text style={styles.username}>@{profile.username}</Text>
         )}
-      </GradientHeader>
+      </View>
 
-      <View style={styles.section}>
+      {/* Glass Card Data Sections */}
+      <View style={styles.glassCardsContainer}>
+      <GlassCard>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Profile Information</Text>
           {!isEditing && (
@@ -568,13 +581,13 @@ export default function ProfileScreen() {
             </HapticPressable>
           </View>
         )}
-      </View>
+      </GlassCard>
 
       {/* Level & XP Section */}
       {userStats && (() => {
         const levelSummary = getUserLevelSummary(userStats);
         return (
-          <View style={styles.section}>
+          <GlassCard>
             <Text style={styles.sectionTitle}>Level & XP</Text>
 
             {/* Soteria Level Card */}
@@ -627,13 +640,13 @@ export default function ProfileScreen() {
                 />
               );
             })}
-          </View>
+          </GlassCard>
         );
       })()}
 
       {/* Health Team Invitations */}
       {healthTeamInvitations.length > 0 && (
-        <View style={styles.section}>
+        <GlassCard>
           <Text style={styles.sectionTitle}>Health Team Invitation</Text>
           <View style={styles.healthTeamInvitationContainer}>
             {healthTeamInvitations.map((invitation) => (
@@ -654,12 +667,12 @@ export default function ProfileScreen() {
               />
             ))}
           </View>
-        </View>
+        </GlassCard>
       )}
 
       {/* Health Team Stats */}
       {(profile?.role === 'health_team' || profile?.role === 'admin') && healthTeamStats && (
-        <View style={styles.section}>
+        <GlassCard>
           <Text style={styles.sectionTitle}>Health Team Stats</Text>
           <View style={styles.healthTeamStatsContainer}>
             <View style={styles.statsGrid}>
@@ -719,11 +732,11 @@ export default function ProfileScreen() {
               <Text style={styles.leaveHealthTeamButtonText}>Leave Health Team</Text>
             </HapticPressable>
           </View>
-        </View>
+        </GlassCard>
       )}
 
       {/* Milestones Section */}
-      <View style={styles.section}>
+      <GlassCard>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Milestones</Text>
           {milestones.length > 0 && (
@@ -803,16 +816,14 @@ export default function ProfileScreen() {
             </View>
           </>
         )}
-      </View>
+      </GlassCard>
 
-      <View style={styles.section}>
+      <GlassCard>
         <HapticPressable hapticStyle="medium" style={styles.signOutButton} onPress={handleSignOut}>
           <Text style={styles.signOutText}>Sign Out</Text>
         </HapticPressable>
-      </View>
 
-      {/* Reset Journey Section */}
-      <View style={styles.section}>
+        {/* Reset Journey Section */}
         <Text style={styles.dangerZoneTitle}>Danger Zone</Text>
         <Text style={styles.dangerZoneSubtitle}>
           Resetting your journey will permanently delete all your progress and data
@@ -828,6 +839,7 @@ export default function ProfileScreen() {
             {resetting ? 'Resetting...' : 'Reset Journey'}
           </Text>
         </HapticPressable>
+      </GlassCard>
       </View>
 
       {/* Journey Focus Modal */}
@@ -866,18 +878,42 @@ export default function ProfileScreen() {
       </Modal>
 
     </ScrollView>
+    </SanctumBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: AppColors.background,
+    backgroundColor: 'transparent',
+  },
+  overscrollCover: {
+    position: 'absolute',
+    top: -600,
+    left: 0,
+    right: 0,
+    height: 600,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    zIndex: 2,
+  },
+  topGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 120,
+    zIndex: 1,
   },
   header: {
-    padding: 24,
+    paddingHorizontal: 24,
     paddingTop: 100,
+    paddingBottom: 24,
     alignItems: 'center',
+    backgroundColor: 'transparent',
+  },
+  glassCardsContainer: {
+    paddingTop: 8,
+    paddingBottom: 40,
   },
   avatarContainer: {
     position: 'relative',
@@ -935,9 +971,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   section: {
-    marginTop: 16,
-    padding: 24,
-    backgroundColor: AppColors.surface,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -952,10 +985,12 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   soteriaLevelCard: {
-    backgroundColor: AppColors.surfaceSecondary,
+    backgroundColor: AppColors.glassBackground,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: AppColors.glassEdge,
   },
   soteriaLevelHeader: {
     flexDirection: 'row',
@@ -1020,10 +1055,12 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   companionCard: {
-    backgroundColor: AppColors.surfaceSecondary,
+    backgroundColor: AppColors.glassBackground,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: AppColors.glassEdge,
   },
   companionCardTitle: {
     fontSize: 22,
@@ -1244,7 +1281,7 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   modalContent: {
-    backgroundColor: AppColors.surface,
+    backgroundColor: AppColors.glassBackground,
     borderRadius: 12,
     width: '100%',
     maxWidth: 300,
@@ -1285,6 +1322,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: AppColors.destructive,
+    marginTop: 20,
     marginBottom: 8,
   },
   dangerZoneSubtitle: {
@@ -1347,11 +1385,11 @@ const styles = StyleSheet.create({
   milestoneStatCard: {
     flex: 1,
     padding: 12,
-    backgroundColor: AppColors.surfaceSecondary,
+    backgroundColor: AppColors.glassBackground,
     borderRadius: 8,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: AppColors.border,
+    borderColor: AppColors.glassEdge,
   },
   milestoneStatValue: {
     fontSize: 20,
@@ -1374,10 +1412,10 @@ const styles = StyleSheet.create({
     gap: 8,
     padding: 16,
     marginTop: 8,
-    backgroundColor: AppColors.surfaceSecondary,
+    backgroundColor: AppColors.glassBackground,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: AppColors.border,
+    borderColor: AppColors.glassEdge,
   },
   showMoreText: {
     fontSize: 14,

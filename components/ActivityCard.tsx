@@ -111,12 +111,12 @@ export default function ActivityCard({
 const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
-    backgroundColor: AppColors.surfaceSecondary,
+    backgroundColor: AppColors.glassBackground,
     borderRadius: 12,
     padding: 12,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: AppColors.cardBorder,
+    borderColor: AppColors.glassEdge,
   },
   iconContainer: {
     width: 36,

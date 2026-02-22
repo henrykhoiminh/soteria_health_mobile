@@ -3,6 +3,7 @@ import FriendActivitySection from '@/components/Dashboard/FriendActivitySection'
 import GlassCard from '@/components/Dashboard/GlassCard';
 import LevelsSection from '@/components/Dashboard/LevelsSection';
 import PainProgressSection from '@/components/Dashboard/PainProgressSection';
+import SanctumBackground from '@/components/Dashboard/SanctumBackground';
 import SanctumScene from '@/components/Dashboard/SanctumScene';
 import UserStatsSection from '@/components/Dashboard/UserStatsSection';
 import HapticPressable from '@/components/HapticPressable';
@@ -23,15 +24,12 @@ import { getAllAvatarStates } from '@/lib/utils/stats';
 import { getDisplayName } from '@/lib/utils/username';
 import { ActivityFeedItem, AvatarState, CategoryLevelInfo, DailyProgress, HarmonyStatus, PainCheckIn, PainStatistics, Routine, RoutineCategory, UserSearchResult, UserStats } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Animated,
-  Dimensions,
-  ImageBackground,
   Modal,
   ScrollView,
   StyleSheet,
@@ -39,24 +37,6 @@ import {
   TextInput,
   View,
 } from 'react-native';
-
-const SCREEN_HEIGHT = Dimensions.get('window').height;
-
-// Pre-require all sanctum backgrounds (Metro resolves at build time)
-const SANCTUM_BACKGROUNDS = {
-  sunrise: require('@/assets/images/sanctum-bg-sunrise.png'),
-  day: require('@/assets/images/sanctum-bg-1.png'),
-  twilight: require('@/assets/images/sanctum-bg-twilight.png'),
-  midnight: require('@/assets/images/sanctum-bg-midnight.png'),
-};
-
-function getSanctumBackground() {
-  const hour = new Date().getHours();
-  if (hour >= 5 && hour < 11) return SANCTUM_BACKGROUNDS.sunrise;
-  if (hour >= 11 && hour < 17) return SANCTUM_BACKGROUNDS.day;
-  if (hour >= 17 && hour < 21) return SANCTUM_BACKGROUNDS.twilight;
-  return SANCTUM_BACKGROUNDS.midnight;
-}
 
 export default function DashboardScreen() {
   const { user, profile, refreshProfile } = useAuth();
@@ -533,25 +513,10 @@ export default function DashboardScreen() {
         </View>
       </Modal>
 
-      <View style={styles.outerContainer}>
-        {/* Background image - absolutely positioned behind scroll content */}
-        <ImageBackground
-          source={getSanctumBackground()}
-          style={styles.backgroundContainer}
-          imageStyle={styles.backgroundImage}
-        >
-          {/* Dark overlay to let content pop */}
-          <View style={styles.darkOverlay} />
-
-          {/* Long fade-to-black gradient covering bottom 60% of the bg image */}
-          <LinearGradient
-            colors={['transparent', 'rgba(26, 26, 26, 0.5)', 'rgba(26, 26, 26, 0.85)', AppColors.background]}
-            locations={[0, 0.3, 0.6, 1]}
-            style={styles.fadeGradient}
-          />
-        </ImageBackground>
-
+      <SanctumBackground>
         <ScrollView style={styles.container}>
+          {/* Overscroll cover - prevents background reveal on bounce */}
+          <View style={styles.overscrollCover} />
           {/* Sanctum Scene: Companions only */}
           <SanctumScene
             profile={profile}
@@ -620,42 +585,24 @@ export default function DashboardScreen() {
           )}
 
         </ScrollView>
-      </View>
+      </SanctumBackground>
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  outerContainer: {
-    flex: 1,
-    backgroundColor: AppColors.background,
-  },
-  backgroundContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: SCREEN_HEIGHT * 0.85,
-    zIndex: 0,
-  },
-  backgroundImage: {
-    resizeMode: 'cover',
-    top: -70,
-  },
-  darkOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.55)',
-  },
-  fadeGradient: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: '60%',
-  },
   container: {
     flex: 1,
     backgroundColor: 'transparent',
+  },
+  overscrollCover: {
+    position: 'absolute',
+    top: -600,
+    left: 0,
+    right: 0,
+    height: 600,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    zIndex: 2,
   },
   loadingContainer: {
     flex: 1,

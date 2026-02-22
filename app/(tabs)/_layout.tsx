@@ -12,6 +12,7 @@ export default function TabLayout() {
       name: 'index',
       title: 'Dashboard',
       icon: 'house.fill',
+      iconOutline: 'house',
       component: DashboardScreen,
     },
     {
@@ -24,18 +25,21 @@ export default function TabLayout() {
       name: 'builder',
       title: 'Build',
       icon: 'plus.circle.fill',
+      iconOutline: 'plus.circle',
       component: BuilderScreen,
     },
     {
       name: 'social',
       title: 'Social',
       icon: 'person.3.fill',
+      iconOutline: 'person.3',
       component: SocialScreen,
     },
     {
       name: 'profile',
       title: 'Profile',
       icon: 'person.fill',
+      iconOutline: 'person',
       component: ProfileScreen,
     },
   ];

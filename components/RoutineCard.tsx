@@ -198,17 +198,12 @@ export default function RoutineCard({
 
 const styles = StyleSheet.create({
   routineCard: {
-    backgroundColor: AppColors.surface,
+    backgroundColor: AppColors.glassBackground,
     borderRadius: 12,
     padding: 14,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: AppColors.cardBorder,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 2,
+    borderColor: AppColors.glassEdge,
   },
   routineCardCompact: {
     padding: 10,
