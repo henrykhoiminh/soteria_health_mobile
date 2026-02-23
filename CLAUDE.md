@@ -76,6 +76,7 @@ components/
 ├── HapticPressable.tsx            # Drop-in TouchableOpacity replacement with haptic feedback
 ├── JourneyBadge.tsx               # Journey type badge with icon
 ├── PainCheckInModal.tsx           # 3-step pain check-in modal
+├── UserProfileModal.tsx           # Bottom-sheet profile modal (Circles & Friends)
 └── HealthTeamInvitationCard.tsx   # Health team invitation UI
 
 lib/
@@ -212,7 +213,42 @@ lsof -ti:8081 | xargs kill -9
 
 ## Session History Summary
 
-### Session 30 (Latest - Profile Redesign, Tab Bar Polish, Builder Exercise Library Split)
+### Session 31 (Latest - User Profile Modal in Circles & Friends)
+
+- **User Profile Modal (`components/UserProfileModal.tsx`) - New Component:**
+  - Bottom-sheet modal triggered by tapping a member card in Circles or a friend card in Social
+  - Two-column profile header: left column (120px) with 88px avatar + full name + @username; right column with detail rows (journey focus, circle admin, health team, join dates)
+  - Soteria Level card with XP progress bar and title (e.g., "Wanderer", "Seeker")
+  - Companion levels section: Mind, Body, Soul XP rows with category-colored dots
+  - Last 3 activity items with inline message formatting
+  - Conditional "Remove from Circle" button (admin only, non-self, non-admin target)
+  - Uses `supabase.rpc()` calls to bypass RLS for viewing other users' data
+
+- **RLS Bypass RPC Functions (`sql/migrations/add_public_stats_rpc.sql`):**
+  - `get_user_public_stats(p_user_id)` — returns total_xp, mind_xp, body_xp, soul_xp (SECURITY DEFINER)
+  - `get_user_recent_activity(p_user_id, p_limit)` — returns last N activity items with joined profile/routine/circle data
+  - **NOTE:** Migration must be run in Supabase SQL Editor for RPC functions to work
+
+- **Circle Member Cards - Profile Pictures (`app/circles/[id].tsx`):**
+  - Replaced generic `<Ionicons name="person">` with actual profile pictures
+  - Shows profile image if available, or first initial (gold text) as fallback
+  - Added `Image` import, `memberAvatarImage` and `memberAvatarText` styles
+  - Member cards are `<HapticPressable>` — tap opens UserProfileModal
+
+- **Friends Tab - Profile Modal (`app/(tabs)/social.tsx`):**
+  - Friend cards changed from `<View>` to `<HapticPressable>` — tap opens UserProfileModal
+  - Added `selectedFriend` state, `UserProfileModal` import and render
+  - Modal shows friend profile with stats/activity (no admin actions in friends context)
+
+- **Key Files Created:**
+  - `components/UserProfileModal.tsx` - Profile modal with stats, levels, activity
+  - `sql/migrations/add_public_stats_rpc.sql` - RPC functions for cross-user data access
+
+- **Key Files Modified:**
+  - `app/circles/[id].tsx` - Profile pictures on member cards, HapticPressable member cards, UserProfileModal integration
+  - `app/(tabs)/social.tsx` - UserProfileModal integration in FriendsTab, tappable friend cards
+
+### Session 30 (Profile Redesign, Tab Bar Polish, Builder Exercise Library Split)
 
 - **Profile Tab Redesign - Inner Sanctum Aesthetic:**
   - Removed opaque `GradientHeader` in favor of transparent profile hero over SanctumBackground
@@ -661,7 +697,7 @@ lsof -ti:8081 | xargs kill -9
 
 ---
 
-**Last Updated:** 2026-02-22
+**Last Updated:** 2026-02-23
 **Current Version:** Expo SDK 54, React Native 0.76+
 
 ## Next Objectives
@@ -673,11 +709,11 @@ lsof -ti:8081 | xargs kill -9
 - UI: Chat tab within circle detail view, message input, message list with timestamps
 - Handle read receipts, typing indicators (optional)
 
-### 2. User Profile Modal in Circles
-- When tapping on a friend/member within a Circle, show a profile modal
-- Display: profile picture, name, username, journey focus, level/XP summary
-- Action buttons: view full profile, send message (if chat is implemented), remove from circle (admin only)
-- Reuse existing profile data patterns from social tab
+### 2. Soteria Level on Friend Cards (Social/Friends Tab)
+- Replace "Friends since [date]" text on friend cards with the friend's Soteria level
+- Use `getLevelFromXp()` or `getUserLevelSummary()` from `lib/utils/leveling.ts`
+- Requires fetching friend's XP data (may need `get_user_public_stats` RPC since `user_stats` has RLS)
+- Display format TBD: level number, title (e.g., "Lv. 5 Seeker"), or compact XP bar
 
 ### 3. Push Notifications (Mobile)
 - Implement push notifications using `expo-notifications`
