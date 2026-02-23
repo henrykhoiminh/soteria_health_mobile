@@ -1,5 +1,5 @@
 import { AppColors } from '@/constants/theme';
-import { getEncouragementMessage, getWellnessLevelInfo, submitPainCheckIn } from '@/lib/utils/pain-checkin';
+import { calculateCompositePain, getEncouragementMessage, getWellnessLevelInfo, submitPainCheckIn } from '@/lib/utils/pain-checkin';
 import { Ionicons } from '@expo/vector-icons';
 import Slider from '@react-native-community/slider';
 import React, { useEffect, useState } from 'react';
@@ -21,6 +21,7 @@ import HapticPressable from '@/components/HapticPressable';
 interface WellnessCheckInModalProps {
   visible: boolean;
   userId: string;
+  userName?: string;
   // Optional: pre-populate with avatar names from user profile
   mindName?: string;
   bodyName?: string;
@@ -38,16 +39,18 @@ const CATEGORY_COLORS = {
 };
 
 // Get time-appropriate greeting
-const getTimeGreeting = (): string => {
+const getTimeGreeting = (name?: string): string => {
   const hour = new Date().getHours();
-  if (hour < 12) return 'Good morning!';
-  if (hour < 17) return 'Good afternoon!';
-  return 'Good evening!';
+  const suffix = name ? `, ${name}!` : '!';
+  if (hour < 12) return `Good morning${suffix}`;
+  if (hour < 17) return `Good afternoon${suffix}`;
+  return `Good evening${suffix}`;
 };
 
 export default function WellnessCheckInModal({
   visible,
   userId,
+  userName,
   mindName = 'Mind',
   bodyName = 'Body',
   soulName = 'Soul',
@@ -170,7 +173,7 @@ export default function WellnessCheckInModal({
       await submitPainCheckIn(userId, mindScore, bodyScore, soulScore, notes || null);
 
       // Calculate overall score for encouragement
-      const overallScore = Math.round((mindScore + bodyScore + soulScore) / 3);
+      const overallScore = calculateCompositePain(mindScore, bodyScore, soulScore);
       const message = getEncouragementMessage(overallScore);
       setEncouragementMessage(message);
       setShowEncouragement(true);
@@ -255,7 +258,7 @@ export default function WellnessCheckInModal({
               color={AppColors.primary}
               style={styles.welcomeIcon}
             />
-            <Text style={styles.welcomeTitle}>{getTimeGreeting()}</Text>
+            <Text style={styles.welcomeTitle}>{getTimeGreeting(userName)}</Text>
             <Text style={styles.welcomeSubtitle}>
               Let's take a moment to check in with yourself today.
             </Text>

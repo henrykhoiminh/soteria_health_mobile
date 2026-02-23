@@ -15,6 +15,7 @@ import {
 } from '@/lib/utils/social';
 import {
   CircleWithMembers,
+  CircleMember,
   CircleRoutine,
   ActivityFeedItem,
   CircleRole,
@@ -26,6 +27,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Image,
   Modal,
   ScrollView,
   StyleSheet,
@@ -39,6 +41,7 @@ import { getFormattedCircleActivity } from '@/lib/utils/social';
 import FriendInviteModal from '@/components/FriendInviteModal';
 import ActivityCard from '@/components/ActivityCard';
 import EnhancedCircleRoutinesTab from '@/components/EnhancedCircleRoutinesTab';
+import UserProfileModal from '@/components/UserProfileModal';
 
 type Tab = 'members' | 'routines' | 'activity';
 
@@ -341,6 +344,8 @@ function MembersTab({
   onInviteClick: () => void;
   currentUserId: string;
 }) {
+  const [selectedMember, setSelectedMember] = useState<CircleMember | null>(null);
+
   const handleRemoveMember = (userId: string, userName: string) => {
     Alert.alert(
       'Remove Member?',
@@ -375,9 +380,22 @@ function MembersTab({
       )}
 
       {circle.members.map((member) => (
-        <View key={member.id} style={styles.memberCard}>
+        <HapticPressable
+          key={member.id}
+          style={styles.memberCard}
+          onPress={() => setSelectedMember(member)}
+        >
           <View style={styles.memberAvatar}>
-            <Ionicons name="person" size={24} color={AppColors.textSecondary} />
+            {member.profile?.profile_picture_url ? (
+              <Image
+                source={{ uri: member.profile.profile_picture_url }}
+                style={styles.memberAvatarImage}
+              />
+            ) : (
+              <Text style={styles.memberAvatarText}>
+                {member.profile?.first_name?.charAt(0).toUpperCase() || 'U'}
+              </Text>
+            )}
           </View>
           <View style={styles.memberInfo}>
             <Text style={styles.memberName}>
@@ -406,8 +424,22 @@ function MembersTab({
               <Ionicons name="shield-checkmark" size={16} color={AppColors.primary} />
             </View>
           )}
-        </View>
+        </HapticPressable>
       ))}
+
+      <UserProfileModal
+        visible={selectedMember !== null}
+        onClose={() => setSelectedMember(null)}
+        profile={selectedMember?.profile ?? null}
+        memberRole={selectedMember?.role ?? 'member'}
+        joinedAt={selectedMember?.joined_at ?? ''}
+        isCurrentUser={selectedMember?.user_id === currentUserId}
+        isCurrentUserAdmin={isAdmin}
+        onRemoveMember={(userId, userName) => {
+          setSelectedMember(null);
+          handleRemoveMember(userId, userName);
+        }}
+      />
     </View>
   );
 }
@@ -906,6 +938,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
+  },
+  memberAvatarImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+  },
+  memberAvatarText: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: AppColors.primary,
   },
   memberInfo: {
     flex: 1,

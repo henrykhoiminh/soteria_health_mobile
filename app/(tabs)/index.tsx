@@ -355,6 +355,7 @@ export default function DashboardScreen() {
         <WellnessCheckInModal
           visible={showWellnessCheckIn}
           userId={user.id}
+          userName={profile?.first_name || undefined}
           mindName={profile?.mind_name || 'Mind'}
           bodyName={profile?.body_name || 'Body'}
           soulName={profile?.soul_name || 'Soul'}

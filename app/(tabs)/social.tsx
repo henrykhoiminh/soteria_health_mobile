@@ -50,6 +50,7 @@ import {
 } from 'react-native';
 import SanctumBackground from '@/components/Dashboard/SanctumBackground';
 import HapticPressable from '@/components/HapticPressable';
+import UserProfileModal from '@/components/UserProfileModal';
 
 type Tab = 'friends' | 'circles' | 'activity';
 
@@ -165,6 +166,7 @@ function FriendsTab({ userId, onRefresh }: { userId: string; onRefresh: () => vo
   const [searching, setSearching] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [invitedUsers, setInvitedUsers] = useState<Set<string>>(new Set());
+  const [selectedFriend, setSelectedFriend] = useState<FriendWithProfile | null>(null);
 
   const isHealthTeam = profile?.role === 'health_team' || profile?.role === 'admin';
 
@@ -481,7 +483,11 @@ function FriendsTab({ userId, onRefresh }: { userId: string; onRefresh: () => vo
           friends.map((friendship) => {
             const friend = friendship.friend_profile;
             return (
-              <View key={friendship.id} style={styles.friendCard}>
+              <HapticPressable
+                key={friendship.id}
+                style={styles.friendCard}
+                onPress={() => setSelectedFriend(friendship)}
+              >
                 <View style={styles.userAvatar}>
                   {friend.profile_picture_url ? (
                     <Image
@@ -512,13 +518,24 @@ function FriendsTab({ userId, onRefresh }: { userId: string; onRefresh: () => vo
                 >
                   <Ionicons name="trash-outline" size={20} color={AppColors.destructive} />
                 </HapticPressable>
-              </View>
+              </HapticPressable>
             );
           })
         )}
       </View>
 
       <View style={{ height: 100 }} />
+
+      <UserProfileModal
+        visible={selectedFriend !== null}
+        onClose={() => setSelectedFriend(null)}
+        profile={selectedFriend?.friend_profile ?? null}
+        memberRole="member"
+        joinedAt={selectedFriend?.accepted_at ?? ''}
+        isCurrentUser={false}
+        isCurrentUserAdmin={false}
+        onRemoveMember={() => {}}
+      />
     </ScrollView>
   );
 }

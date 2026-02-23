@@ -3,6 +3,20 @@ import { supabase } from '../supabase/client'
 import { getLocalDateString } from './timezone'
 
 /**
+ * Calculate a weighted composite pain level from Mind/Body/Soul scores.
+ * Uses root-mean-square so higher scores carry more weight — a single
+ * high-pain category won't get diluted by low scores elsewhere.
+ *
+ * Examples:
+ *   (7, 7, 1) → 6  (simple avg would be 5)
+ *   (10, 0, 0) → 6  (simple avg would be 3)
+ *   (5, 5, 5)  → 5  (same as simple avg when equal)
+ */
+export function calculateCompositePain(mind: number, body: number, soul: number): number {
+  return Math.round(Math.sqrt((mind * mind + body * body + soul * soul) / 3))
+}
+
+/**
  * Get today's date in YYYY-MM-DD format (local timezone)
  */
 export function getTodayDate(): string {
@@ -94,8 +108,8 @@ export async function submitPainCheckIn(
     validateScore(bodyScore, 'Body')
     validateScore(soulScore, 'Soul')
 
-    // Calculate overall pain level as average of the three scores
-    const painLevel = Math.round((mindScore + bodyScore + soulScore) / 3)
+    // Calculate overall pain level (weighted — higher scores pull the result up)
+    const painLevel = calculateCompositePain(mindScore, bodyScore, soulScore)
 
     // Check if already checked in today
     const existingCheckIn = await getTodayCheckIn(userId)
@@ -164,10 +178,13 @@ export function getWellnessLevelInfo(score: number): { label: string; color: str
     return { label: 'Barely there', color: '#34C759' } // Green
   } else if (score <= 4) {
     return { label: 'I feel it sometimes', color: '#FFD60A' } // Yellow
-  } else if (score <= 7) {
+  } else if (score <= 6) {
     return { label: 'Gets in the way', color: '#FF9500' } // Orange
-  } else if (score <= 9) {
-    return { label: 'Controlling my day', color: '#FF3B30' } // Red
+  } else if (score <= 8) {
+    return { label: 'I feel it a lot', color: '#FF9500' } // Orange
+  }
+   else if (score <= 9) {
+    return { label: 'Deeply affects it', color: '#FF3B30' } // Red
   } else {
     return { label: 'Ruining my life', color: '#FF3B30' } // Red
   }
