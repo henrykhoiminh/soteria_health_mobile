@@ -4,14 +4,15 @@
   "version": "1.0.0",
   "scripts": {
     "start": "expo start",
-    "start:fast": "expo start --clear --max-workers 4",
+    "start:fast": "expo start --max-workers 4",
     "start:tunnel": "expo start --tunnel",
     "reset-project": "node ./scripts/reset-project.js",
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "clean": "rm -rf node_modules/.cache .expo && expo start --clear"
+    "clean": "watchman watch-del-all && rm -rf .expo .metro-cache /tmp/metro-* /tmp/haste-map-* && expo start --clear",
+    "nuke": "watchman watch-del-all && rm -rf node_modules .expo .metro-cache /tmp/metro-* /tmp/haste-map-* && npm install && expo start"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
