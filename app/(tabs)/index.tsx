@@ -60,6 +60,7 @@ export default function DashboardScreen() {
   const [recommendationSubtitle, setRecommendationSubtitle] = useState<string>('');
   const [showCompletedRoutinesModal, setShowCompletedRoutinesModal] = useState(false);
   const [completedRoutines, setCompletedRoutines] = useState<Routine[]>([]);
+  const [completedRoutinesLoading, setCompletedRoutinesLoading] = useState(false);
   const [levelModalCategory, setLevelModalCategory] = useState<RoutineCategory | undefined>(undefined);
   const [levelModalInfo, setLevelModalInfo] = useState<CategoryLevelInfo | undefined>(undefined);
   const [showHealthTeamInviteModal, setShowHealthTeamInviteModal] = useState(false);
@@ -143,7 +144,6 @@ export default function DashboardScreen() {
         checkHarmonyRequirements(user.id),
       ]);
 
-      console.log('Today Progress:', progressData);
       setTodayProgress(progressData);
       setStats(statsData);
       setFriendActivity(activityData);
@@ -222,18 +222,19 @@ export default function DashboardScreen() {
     setRecommendationSubtitle('');
   };
 
-  const handleLevelBadgeTap = async (category: RoutineCategory, info: CategoryLevelInfo) => {
+  const handleLevelBadgeTap = (category: RoutineCategory, info: CategoryLevelInfo) => {
     if (!user) return;
 
-    try {
-      const routines = await getUniqueCompletedRoutines(user.id);
-      setCompletedRoutines(routines);
-      setLevelModalCategory(category);
-      setLevelModalInfo(info);
-      setShowCompletedRoutinesModal(true);
-    } catch (error) {
-      console.error('Error fetching completed routines:', error);
-    }
+    // Show modal immediately, load routines in background
+    setLevelModalCategory(category);
+    setLevelModalInfo(info);
+    setCompletedRoutinesLoading(true);
+    setShowCompletedRoutinesModal(true);
+
+    getUniqueCompletedRoutines(user.id)
+      .then(routines => setCompletedRoutines(routines))
+      .catch(error => console.error('Error fetching completed routines:', error))
+      .finally(() => setCompletedRoutinesLoading(false));
   };
 
   const handleSelectCompletedRoutine = (routineId: string) => {
@@ -338,6 +339,19 @@ export default function DashboardScreen() {
         onSelectRoutine={handleSelectCompletedRoutine}
         categoryFilter={levelModalCategory}
         levelInfo={levelModalInfo}
+        companionName={
+          levelModalCategory === 'Mind' ? (profile?.mind_name ?? undefined) :
+          levelModalCategory === 'Body' ? (profile?.body_name ?? undefined) :
+          levelModalCategory === 'Soul' ? (profile?.soul_name ?? undefined) :
+          undefined
+        }
+        userName={profile?.first_name ?? undefined}
+        loading={completedRoutinesLoading}
+        lightState={
+          levelModalCategory
+            ? avatarStates.find(a => a.category === levelModalCategory)?.lightState
+            : undefined
+        }
       />
 
       {harmonyStatus && (

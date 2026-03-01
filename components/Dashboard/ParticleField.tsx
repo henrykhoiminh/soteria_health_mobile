@@ -1,4 +1,5 @@
 import { AppColors } from '@/constants/theme';
+import { useIsTabVisible } from '@/lib/contexts/TabVisibilityContext';
 import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
 
@@ -22,6 +23,7 @@ const PARTICLE_COLORS = [
 interface Particle {
   anim: Animated.Value;
   x: number;
+  y: number;
   size: number;
   color: string;
   duration: number;
@@ -29,10 +31,12 @@ interface Particle {
 }
 
 export default function ParticleField() {
+  const isVisible = useIsTabVisible();
   const particles = useRef<Particle[]>(
     Array.from({ length: PARTICLE_COUNT }, (_, i) => ({
       anim: new Animated.Value(0),
-      x: Math.random() * 100, // percentage across width
+      x: Math.random() * 100,
+      y: 40 + Math.random() * 200,
       size: 2 + Math.random() * 3,
       color: PARTICLE_COLORS[i % PARTICLE_COLORS.length],
       duration: 3000 + Math.random() * 2000,
@@ -41,6 +45,8 @@ export default function ParticleField() {
   ).current;
 
   useEffect(() => {
+    if (!isVisible) return;
+
     const animations = particles.map((particle) => {
       const loop = Animated.loop(
         Animated.sequence([
@@ -64,7 +70,7 @@ export default function ParticleField() {
     return () => {
       animations.forEach((anim) => anim.stop());
     };
-  }, []);
+  }, [isVisible]);
 
   return (
     <View style={styles.container} pointerEvents="none">
@@ -86,7 +92,7 @@ export default function ParticleField() {
               styles.particle,
               {
                 left: `${particle.x}%`,
-                bottom: 40 + Math.random() * 200,
+                bottom: particle.y,
                 width: particle.size,
                 height: particle.size,
                 borderRadius: particle.size / 2,

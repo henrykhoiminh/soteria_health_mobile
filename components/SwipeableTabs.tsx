@@ -1,9 +1,8 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import {
   View,
   StyleSheet,
   Platform,
-  Dimensions,
 } from 'react-native';
 import HapticPressable from '@/components/HapticPressable';
 import PagerView from 'react-native-pager-view';
@@ -11,6 +10,7 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useSegments } from 'expo-router';
+import { CurrentTabProvider, OwnTabIndexProvider } from '@/lib/contexts/TabVisibilityContext';
 import * as Haptics from 'expo-haptics';
 
 interface TabConfig {
@@ -26,60 +26,86 @@ interface SwipeableTabsProps {
   initialPage?: number;
 }
 
+// Memoized page wrapper prevents heavy tab screens from re-rendering
+// when only the currentPage state changes (i.e. icon/haptic updates).
+// OwnTabIndexProvider gives each page its index so nested components
+// can call useIsTabVisible() without knowing their tab index.
+const TabPage = React.memo(({ component: Component, index }: { component: React.ComponentType<any>; index: number }) => (
+  <OwnTabIndexProvider value={index}>
+    <Component />
+  </OwnTabIndexProvider>
+));
+
 export default function SwipeableTabs({ tabs, initialPage = 0 }: SwipeableTabsProps) {
   const colorScheme = useColorScheme();
   const pagerRef = useRef<PagerView>(null);
   const segments = useSegments();
   const [currentPage, setCurrentPage] = useState(initialPage);
-  const [scrollEnabled, setScrollEnabled] = useState(true);
+  const lastHapticPage = useRef(initialPage);
 
   // Listen to route changes and switch tabs accordingly
   useEffect(() => {
-    // Get the tab segment (e.g., 'index', 'routines', 'builder', etc.)
-    const tabSegment = segments[1]; // segments[0] is '(tabs)', segments[1] is the tab name
+    const tabSegment = segments[1];
 
     if (tabSegment) {
       const tabIndex = tabs.findIndex(tab => tab.name === tabSegment);
       if (tabIndex !== -1 && tabIndex !== currentPage) {
         pagerRef.current?.setPage(tabIndex);
         setCurrentPage(tabIndex);
+        lastHapticPage.current = tabIndex;
       }
     }
   }, [segments]);
 
   // Handle tab press - navigate to page (haptic feedback handled by HapticPressable)
-  const handleTabPress = (index: number) => {
+  const handleTabPress = useCallback((index: number) => {
     pagerRef.current?.setPage(index);
     setCurrentPage(index);
-  };
+    lastHapticPage.current = index;
+  }, []);
 
-  // Handle page change from swipe
-  const handlePageSelected = (e: any) => {
-    const { position } = e.nativeEvent;
-    setCurrentPage(position);
+  // Fires continuously during swipe — update icons as soon as we cross the midpoint
+  const handlePageScroll = useCallback((e: any) => {
+    const { position, offset } = e.nativeEvent;
+    // Determine which page the user is closest to
+    const nearestPage = offset > 0.5 ? position + 1 : position;
+    const clampedPage = Math.max(0, Math.min(nearestPage, tabs.length - 1));
 
-    // Haptic feedback on page change
-    if (Platform.OS === 'ios') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (clampedPage !== lastHapticPage.current) {
+      lastHapticPage.current = clampedPage;
+      setCurrentPage(clampedPage);
+
+      if (Platform.OS === 'ios') {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
     }
-  };
+  }, [tabs.length]);
+
+  // Final confirmation when page settles
+  const handlePageSelected = useCallback((e: any) => {
+    const { position } = e.nativeEvent;
+    if (position !== currentPage) {
+      setCurrentPage(position);
+    }
+    lastHapticPage.current = position;
+  }, [currentPage]);
 
   return (
+    <CurrentTabProvider value={currentPage}>
     <View style={styles.container}>
       {/* Swipeable Content */}
       <PagerView
         ref={pagerRef}
         style={styles.pagerView}
         initialPage={initialPage}
+        onPageScroll={handlePageScroll}
         onPageSelected={handlePageSelected}
-        scrollEnabled={scrollEnabled}
         overdrag={true}
-        // iOS-like feel
         pageMargin={0}
       >
         {tabs.map((tab, index) => (
           <View key={tab.name} style={styles.page}>
-            <tab.component />
+            <TabPage component={tab.component} index={index} />
           </View>
         ))}
       </PagerView>
@@ -109,6 +135,7 @@ export default function SwipeableTabs({ tabs, initialPage = 0 }: SwipeableTabsPr
         })}
       </View>
     </View>
+    </CurrentTabProvider>
   );
 }
 

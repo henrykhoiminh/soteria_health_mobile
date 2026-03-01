@@ -86,6 +86,7 @@ lib/
 └── utils/
     ├── auth.ts                  # Auth, profile, upload
     ├── audio.ts                 # Audio playback for countdown beeps
+    ├── companion-images.ts      # PNG image mapping for companion characters (Mind states)
     ├── dashboard.ts             # Dashboard data, recommendations
     ├── dashboard-cache.ts       # In-memory cache for fluid navigation
     ├── haptics.ts               # Centralized haptic feedback (light/medium/heavy/selection)
@@ -96,6 +97,8 @@ lib/
     └── health-team.ts           # Health team functions
 
 assets/
+├── images/
+│   └── mind_states/             # Mind companion PNG art (7 images for 5 light states)
 ├── sounds/
 │   └── count_down_beep.mp3      # Countdown timer beep sound
 └── animations/
@@ -213,7 +216,57 @@ lsof -ti:8081 | xargs kill -9
 
 ## Session History Summary
 
-### Session 31 (Latest - User Profile Modal in Circles & Friends)
+### Session 32 (Latest - Mind Companion Character Art)
+
+- **Companion Image System (`lib/utils/companion-images.ts`) - New Utility:**
+  - `getMindStateImage(lightState)` returns correct PNG `require()` for given light state
+  - `getCompanionImage(category, lightState?)` returns image source or `null` (null for Body/Soul - no assets yet)
+  - Sleepy and Awakening states have 2 variants each, randomly selected via `Math.random()`
+  - Default fallback is Glowing state when no lightState provided
+
+- **Mind Companion PNG Assets (`assets/images/mind_states/`):**
+  - 7 images covering all 5 light states:
+    | Light State | File(s) |
+    |-------------|---------|
+    | Dormant | `mind_dormant.png` |
+    | Sleepy | `mind_sleepy_1.png`, `mind_sleepy_2.png` |
+    | Awakening | `mind_awakening_1.png`, `mind_awakening_2.png` |
+    | Glowing | `mind_glowing.png` |
+    | Radiant | `mind_radiant.png` |
+
+- **Dashboard Avatar (`components/Avatar.tsx`):**
+  - Mind companion renders as 115px static `<Image>` (no circle border, no glow ring)
+  - Subtle breathing animation: scales 1.0 to 1.03 over 4s loop for liveliness
+  - Name label moved above the character (was below)
+  - Reduced gap between name and character (marginBottom 8 -> 4)
+  - Body/Soul keep existing 80px animated icon circles with glow ring
+  - `useMemo` ensures random Sleepy/Awakening variant stays stable across re-renders
+
+- **Companion Stats Badge (`components/Dashboard/LevelsSection.tsx`):**
+  - Mind badge shows Glowing-state PNG filling the 40px rounded badge
+  - Body/Soul keep Ionicons
+
+- **Bio Modal (`components/CompletedRoutinesModal.tsx`):**
+  - Added `lightState?: AvatarLightState` prop
+  - Mind companion shows state-mapped PNG (132px) - no animated circle
+  - Body/Soul keep pulsating animated circle with Ionicons
+  - `index.tsx` passes `avatarStates` lightState to the modal
+
+- **Profile Companion Card (`app/(tabs)/profile.tsx`):**
+  - Mind card shows Glowing-state PNG (88px) - no animated circle
+  - Body/Soul keep pulsating animated circle with Ionicons
+
+- **Key Files Created:**
+  - `lib/utils/companion-images.ts` - Image mapping utility
+
+- **Key Files Modified:**
+  - `components/Avatar.tsx` - Image rendering, name above character, breathing animation
+  - `components/Dashboard/LevelsSection.tsx` - Image badge for Mind
+  - `components/CompletedRoutinesModal.tsx` - lightState prop, image rendering
+  - `app/(tabs)/profile.tsx` - Image rendering in CompanionStatsCard
+  - `app/(tabs)/index.tsx` - Pass lightState to CompletedRoutinesModal
+
+### Session 31 (User Profile Modal in Circles & Friends)
 
 - **User Profile Modal (`components/UserProfileModal.tsx`) - New Component:**
   - Bottom-sheet modal triggered by tapping a member card in Circles or a friend card in Social
@@ -697,12 +750,19 @@ lsof -ti:8081 | xargs kill -9
 
 ---
 
-**Last Updated:** 2026-02-23
+**Last Updated:** 2026-03-01
 **Current Version:** Expo SDK 54, React Native 0.76+
 
 ## Next Objectives
 
-### 1. Circle Chat Functionality
+### 1. Finish Companion Character Designs
+- Create PNG character art for Body and Soul companions (matching Mind's 7-image pattern)
+- Each needs: Dormant, Sleepy (x2 variants), Awakening (x2 variants), Glowing, Radiant
+- Place assets in `assets/images/body_states/` and `assets/images/soul_states/`
+- `getCompanionImage()` in `companion-images.ts` already returns `null` for Body/Soul - just add mappings
+- All 4 rendering locations (Avatar, LevelsSection, CompletedRoutinesModal, profile CompanionStatsCard) already handle the image vs icon fallback
+
+### 2. Circle Chat Functionality
 - Add real-time chat/messaging within Circles (social groups)
 - Likely requires new `circle_messages` table in Supabase with RLS policies
 - Consider Supabase Realtime for live message delivery

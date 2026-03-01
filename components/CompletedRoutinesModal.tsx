@@ -1,10 +1,11 @@
 import HapticPressable from '@/components/HapticPressable';
 import RoutineCard from '@/components/RoutineCard';
 import { AppColors } from '@/constants/theme';
-import { CategoryLevelInfo, Routine, RoutineCategory } from '@/types';
+import { getCompanionImage } from '@/lib/utils/companion-images';
+import { AvatarLightState, CategoryLevelInfo, Routine, RoutineCategory } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useRef } from 'react';
-import { Animated, Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useRef } from 'react';
+import { ActivityIndicator, Animated, Image, Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 const getCategoryTale = (category: RoutineCategory): string => {
   switch (category) {
@@ -30,6 +31,10 @@ interface CompletedRoutinesModalProps {
   companionName?: string;
   /** User's first name for Origin field */
   userName?: string;
+  /** Show loading indicator while routines are being fetched */
+  loading?: boolean;
+  /** Current light state for companion image (used for Mind category) */
+  lightState?: AvatarLightState;
 }
 
 export default function CompletedRoutinesModal({
@@ -41,7 +46,14 @@ export default function CompletedRoutinesModal({
   levelInfo,
   companionName,
   userName,
+  loading,
+  lightState,
 }: CompletedRoutinesModalProps) {
+  const companionImage = useMemo(
+    () => categoryFilter ? getCompanionImage(categoryFilter, lightState) : null,
+    [categoryFilter, lightState],
+  );
+
   // Pulsating animation for companion icon
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const glowAnim = useRef(new Animated.Value(0.3)).current;
@@ -153,24 +165,30 @@ export default function CompletedRoutinesModal({
                 <View style={[styles.headerDivider, { backgroundColor: filterColor + '40' }]} />
                 {/* Companion + Stats Card Row */}
                 <View style={styles.companionRow}>
-                  {/* Pulsating Icon */}
+                  {/* Companion Icon */}
                   <View style={styles.companionIconWrapper}>
-                    <Animated.View
-                      style={[
-                        styles.companionGlow,
-                        { borderColor: filterColor, opacity: glowAnim,
-                          transform: [{ scale: glowAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.2] }) }] },
-                      ]}
-                    />
-                    <Animated.View
-                      style={[
-                        styles.companionIcon,
-                        { backgroundColor: filterColor + '25', borderColor: filterColor,
-                          transform: [{ scale: pulseAnim }] },
-                      ]}
-                    >
-                      <Ionicons name={getCategoryIcon(categoryFilter)} size={66} color={filterColor} />
-                    </Animated.View>
+                    {companionImage ? (
+                      <Image source={companionImage} style={styles.companionImageLarge} resizeMode="cover" />
+                    ) : (
+                      <>
+                        <Animated.View
+                          style={[
+                            styles.companionGlow,
+                            { borderColor: filterColor, opacity: glowAnim,
+                              transform: [{ scale: glowAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.2] }) }] },
+                          ]}
+                        />
+                        <Animated.View
+                          style={[
+                            styles.companionIcon,
+                            { backgroundColor: filterColor + '25', borderColor: filterColor,
+                              transform: [{ scale: pulseAnim }] },
+                          ]}
+                        >
+                          <Ionicons name={getCategoryIcon(categoryFilter)} size={66} color={filterColor} />
+                        </Animated.View>
+                      </>
+                    )}
                   </View>
                   {/* Stats Card */}
                   <View style={styles.companionDetails}>
@@ -226,7 +244,11 @@ export default function CompletedRoutinesModal({
               </Text>
             )}
 
-            {displayRoutines.length === 0 ? (
+            {loading ? (
+              <View style={styles.emptyState}>
+                <ActivityIndicator size="large" color={filterColor ?? AppColors.textTertiary} />
+              </View>
+            ) : displayRoutines.length === 0 ? (
               <View style={styles.emptyState}>
                 <Ionicons name="checkmark-circle-outline" size={64} color={AppColors.textTertiary} />
                 <Text style={styles.emptyStateTitle}>No Routines Yet</Text>
@@ -355,6 +377,12 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
+  },
+  companionImageLarge: {
+    width: 132,
+    height: 132,
+    borderRadius: 66,
   },
   companionDetails: {
     flex: 1,

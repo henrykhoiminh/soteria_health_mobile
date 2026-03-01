@@ -1,9 +1,11 @@
-import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import React, { useEffect, useMemo, useRef } from 'react';
+import { View, Text, StyleSheet, Animated, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AvatarLightState, RoutineCategory } from '@/types';
 import { AppColors } from '@/constants/theme';
+import { useIsTabVisible } from '@/lib/contexts/TabVisibilityContext';
 import HapticPressable from '@/components/HapticPressable';
+import { getCompanionImage } from '@/lib/utils/companion-images';
 
 // Toggle to hide light state labels (e.g. "Glowing", "Dormant") for testing
 const HIDE_LIGHT_STATE_LABELS = true;
@@ -17,7 +19,9 @@ interface AvatarProps {
 
 export default function Avatar({ category, lightState, name, onPress }: AvatarProps) {
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const subtlePulseAnim = useRef(new Animated.Value(1)).current;
   const glowAnim = useRef(new Animated.Value(0)).current;
+  const isVisible = useIsTabVisible();
 
   // Get category-specific colors and icons
   const getCategoryConfig = () => {
@@ -96,9 +100,12 @@ export default function Avatar({ category, lightState, name, onPress }: AvatarPr
 
   const stateConfig = getLightStateConfig();
 
-  // Pulse animation for active states
+  // Resolve companion image once on mount (random variant stays stable)
+  const companionImage = useMemo(() => getCompanionImage(category, lightState), [category, lightState]);
+
+  // Pulse animation for active states — only runs when tab is visible
   useEffect(() => {
-    if (stateConfig.pulseEnabled) {
+    if (stateConfig.pulseEnabled && isVisible) {
       const pulseAnimation = Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, {
@@ -119,11 +126,35 @@ export default function Avatar({ category, lightState, name, onPress }: AvatarPr
     } else {
       pulseAnim.setValue(1);
     }
-  }, [lightState, stateConfig.pulseEnabled]);
+  }, [lightState, stateConfig.pulseEnabled, isVisible]);
 
-  // Glow animation for active states
+  // Subtle breathing animation for companion images
   useEffect(() => {
-    if (stateConfig.glowIntensity > 0) {
+    if (companionImage && isVisible) {
+      const breathe = Animated.loop(
+        Animated.sequence([
+          Animated.timing(subtlePulseAnim, {
+            toValue: 1.03,
+            duration: 2000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(subtlePulseAnim, {
+            toValue: 1,
+            duration: 2000,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      breathe.start();
+      return () => breathe.stop();
+    } else {
+      subtlePulseAnim.setValue(1);
+    }
+  }, [companionImage, isVisible]);
+
+  // Glow animation for active states — only runs when tab is visible
+  useEffect(() => {
+    if (stateConfig.glowIntensity > 0 && isVisible) {
       const glowAnimation = Animated.loop(
         Animated.sequence([
           Animated.timing(glowAnim, {
@@ -144,56 +175,68 @@ export default function Avatar({ category, lightState, name, onPress }: AvatarPr
     } else {
       glowAnim.setValue(0);
     }
-  }, [lightState, stateConfig.glowIntensity]);
+  }, [lightState, stateConfig.glowIntensity, isVisible]);
 
   return (
     <HapticPressable style={styles.container} onPress={onPress} activeOpacity={0.7}>
-      {/* Avatar Circle with Glow */}
-      <View style={styles.avatarWrapper}>
-        {/* Outer Glow Effect */}
-        {stateConfig.glowIntensity > 0 && (
-          <Animated.View
-            style={[
-              styles.glowRing,
-              {
-                borderColor: config.color,
-                opacity: glowAnim,
-                transform: [
-                  {
-                    scale: glowAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [1, 1.2],
-                    }),
-                  },
-                ],
-              },
-            ]}
-          />
-        )}
-
-        {/* Main Avatar Circle */}
-        <Animated.View
-          style={[
-            styles.avatarCircle,
-            {
-              backgroundColor: config.lightColor,
-              borderColor: config.color,
-              opacity: stateConfig.opacity,
-              transform: [{ scale: pulseAnim }],
-            },
-          ]}
-        >
-          <Ionicons
-            name={config.icon}
-            size={40}
-            color={config.color}
-            style={{ opacity: stateConfig.opacity }}
-          />
-        </Animated.View>
-      </View>
-
       {/* Companion Name or Category Label */}
       <Text style={[styles.label, { color: config.color }]}>{name || config.label}</Text>
+
+      {/* Avatar */}
+      <View style={styles.avatarWrapper}>
+        {companionImage ? (
+          <Animated.View style={{ transform: [{ scale: subtlePulseAnim }] }}>
+            <Image
+              source={companionImage}
+              style={styles.companionImage}
+              resizeMode="cover"
+            />
+          </Animated.View>
+        ) : (
+          <>
+            {/* Outer Glow Effect */}
+            {stateConfig.glowIntensity > 0 && (
+              <Animated.View
+                style={[
+                  styles.glowRing,
+                  {
+                    borderColor: config.color,
+                    opacity: glowAnim,
+                    transform: [
+                      {
+                        scale: glowAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [1, 1.2],
+                        }),
+                      },
+                    ],
+                  },
+                ]}
+              />
+            )}
+
+            {/* Main Avatar Circle */}
+            <Animated.View
+              style={[
+                styles.avatarCircle,
+                {
+                  backgroundColor: config.lightColor,
+                  borderColor: config.color,
+                  opacity: stateConfig.opacity,
+                  transform: [{ scale: pulseAnim }],
+                },
+              ]}
+            >
+              <Ionicons
+                name={config.icon}
+                size={40}
+                color={config.color}
+                style={{ opacity: stateConfig.opacity }}
+              />
+            </Animated.View>
+          </>
+        )}
+      </View>
 
       {/* Light State Status */}
       {!HIDE_LIGHT_STATE_LABELS && (
@@ -212,7 +255,6 @@ const styles = StyleSheet.create({
   },
   avatarWrapper: {
     position: 'relative',
-    marginBottom: 24,
   },
   glowRing: {
     position: 'absolute',
@@ -230,12 +272,18 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
+  },
+  companionImage: {
+    width: 115,
+    height: 115,
+    borderRadius: 58,
   },
   label: {
     fontSize: 16,
     fontWeight: '600',
     color: AppColors.textPrimary,
-    marginBottom: 8,
+    marginBottom: 4,
   },
   statusText: {
     fontSize: 12,

@@ -1,5 +1,6 @@
 import HapticPressable from '@/components/HapticPressable';
 import { AppColors } from '@/constants/theme';
+import { useIsTabVisible } from '@/lib/contexts/TabVisibilityContext';
 import { AvatarState } from '@/types';
 import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
@@ -17,6 +18,8 @@ const MIDDLE_GLOW_SIZE = 95;
 export default function HarmonyCore({ isInHarmony, avatarStates, onPress }: HarmonyCoreProps) {
   const pulseAnim = useRef(new Animated.Value(0)).current;
   const glowAnim = useRef(new Animated.Value(0.4)).current;
+  const glowMultiplier = useRef(new Animated.Value(1.5)).current;
+  const isVisible = useIsTabVisible();
 
   // Count how many companions are Glowing/Radiant
   const activeCount = avatarStates.filter(
@@ -26,6 +29,8 @@ export default function HarmonyCore({ isInHarmony, avatarStates, onPress }: Harm
   const coreIntensity = activeCount / 3; // 0, 0.33, 0.67, 1
 
   useEffect(() => {
+    if (!isVisible) return;
+
     const pulseDuration = isInHarmony ? 1500 : 3000;
 
     const pulse = Animated.loop(
@@ -64,7 +69,7 @@ export default function HarmonyCore({ isInHarmony, avatarStates, onPress }: Harm
       pulse.stop();
       glow.stop();
     };
-  }, [isInHarmony, coreIntensity]);
+  }, [isInHarmony, coreIntensity, isVisible]);
 
   const outerScale = pulseAnim.interpolate({
     inputRange: [0, 1],
@@ -99,7 +104,7 @@ export default function HarmonyCore({ isInHarmony, avatarStates, onPress }: Harm
         style={[
           styles.middleGlow,
           {
-            opacity: Animated.multiply(glowAnim, new Animated.Value(1.5)),
+            opacity: Animated.multiply(glowAnim, glowMultiplier),
             transform: [{ scale: middleScale }],
           },
         ]}

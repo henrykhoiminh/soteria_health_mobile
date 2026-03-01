@@ -61,8 +61,8 @@ export default function MilestoneCelebrationModal({
       ]).start();
 
       // Animate stars/particles in random patterns
-      starAnimations.forEach((anim, index) => {
-        Animated.loop(
+      const loops = starAnimations.map((anim, index) => {
+        const loop = Animated.loop(
           Animated.sequence([
             Animated.delay(index * 50),
             Animated.timing(anim, {
@@ -76,8 +76,14 @@ export default function MilestoneCelebrationModal({
               useNativeDriver: true,
             }),
           ])
-        ).start();
+        );
+        loop.start();
+        return loop;
       });
+
+      return () => {
+        loops.forEach(loop => loop.stop());
+      };
     }
   }, [visible, milestone]);
 

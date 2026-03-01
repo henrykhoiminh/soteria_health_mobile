@@ -1,10 +1,11 @@
 import HapticPressable from '@/components/HapticPressable';
 import { AppColors } from '@/constants/theme';
+import { getCompanionImage } from '@/lib/utils/companion-images';
 import { getUserLevelSummary } from '@/lib/utils/leveling';
 import { CategoryLevelInfo, RoutineCategory, UserStats } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 
 interface LevelsSectionProps {
   stats: UserStats;
@@ -22,7 +23,9 @@ export default function LevelsSection({ stats, onLevelBadgeTap }: LevelsSectionP
           { cat: 'Mind' as const, info: levelSummary.mind, color: AppColors.mind, icon: 'bulb-outline' as const },
           { cat: 'Body' as const, info: levelSummary.body, color: AppColors.body, icon: 'body' as const },
           { cat: 'Soul' as const, info: levelSummary.soul, color: AppColors.soul, icon: 'flame-outline' as const },
-        ]).map(({ cat, info, color, icon }) => (
+        ]).map(({ cat, info, color, icon }) => {
+          const badgeImage = getCompanionImage(cat);
+          return (
           <View key={cat} style={styles.levelRow}>
             {/* Left: Tappable icon badge */}
             <HapticPressable
@@ -31,7 +34,11 @@ export default function LevelsSection({ stats, onLevelBadgeTap }: LevelsSectionP
               onPress={() => onLevelBadgeTap(cat, info)}
               activeOpacity={0.7}
             >
-              <Ionicons name={icon} size={18} color={color} />
+              {badgeImage ? (
+                <Image source={badgeImage} style={styles.levelBadgeImage} resizeMode="cover" />
+              ) : (
+                <Ionicons name={icon} size={18} color={color} />
+              )}
             </HapticPressable>
 
             {/* Right: Lv + Title + Progress bar */}
@@ -49,7 +56,8 @@ export default function LevelsSection({ stats, onLevelBadgeTap }: LevelsSectionP
               </View>
             </View>
           </View>
-        ))}
+          );
+        })}
       </View>
     </View>
   );
@@ -78,6 +86,12 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
+  },
+  levelBadgeImage: {
+    width: 37,
+    height: 37,
+    borderRadius: 8,
   },
   levelBarSection: {
     flex: 1,

@@ -88,8 +88,8 @@ export default function LevelUpCelebrationModal({
       }).start();
 
       // Animate particles
-      starAnimations.forEach((anim, index) => {
-        Animated.loop(
+      const loops = starAnimations.map((anim, index) => {
+        const loop = Animated.loop(
           Animated.sequence([
             Animated.delay(index * 80),
             Animated.timing(anim, {
@@ -103,8 +103,14 @@ export default function LevelUpCelebrationModal({
               useNativeDriver: true,
             }),
           ])
-        ).start();
+        );
+        loop.start();
+        return loop;
       });
+
+      return () => {
+        loops.forEach(loop => loop.stop());
+      };
     }
   }, [visible]);
 

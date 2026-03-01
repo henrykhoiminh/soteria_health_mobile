@@ -1,4 +1,5 @@
 import { AppColors } from '@/constants/theme';
+import { useIsTabVisible } from '@/lib/contexts/TabVisibilityContext';
 import { BlurView } from 'expo-blur';
 import React, { useEffect, useRef } from 'react';
 import { Animated, Platform, StyleSheet, View } from 'react-native';
@@ -10,8 +11,11 @@ interface GlassCardProps {
 
 export default function GlassCard({ children }: GlassCardProps) {
   const edgeGlow = useRef(new Animated.Value(0.6)).current;
+  const isVisible = useIsTabVisible();
 
   useEffect(() => {
+    if (!isVisible) return;
+
     const glow = Animated.loop(
       Animated.sequence([
         Animated.timing(edgeGlow, {
@@ -29,7 +33,7 @@ export default function GlassCard({ children }: GlassCardProps) {
     glow.start();
 
     return () => glow.stop();
-  }, []);
+  }, [isVisible]);
 
   const supportsBlur = Platform.OS === 'ios';
 

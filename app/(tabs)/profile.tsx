@@ -5,6 +5,7 @@ import { AppColors } from '@/constants/theme';
 import { updateUserProfile, uploadProfilePicture, hardResetUserData } from '@/lib/utils/auth';
 import { validateUsername, getSuggestedUsernames } from '@/lib/utils/username';
 import { JourneyFocus, MilestoneSummary, HealthTeamInvitation, HealthTeamStats, UserStats, RoutineCategory } from '@/types';
+import { getCompanionImage } from '@/lib/utils/companion-images';
 import { getUserLevelSummary, getCategoryTitle } from '@/lib/utils/leveling';
 import { getUserStats } from '@/lib/utils/dashboard';
 import { useState, useCallback, useEffect, useRef } from 'react';
@@ -39,6 +40,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
+import { useIsTabVisible } from '@/lib/contexts/TabVisibilityContext';
 
 const JOURNEY_FOCUSES: JourneyFocus[] = ['Injury Prevention', 'Recovery'];
 
@@ -85,8 +87,11 @@ function CompanionStatsCard({
 }) {
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const glowAnim = useRef(new Animated.Value(0.3)).current;
+  const isVisible = useIsTabVisible();
 
   useEffect(() => {
+    if (!isVisible) return;
+
     const pulse = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, { toValue: 1.08, duration: 1500, useNativeDriver: true }),
@@ -102,7 +107,9 @@ function CompanionStatsCard({
     pulse.start();
     glow.start();
     return () => { pulse.stop(); glow.stop(); };
-  }, []);
+  }, [isVisible]);
+
+  const companionImage = getCompanionImage(category);
 
   return (
     <View style={styles.companionCard}>
@@ -112,24 +119,30 @@ function CompanionStatsCard({
 
       {/* Icon + Stats Row */}
       <View style={styles.companionCardRow}>
-        {/* Pulsating Icon */}
+        {/* Companion Icon */}
         <View style={styles.companionIconWrapper}>
-          <Animated.View
-            style={[
-              styles.companionGlow,
-              { borderColor: color, opacity: glowAnim,
-                transform: [{ scale: glowAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.2] }) }] },
-            ]}
-          />
-          <Animated.View
-            style={[
-              styles.companionIcon,
-              { backgroundColor: color + '25', borderColor: color,
-                transform: [{ scale: pulseAnim }] },
-            ]}
-          >
-            <Ionicons name={icon} size={44} color={color} />
-          </Animated.View>
+          {companionImage ? (
+            <Image source={companionImage} style={styles.companionCardImage} resizeMode="cover" />
+          ) : (
+            <>
+              <Animated.View
+                style={[
+                  styles.companionGlow,
+                  { borderColor: color, opacity: glowAnim,
+                    transform: [{ scale: glowAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.2] }) }] },
+                ]}
+              />
+              <Animated.View
+                style={[
+                  styles.companionIcon,
+                  { backgroundColor: color + '25', borderColor: color,
+                    transform: [{ scale: pulseAnim }] },
+                ]}
+              >
+                <Ionicons name={icon} size={44} color={color} />
+              </Animated.View>
+            </>
+          )}
         </View>
 
         {/* Stats Report */}
@@ -1099,6 +1112,12 @@ const styles = StyleSheet.create({
     borderWidth: 2.5,
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
+  },
+  companionCardImage: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
   },
   companionDetails: {
     flex: 1,
