@@ -12,6 +12,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useOnboarding } from '@/lib/contexts/OnboardingContext';
+import SanctumBackground from '@/components/Dashboard/SanctumBackground';
 import SoteriaPresence from './components/SoteriaPresence';
 import SoteriaDialogueBox from './components/SoteriaDialogueBox';
 import { AppColors } from '@/constants/theme';
@@ -155,6 +156,7 @@ export default function JourneyFocusScreen() {
   const hasRecoveryAreas = data.journeyFocus === 'Recovery' && data.recoveryAreas.length > 0;
 
   return (
+    <SanctumBackground>
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         {/* Soteria's presence (smaller) */}
@@ -429,13 +431,14 @@ export default function JourneyFocusScreen() {
         </Modal>
       </Modal>
     </SafeAreaView>
+    </SanctumBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: AppColors.background,
+    backgroundColor: 'transparent',
   },
   content: {
     flex: 1,

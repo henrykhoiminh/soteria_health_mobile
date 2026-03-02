@@ -1,11 +1,12 @@
 import JourneyBadge from '@/components/JourneyBadge';
+import SanctumBackground from '@/components/Dashboard/SanctumBackground';
 import { AppColors } from '@/constants/theme';
 import { BODY_NAME_OPTIONS, useOnboarding } from '@/lib/contexts/OnboardingContext';
+import { getBodyStateImage } from '@/lib/utils/companion-images';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Animated, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import AvatarOrb from './components/AvatarOrb';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, Image, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import NameSelector from './components/NameSelector';
 import OnboardingProgress from './components/OnboardingProgress';
 import SoteriaDialogueBox from './components/SoteriaDialogueBox';
@@ -63,6 +64,21 @@ export default function BodyExtractionScreen() {
   const continueButtonScale = useRef(new Animated.Value(0.8)).current;
   const typingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const charIndexRef = useRef(0);
+
+  const bodyImage = useMemo(() => getBodyStateImage('Dormant'), []);
+
+  // Breathing animation
+  const breathAnim = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(breathAnim, { toValue: 1.03, duration: 2000, useNativeDriver: true }),
+        Animated.timing(breathAnim, { toValue: 1, duration: 2000, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [breathAnim]);
 
   const captions = isResetFlow
     ? resetUserCaptions
@@ -239,6 +255,7 @@ export default function BodyExtractionScreen() {
   };
 
   return (
+    <SanctumBackground focusCategory="Body">
     <SafeAreaView style={styles.container}>
       {/* Summoning animation for Body */}
       {showSummoning && (
@@ -246,11 +263,7 @@ export default function BodyExtractionScreen() {
           characterColor={AppColors.body}
           onAnimationComplete={handleSummoningComplete}
         >
-          <AvatarOrb
-            type="Body"
-            size="large"
-            animate={true}
-          />
+          <Image source={bodyImage} style={styles.companionImage} resizeMode="contain" />
         </CharacterSummoningAnimation>
       )}
 
@@ -264,16 +277,15 @@ export default function BodyExtractionScreen() {
       )}
 
       <View style={styles.content}>
-        {/* Body orb - only show after summoning completes */}
+        {/* Body companion - only show after summoning completes */}
         {summoningComplete && (
           <View style={styles.orbContainer}>
-            <AvatarOrb
-              type="Body"
-              size="large"
-              animate={true}
-              name={data.bodyName || undefined}
-              showName={data.bodyName.length > 0}
-            />
+            {data.bodyName.length > 0 && (
+              <Text style={styles.companionName}>{data.bodyName}</Text>
+            )}
+            <Animated.View style={{ transform: [{ scale: breathAnim }] }}>
+              <Image source={bodyImage} style={styles.companionImage} resizeMode="contain" />
+            </Animated.View>
             {data.bodyName && nameDescriptions[data.bodyName] && (
               <Text style={styles.nameDescription}>
                 {nameDescriptions[data.bodyName]}
@@ -346,13 +358,14 @@ export default function BodyExtractionScreen() {
         </Animated.View>
       )}
     </SafeAreaView>
+    </SanctumBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: AppColors.background,
+    backgroundColor: 'transparent',
   },
   badgeContainer: {
     paddingTop: 16,
@@ -368,11 +381,22 @@ const styles = StyleSheet.create({
   orbContainer: {
     marginBottom: 32,
     alignItems: 'center',
-    minHeight: 200, // Fixed height to prevent layout shift
+    minHeight: 200,
+  },
+  companionImage: {
+    width: 140,
+    height: 140,
+  },
+  companionName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginBottom: 4,
+    letterSpacing: 1,
   },
   nameDescription: {
-    position: 'absolute',
-    bottom: 0,
+    marginTop: 8,
     fontSize: 14,
     fontStyle: 'italic',
     color: 'rgba(255, 255, 255, 0.6)',

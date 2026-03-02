@@ -25,11 +25,12 @@ import { getDisplayName } from '@/lib/utils/username';
 import { ActivityFeedItem, AvatarState, CategoryLevelInfo, DailyProgress, HarmonyStatus, PainCheckIn, PainStatistics, Routine, RoutineCategory, UserSearchResult, UserStats } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Animated,
+  Image,
   Modal,
   ScrollView,
   StyleSheet,
@@ -37,10 +38,16 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { getAllCompanionSlides, preloadDashboardAssets } from '@/lib/utils/companion-images';
 
 export default function DashboardScreen() {
   const { user, profile, refreshProfile } = useAuth();
   const router = useRouter();
+
+  // Loading slideshow
+  const [slideshowIndex, setSlideshowIndex] = useState(0);
+  const slideshowSlides = useMemo(() => getAllCompanionSlides(), []);
+  const slideshowFade = useRef(new Animated.Value(1)).current;
 
   // Check for cached data immediately on mount to avoid loading flash
   const initialCache = getDashboardCache();
@@ -126,6 +133,28 @@ export default function DashboardScreen() {
     }, [user, profile])
   );
 
+  // Loading slideshow - cycle through companion states
+  useEffect(() => {
+    if (!loading || slideshowSlides.length === 0) return;
+
+    const interval = setInterval(() => {
+      Animated.timing(slideshowFade, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start(() => {
+        setSlideshowIndex((prev) => (prev + 1) % slideshowSlides.length);
+        Animated.timing(slideshowFade, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }).start();
+      });
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [loading, slideshowSlides.length]);
+
   const loadDashboardData = async (showLoading = true) => {
     if (!user) return;
 
@@ -142,6 +171,7 @@ export default function DashboardScreen() {
         getPainStatistics(user.id, 100),
         getPainCheckInHistory(user.id, 100),
         checkHarmonyRequirements(user.id),
+        preloadDashboardAssets(),
       ]);
 
       setTodayProgress(progressData);
@@ -292,10 +322,24 @@ export default function DashboardScreen() {
   };
 
   if (loading && !todayProgress && !stats) {
+    const currentSlide = slideshowSlides[slideshowIndex];
+
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={AppColors.primary} />
-        <Text style={styles.loadingText}>Setting up your dashboard...</Text>
+        <Animated.View style={[styles.slideshowContainer, { opacity: slideshowFade }]}>
+          {currentSlide?.image ? (
+            <Image
+              source={currentSlide.image}
+              style={styles.slideshowImage}
+              resizeMode="contain"
+            />
+          ) : (
+            <View style={[styles.slideshowPlaceholder, { borderColor: '#F59E0B' }]}>
+              <Ionicons name="flame" size={80} color="#F59E0B" />
+            </View>
+          )}
+        </Animated.View>
+        <Text style={styles.loadingText}>Loading...</Text>
       </View>
     );
   }
@@ -883,5 +927,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: AppColors.primaryText,
+  },
+  slideshowContainer: {
+    alignItems: 'center',
+  },
+  slideshowImage: {
+    width: 200,
+    height: 200,
+  },
+  slideshowPlaceholder: {
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    borderWidth: 3,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: AppColors.surface,
   },
 });

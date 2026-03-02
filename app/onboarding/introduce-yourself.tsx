@@ -1,10 +1,12 @@
 import JourneyBadge from '@/components/JourneyBadge';
+import SanctumBackground from '@/components/Dashboard/SanctumBackground';
 import { AppColors } from '@/constants/theme';
 import { useOnboarding } from '@/lib/contexts/OnboardingContext';
+import { getMindStateImage, getBodyStateImage } from '@/lib/utils/companion-images';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, Image, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import AvatarOrb from './components/AvatarOrb';
 import OnboardingProgress from './components/OnboardingProgress';
 import SoteriaDialogueBox from './components/SoteriaDialogueBox';
@@ -22,6 +24,8 @@ export default function IntroduceYourselfScreen() {
   const [displayedText, setDisplayedText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [showButton, setShowButton] = useState(false);
+  const mindImage = useMemo(() => getMindStateImage('Dormant'), []);
+  const bodyImage = useMemo(() => getBodyStateImage('Dormant'), []);
   const buttonOpacity = useRef(new Animated.Value(0)).current;
   const buttonScale = useRef(new Animated.Value(0.8)).current;
   const typingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -118,6 +122,7 @@ export default function IntroduceYourselfScreen() {
   };
 
   return (
+    <SanctumBackground>
     <SafeAreaView style={styles.container}>
       <OnboardingProgress currentStep="introduce-yourself" />
 
@@ -129,15 +134,15 @@ export default function IntroduceYourselfScreen() {
       )}
 
       <View style={styles.content}>
-        {/* Three orbs - matching three-lights layout */}
+        {/* Three companions - Mind/Body as PNGs, Soul as AvatarOrb */}
         <View style={styles.orbsContainer}>
           <View style={styles.orbWrapper}>
-            <AvatarOrb type="Mind" size="medium" state="glowing" />
+            <Image source={mindImage} style={styles.companionImage} resizeMode="contain" />
             <Text style={[styles.orbLabel, { color: '#3B82F6' }]}>{data.mindName}</Text>
           </View>
 
           <View style={styles.orbWrapper}>
-            <AvatarOrb type="Body" size="medium" state="glowing" />
+            <Image source={bodyImage} style={styles.companionImage} resizeMode="contain" />
             <Text style={[styles.orbLabel, { color: '#EF4444' }]}>{data.bodyName}</Text>
           </View>
 
@@ -176,13 +181,14 @@ export default function IntroduceYourselfScreen() {
         </TouchableOpacity>
       </Animated.View>
     </SafeAreaView>
+    </SanctumBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: AppColors.background,
+    backgroundColor: 'transparent',
   },
   badgeContainer: {
     paddingTop: 16,
@@ -205,6 +211,10 @@ const styles = StyleSheet.create({
   },
   orbWrapper: {
     alignItems: 'center',
+  },
+  companionImage: {
+    width: 90,
+    height: 90,
   },
   orbLabel: {
     marginTop: 12,

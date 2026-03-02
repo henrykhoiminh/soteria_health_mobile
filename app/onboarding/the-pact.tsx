@@ -1,4 +1,5 @@
 import JourneyBadge from '@/components/JourneyBadge';
+import SanctumBackground from '@/components/Dashboard/SanctumBackground';
 import { AppColors } from '@/constants/theme';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useOnboarding } from '@/lib/contexts/OnboardingContext';
@@ -229,6 +230,7 @@ export default function ThePactScreen() {
   // Show welcome screen while saving in background
   if (saving || saved) {
     return (
+      <SanctumBackground>
       <SafeAreaView style={styles.container}>
         <View style={styles.savingContent}>
           <View style={styles.presenceContainer}>
@@ -238,10 +240,12 @@ export default function ThePactScreen() {
           <Text style={styles.welcomeText}>Welcome, {welcomeName}.</Text>
         </View>
       </SafeAreaView>
+      </SanctumBackground>
     );
   }
 
   return (
+    <SanctumBackground>
     <SafeAreaView style={styles.container}>
       <OnboardingProgress currentStep="the-pact" />
 
@@ -283,13 +287,14 @@ export default function ThePactScreen() {
         visible={allComplete}
       />
     </SafeAreaView>
+    </SanctumBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: AppColors.background,
+    backgroundColor: 'transparent',
   },
   badgeContainer: {
     paddingTop: 16,

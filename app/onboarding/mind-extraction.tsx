@@ -1,11 +1,12 @@
 import JourneyBadge from '@/components/JourneyBadge';
+import SanctumBackground from '@/components/Dashboard/SanctumBackground';
 import { AppColors } from '@/constants/theme';
 import { MIND_NAME_OPTIONS, useOnboarding } from '@/lib/contexts/OnboardingContext';
+import { getMindStateImage } from '@/lib/utils/companion-images';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Animated, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import AvatarOrb from './components/AvatarOrb';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, Image, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import NameSelector from './components/NameSelector';
 import OnboardingProgress from './components/OnboardingProgress';
 import SoteriaDialogueBox from './components/SoteriaDialogueBox';
@@ -57,6 +58,21 @@ export default function MindExtractionScreen() {
   const continueButtonScale = useRef(new Animated.Value(0.8)).current;
   const typingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const charIndexRef = useRef(0);
+
+  const mindImage = useMemo(() => getMindStateImage('Dormant'), []);
+
+  // Breathing animation
+  const breathAnim = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(breathAnim, { toValue: 1.03, duration: 2000, useNativeDriver: true }),
+        Animated.timing(breathAnim, { toValue: 1, duration: 2000, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [breathAnim]);
 
   const isValid = data.mindName.trim().length > 0;
 
@@ -230,6 +246,7 @@ export default function MindExtractionScreen() {
   };
 
   return (
+    <SanctumBackground focusCategory="Mind">
     <SafeAreaView style={styles.container}>
       {/* Summoning animation for Mind */}
       {showSummoning && (
@@ -237,11 +254,7 @@ export default function MindExtractionScreen() {
           characterColor={AppColors.mind}
           onAnimationComplete={handleSummoningComplete}
         >
-          <AvatarOrb
-            type="Mind"
-            size="large"
-            animate={true}
-          />
+          <Image source={mindImage} style={styles.companionImage} resizeMode="contain" />
         </CharacterSummoningAnimation>
       )}
 
@@ -255,16 +268,15 @@ export default function MindExtractionScreen() {
       )}
 
       <View style={styles.content}>
-        {/* Mind orb - only show after summoning completes */}
+        {/* Mind companion - only show after summoning completes */}
         {summoningComplete && (
           <View style={styles.orbContainer}>
-            <AvatarOrb
-              type="Mind"
-              size="large"
-              animate={true}
-              name={data.mindName || undefined}
-              showName={data.mindName.length > 0}
-            />
+            {data.mindName.length > 0 && (
+              <Text style={styles.companionName}>{data.mindName}</Text>
+            )}
+            <Animated.View style={{ transform: [{ scale: breathAnim }] }}>
+              <Image source={mindImage} style={styles.companionImage} resizeMode="contain" />
+            </Animated.View>
             {data.mindName && nameDescriptions[data.mindName] && (
               <Text style={styles.nameDescription}>
                 {nameDescriptions[data.mindName]}
@@ -337,13 +349,14 @@ export default function MindExtractionScreen() {
         </Animated.View>
       )}
     </SafeAreaView>
+    </SanctumBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: AppColors.background,
+    backgroundColor: 'transparent',
   },
   badgeContainer: {
     paddingTop: 16,
@@ -359,11 +372,22 @@ const styles = StyleSheet.create({
   orbContainer: {
     marginBottom: 32,
     alignItems: 'center',
-    minHeight: 200, // Fixed height to prevent layout shift
+    minHeight: 200,
+  },
+  companionImage: {
+    width: 140,
+    height: 140,
+  },
+  companionName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginBottom: 4,
+    letterSpacing: 1,
   },
   nameDescription: {
-    position: 'absolute',
-    bottom: 0,
+    marginTop: 8,
     fontSize: 14,
     fontStyle: 'italic',
     color: 'rgba(255, 255, 255, 0.6)',

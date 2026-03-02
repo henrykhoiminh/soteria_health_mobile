@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, SafeAreaView, TouchableOpacity, Text } from 'react-native';
 import { useRouter } from 'expo-router';
+import SanctumBackground from '@/components/Dashboard/SanctumBackground';
 import SoteriaPresence from './components/SoteriaPresence';
 import NarrativeText from './components/NarrativeText';
 import { useOnboarding } from '@/lib/contexts/OnboardingContext';
@@ -49,6 +50,7 @@ export default function ResetWelcomeScreen() {
   };
 
   return (
+    <SanctumBackground>
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         {/* Soteria's presence */}
@@ -76,13 +78,14 @@ export default function ResetWelcomeScreen() {
         </View>
       )}
     </SafeAreaView>
+    </SanctumBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: AppColors.background,
+    backgroundColor: 'transparent',
   },
   content: {
     flex: 1,

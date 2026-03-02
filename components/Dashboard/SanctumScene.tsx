@@ -39,13 +39,14 @@ export default function SanctumScene({
       {/* Companions Row - simple horizontal layout */}
       <View style={styles.companionsRow}>
         {avatarStates.map((avatarState) => (
-          <Avatar
-            key={avatarState.category}
-            category={avatarState.category}
-            lightState={avatarState.lightState}
-            name={getCompanionName(avatarState.category)}
-            onPress={() => onAvatarClick(avatarState.category)}
-          />
+          <View key={avatarState.category} style={styles.avatarSlot}>
+            <Avatar
+              category={avatarState.category}
+              lightState={avatarState.lightState}
+              name={getCompanionName(avatarState.category)}
+              onPress={() => onAvatarClick(avatarState.category)}
+            />
+          </View>
         ))}
       </View>
     </View>
@@ -71,5 +72,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginTop: 130,
     marginBottom: 50,
+  },
+  avatarSlot: {
+    flex: 1,
   },
 });

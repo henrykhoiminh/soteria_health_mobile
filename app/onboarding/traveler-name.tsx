@@ -1,4 +1,5 @@
 import JourneyBadge from '@/components/JourneyBadge';
+import SanctumBackground from '@/components/Dashboard/SanctumBackground';
 import { AppColors } from '@/constants/theme';
 import { useOnboarding, USERNAME_MAX_LENGTH } from '@/lib/contexts/OnboardingContext';
 import { checkUsernameAvailability } from '@/lib/utils/username';
@@ -193,6 +194,7 @@ export default function TravelerNameScreen() {
   };
 
   return (
+    <SanctumBackground>
     <SafeAreaView style={styles.container}>
       <OnboardingProgress currentStep="traveler-name" />
 
@@ -315,13 +317,14 @@ export default function TravelerNameScreen() {
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
+    </SanctumBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: AppColors.background,
+    backgroundColor: 'transparent',
   },
   badgeContainer: {
     paddingTop: 16,
@@ -409,7 +412,7 @@ const styles = StyleSheet.create({
   },
   input: {
     width: '100%',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: 'rgba(30, 30, 30, 0.8)',
     borderWidth: 2,
     borderColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 12,

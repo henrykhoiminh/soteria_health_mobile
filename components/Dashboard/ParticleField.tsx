@@ -20,6 +20,13 @@ const PARTICLE_COLORS = [
   AppColors.soul,       // amber
 ];
 
+interface ParticleFieldProps {
+  /** When set, all particles use this single color instead of the default mix */
+  color?: string;
+  /** When true, skip tab visibility check (for use outside of tab screens) */
+  alwaysVisible?: boolean;
+}
+
 interface Particle {
   anim: Animated.Value;
   x: number;
@@ -30,15 +37,16 @@ interface Particle {
   delay: number;
 }
 
-export default function ParticleField() {
-  const isVisible = useIsTabVisible();
+export default function ParticleField({ color, alwaysVisible }: ParticleFieldProps = {}) {
+  const isTabVisible = useIsTabVisible();
+  const isVisible = alwaysVisible || isTabVisible;
   const particles = useRef<Particle[]>(
     Array.from({ length: PARTICLE_COUNT }, (_, i) => ({
       anim: new Animated.Value(0),
       x: Math.random() * 100,
       y: 40 + Math.random() * 200,
       size: 2 + Math.random() * 3,
-      color: PARTICLE_COLORS[i % PARTICLE_COLORS.length],
+      color: color ?? PARTICLE_COLORS[i % PARTICLE_COLORS.length],
       duration: 3000 + Math.random() * 2000,
       delay: i * 250 + Math.random() * 500,
     }))
@@ -112,6 +120,7 @@ const styles = StyleSheet.create({
   container: {
     ...StyleSheet.absoluteFillObject,
     overflow: 'hidden',
+    zIndex: 1,
   },
   particle: {
     position: 'absolute',

@@ -1,22 +1,29 @@
+import ParticleField from '@/components/Dashboard/ParticleField';
+import SanctumBackground from '@/components/Dashboard/SanctumBackground';
+import HapticPressable from '@/components/HapticPressable';
+import LevelUpCelebrationModal from '@/components/LevelUpCelebrationModal';
 import { AppColors } from '@/constants/theme';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { initAudio, playCountdownBeep } from '@/lib/utils/audio';
+import { getAllCompanionSlides, getCompanionImage } from '@/lib/utils/companion-images';
 import { completeRoutine, getRoutineById, getTodayProgress, getUserStats } from '@/lib/utils/dashboard';
 import { setDashboardCache } from '@/lib/utils/dashboard-cache';
+import { clearRoutineCache, getRoutineCache } from '@/lib/utils/routine-cache';
 import { checkHarmonyRequirements } from '@/lib/utils/harmony';
 import { getPainCheckInHistory, getPainStatistics } from '@/lib/utils/pain-checkin';
 import { completeCircleRoutine, getFormattedFriendActivity } from '@/lib/utils/social';
-import { calculateActivityStreak, getAllAvatarStates, getAvatarLightState } from '@/lib/utils/stats';
+import { calculateActivityStreak, getAllAvatarStates } from '@/lib/utils/stats';
 import { formatTime } from '@/lib/utils/time';
 import { AvatarLightState, Exercise, LevelUpInfo, Routine, RoutineCategory } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import { ResizeMode, Video } from 'expo-av';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import LottieView from 'lottie-react-native';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   Image,
   Modal,
   Platform,
@@ -27,8 +34,9 @@ import {
   Vibration,
   View,
 } from 'react-native';
-import HapticPressable from '@/components/HapticPressable';
-import LevelUpCelebrationModal from '@/components/LevelUpCelebrationModal';
+import Svg, { Circle } from 'react-native-svg';
+
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 // Completion animation - add your Lottie JSON file to assets/animations/
 // Expected file: assets/animations/routine_complete.json
@@ -72,9 +80,50 @@ const getAvatarGlowColor = (lightState: AvatarLightState, category: RoutineCateg
   }
 };
 
+// Circular progress ring constants
+const RING_SIZE = 268;
+const RING_STROKE = 5;
+const RING_RADIUS = (RING_SIZE - RING_STROKE) / 2;
+const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
+
+const getCategoryColor = (category: RoutineCategory): string => {
+  switch (category) {
+    case 'Mind': return '#3B82F6';
+    case 'Body': return '#EF4444';
+    case 'Soul': return '#F59E0B';
+  }
+};
+
+/**
+ * Maps exercise index to avatar light state during routine execution.
+ * Progresses from starting state → Awakening, with the last exercise always Awakening.
+ */
+export function getExerciseAvatarState(
+  exerciseIndex: number,
+  totalExercises: number,
+  startingState: 'Dormant' | 'Sleepy',
+): AvatarLightState {
+  if (totalExercises === 1) return 'Awakening';
+  if (exerciseIndex >= totalExercises - 1) return 'Awakening';
+
+  const progression: AvatarLightState[] = startingState === 'Dormant'
+    ? ['Dormant', 'Sleepy', 'Awakening']
+    : ['Sleepy', 'Awakening'];
+
+  const statesBeforeFinal = progression.length - 1;
+  const exercisesBeforeFinal = totalExercises - 1;
+
+  const stateIndex = Math.min(
+    Math.floor((exerciseIndex * statesBeforeFinal) / exercisesBeforeFinal),
+    statesBeforeFinal - 1,
+  );
+
+  return progression[stateIndex];
+}
+
 export default function ExecuteRoutineScreen() {
   const { id, circleId } = useLocalSearchParams<{ id: string; circleId?: string }>();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const router = useRouter();
 
   const [loading, setLoading] = useState(true);
@@ -84,7 +133,8 @@ export default function ExecuteRoutineScreen() {
   const [isPaused, setIsPaused] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
-  const [avatarLightState, setAvatarLightState] = useState<AvatarLightState>('Awakening');
+  const [avatarLightState, setAvatarLightState] = useState<AvatarLightState>('Dormant');
+  const [startingLightState, setStartingLightState] = useState<'Dormant' | 'Sleepy'>('Dormant');
   const [animationFinished, setAnimationFinished] = useState(false);
   const [dashboardPreloaded, setDashboardPreloaded] = useState(false);
   const [loadingSeconds, setLoadingSeconds] = useState(0);
@@ -99,9 +149,22 @@ export default function ExecuteRoutineScreen() {
   const [showLevelUp, setShowLevelUp] = useState(false);
   const [currentLevelUpIndex, setCurrentLevelUpIndex] = useState(0);
 
+  // Loading slideshow
+  const [slideshowIndex, setSlideshowIndex] = useState(0);
+  const slideshowSlides = useMemo(() => getAllCompanionSlides(), []);
+  const slideshowFade = useRef(new Animated.Value(1)).current;
+
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const loadingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const animationRef = useRef<LottieView>(null);
+  const breatheAnim = useRef(new Animated.Value(1)).current;
+  const progressAnim = useRef(new Animated.Value(RING_CIRCUMFERENCE)).current;
+
+  // Resolve companion image once (random variant stays stable across re-renders)
+  const companionImage = useMemo(
+    () => routine ? getCompanionImage(routine.category, avatarLightState) : null,
+    [routine?.category, avatarLightState]
+  );
 
   useEffect(() => {
     initAudio(); // Initialize audio settings
@@ -113,12 +176,53 @@ export default function ExecuteRoutineScreen() {
     };
   }, [id]);
 
+  // Loading slideshow - cycle through companion states with crossfade
+  useEffect(() => {
+    if (!loading || slideshowSlides.length === 0) return;
+
+    const interval = setInterval(() => {
+      // Fade out
+      Animated.timing(slideshowFade, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start(() => {
+        // Switch slide
+        setSlideshowIndex((prev) => (prev + 1) % slideshowSlides.length);
+        // Fade in
+        Animated.timing(slideshowFade, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }).start();
+      });
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [loading, slideshowSlides.length]);
+
   useEffect(() => {
     if (routine && routine.exercises && currentExerciseIndex < routine.exercises.length) {
       setTimeRemaining(routine.exercises[currentExerciseIndex].duration_seconds);
       setIsPaused(true); // Start paused, user clicks "Start"
       setShowInstructions(false); // Hide instructions when moving to next exercise
+
+      // Progress avatar state through Dormant → Sleepy → Awakening
+      setAvatarLightState(
+        getExerciseAvatarState(currentExerciseIndex, routine.exercises.length, startingLightState)
+      );
     }
+  }, [currentExerciseIndex, routine, startingLightState]);
+
+  // Animate progress ring when exercise index changes
+  useEffect(() => {
+    if (!routine) return;
+    const target = RING_CIRCUMFERENCE * (1 - currentExerciseIndex / routine.exercises.length);
+    Animated.timing(progressAnim, {
+      toValue: target,
+      duration: 600,
+      useNativeDriver: false, // strokeDashoffset can't use native driver
+    }).start();
   }, [currentExerciseIndex, routine]);
 
   useEffect(() => {
@@ -183,9 +287,48 @@ export default function ExecuteRoutineScreen() {
     }
   }, [isComplete, dashboardPreloaded]);
 
+  // Subtle breathing animation for companion character images
+  useEffect(() => {
+    if (companionImage) {
+      const breathe = Animated.loop(
+        Animated.sequence([
+          Animated.timing(breatheAnim, {
+            toValue: 1.03,
+            duration: 2000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(breatheAnim, {
+            toValue: 1,
+            duration: 2000,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      breathe.start();
+      return () => breathe.stop();
+    } else {
+      breatheAnim.setValue(1);
+    }
+  }, [companionImage]);
+
   const loadRoutine = async () => {
     if (!id || !user) return;
 
+    // Check prefetch cache first (populated by detail page)
+    const cached = getRoutineCache(id);
+    if (cached) {
+      clearRoutineCache();
+      setRoutine(cached.routine);
+      if (cached.routine.exercises && cached.routine.exercises.length > 0) {
+        setTimeRemaining(cached.routine.exercises[0].duration_seconds);
+        setStartingLightState(cached.startingLightState);
+        setAvatarLightState(cached.initialAvatarState);
+      }
+      setLoading(false);
+      return;
+    }
+
+    // Cache miss (e.g. deep link) — fall back to fetching
     try {
       setLoading(true);
       const data = await getRoutineById(id);
@@ -193,15 +336,16 @@ export default function ExecuteRoutineScreen() {
       if (data && data.exercises && data.exercises.length > 0) {
         setTimeRemaining(data.exercises[0].duration_seconds);
 
-        // Calculate avatar light state
-        const todayProgress = await getTodayProgress(user.id);
-        const categoryCompleted = data.category === 'Mind' ? todayProgress?.mind_complete :
-                                  data.category === 'Body' ? todayProgress?.body_complete :
-                                  todayProgress?.soul_complete;
-        const allCategoriesCompleted = todayProgress?.mind_complete && todayProgress?.body_complete && todayProgress?.soul_complete;
+        // Fetch actual avatar states (same source as dashboard) to start at the correct state
+        const currentAvatarStates = await getAllAvatarStates(user.id);
+        const categoryState = currentAvatarStates.find(s => s.category === data.category);
+        const currentLightState = categoryState?.lightState ?? 'Dormant';
 
-        const lightState = getAvatarLightState(categoryCompleted || false, allCategoriesCompleted || false, true);
-        setAvatarLightState(lightState);
+        // Use current dashboard state as the starting point for execution progression
+        const starting: 'Dormant' | 'Sleepy' =
+          currentLightState === 'Dormant' ? 'Dormant' : 'Sleepy';
+        setStartingLightState(starting);
+        setAvatarLightState(getExerciseAvatarState(0, data.exercises.length, starting));
       }
     } catch (error) {
       console.error('Error loading routine:', error);
@@ -370,9 +514,25 @@ export default function ExecuteRoutineScreen() {
   };
 
   if (loading) {
+    const currentSlide = slideshowSlides[slideshowIndex];
+
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={AppColors.primary} />
+        <Animated.View style={[styles.slideshowContainer, { opacity: slideshowFade }]}>
+          {currentSlide?.image ? (
+            <Image
+              source={currentSlide.image}
+              style={styles.slideshowImage}
+              resizeMode="contain"
+            />
+          ) : (
+            <View style={[styles.slideshowPlaceholder, { borderColor: '#F59E0B' }]}>
+              <Ionicons name="flame" size={80} color="#F59E0B" />
+            </View>
+          )}
+        </Animated.View>
+        <Text style={styles.loadingText}>Loading...</Text>
+        <ActivityIndicator size="small" color={AppColors.textTertiary} style={{ marginTop: 16 }} />
       </View>
     );
   }
@@ -477,9 +637,9 @@ export default function ExecuteRoutineScreen() {
   }
 
   const currentExercise: Exercise = routine.exercises[currentExerciseIndex];
-  const progress = ((currentExerciseIndex + 1) / routine.exercises.length) * 100;
 
   return (
+    <SanctumBackground focusCategory={routine.category}>
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
@@ -490,37 +650,80 @@ export default function ExecuteRoutineScreen() {
         <View style={{ width: 28 }} />
       </View>
 
-      {/* Progress Bar */}
-      <View style={styles.progressContainer}>
-        <View style={styles.progressBar}>
-          <View style={[styles.progressFill, { width: `${progress}%` }]} />
-        </View>
-        <Text style={styles.progressText}>
-          Exercise {currentExerciseIndex + 1} of {routine.exercises.length}
-        </Text>
-      </View>
-
       {/* Main Content - flex centered between header and controls */}
       <View style={styles.mainContent}>
-        {/* Avatar Circle - Awakening/Glowing Avatar */}
+        {/* Avatar with circular progress ring */}
         <View style={styles.avatarContainer}>
-          <View style={[
-            styles.avatarCircle,
-            {
-              borderColor: getAvatarGlowColor(avatarLightState, routine.category).borderColor,
-              shadowColor: getAvatarGlowColor(avatarLightState, routine.category).shadowColor,
-              shadowOpacity: getAvatarGlowColor(avatarLightState, routine.category).glowIntensity > 0 ? 0.8 : 0,
-              shadowRadius: getAvatarGlowColor(avatarLightState, routine.category).glowIntensity,
-              elevation: getAvatarGlowColor(avatarLightState, routine.category).glowIntensity,
-            }
-          ]}>
-            <Ionicons
-              name={getCategoryIcon(routine.category)}
-              size={100}
-              color={getAvatarGlowColor(avatarLightState, routine.category).borderColor}
-            />
+          {/* Countdown text - above the ring */}
+          {(() => {
+            const remaining = routine.exercises.length - currentExerciseIndex;
+            const companionName = profile?.[`${routine.category.toLowerCase()}_name` as keyof typeof profile] as string | null || routine.category;
+            return (
+              <Text style={styles.countdownText}>
+                {remaining === 1 ? (
+                  <>Final exercise! {companionName} is almost awake!</>
+                ) : (
+                  <>{remaining} exercises until {companionName} awakens!</>
+                )}
+              </Text>
+            );
+          })()}
+          <View style={styles.progressRingWrapper}>
+            {/* SVG progress ring */}
+            <Svg width={RING_SIZE} height={RING_SIZE} style={styles.progressRingSvg}>
+              {/* Background track */}
+              <Circle
+                cx={RING_SIZE / 2}
+                cy={RING_SIZE / 2}
+                r={RING_RADIUS}
+                stroke={AppColors.surfaceSecondary}
+                strokeWidth={RING_STROKE}
+                fill="none"
+              />
+              {/* Progress arc - animated */}
+              <AnimatedCircle
+                cx={RING_SIZE / 2}
+                cy={RING_SIZE / 2}
+                r={RING_RADIUS}
+                stroke={getCategoryColor(routine.category)}
+                strokeWidth={RING_STROKE}
+                fill="none"
+                strokeDasharray={`${RING_CIRCUMFERENCE}`}
+                strokeDashoffset={progressAnim}
+                strokeLinecap="round"
+                transform={`rotate(-90 ${RING_SIZE / 2} ${RING_SIZE / 2})`}
+              />
+            </Svg>
+            {/* Avatar centered inside the ring */}
+            <View style={styles.avatarInner}>
+              {companionImage ? (
+                <Animated.View style={{ transform: [{ scale: breatheAnim }] }}>
+                  <Image
+                    source={companionImage}
+                    style={styles.companionImage}
+                    resizeMode="contain"
+                  />
+                </Animated.View>
+              ) : (
+                <View style={[
+                  styles.avatarCircle,
+                  {
+                    borderColor: getAvatarGlowColor(avatarLightState, routine.category).borderColor,
+                    shadowColor: getAvatarGlowColor(avatarLightState, routine.category).shadowColor,
+                    shadowOpacity: getAvatarGlowColor(avatarLightState, routine.category).glowIntensity > 0 ? 0.8 : 0,
+                    shadowRadius: getAvatarGlowColor(avatarLightState, routine.category).glowIntensity,
+                    elevation: getAvatarGlowColor(avatarLightState, routine.category).glowIntensity,
+                  }
+                ]}>
+                  <Ionicons
+                    name={getCategoryIcon(routine.category)}
+                    size={80}
+                    color={getAvatarGlowColor(avatarLightState, routine.category).borderColor}
+                  />
+                </View>
+              )}
+            </View>
           </View>
-          <Text style={styles.avatarStateText}>{avatarLightState}</Text>
         </View>
 
         {/* Exercise Info */}
@@ -622,19 +825,49 @@ export default function ExecuteRoutineScreen() {
         </View>
       </Modal>
     </SafeAreaView>
+    <View style={styles.particleOverlay} pointerEvents="none">
+      <ParticleField color={getCategoryColor(routine.category)} alwaysVisible />
+    </View>
+    </SanctumBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: AppColors.background,
+    backgroundColor: 'transparent',
+  },
+  particleOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 10,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: AppColors.background,
+  },
+  loadingText: {
+    marginTop: 24,
+    fontSize: 16,
+    fontWeight: '500',
+    color: AppColors.textSecondary,
+  },
+  slideshowContainer: {
+    alignItems: 'center',
+  },
+  slideshowImage: {
+    width: 200,
+    height: 200,
+  },
+  slideshowPlaceholder: {
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    borderWidth: 3,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: AppColors.surface,
   },
   errorContainer: {
     flex: 1,
@@ -720,26 +953,26 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
   },
-  progressContainer: {
-    paddingHorizontal: 24,
-    marginBottom: 16,
+  progressRingWrapper: {
+    width: RING_SIZE,
+    height: RING_SIZE,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  progressBar: {
-    height: 8,
-    backgroundColor: AppColors.surfaceSecondary,
-    borderRadius: 4,
-    overflow: 'hidden',
-    marginBottom: 8,
+  progressRingSvg: {
+    position: 'absolute',
   },
-  progressFill: {
-    height: '100%',
-    backgroundColor: AppColors.primary,
-    borderRadius: 4,
+  avatarInner: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  progressText: {
-    fontSize: 14,
-    color: AppColors.textSecondary,
+  countdownText: {
+    fontSize: 15,
+    fontWeight: '600',
+    fontStyle: 'italic',
     textAlign: 'center',
+    color: AppColors.textPrimary,
+    marginBottom: 24,
   },
   mainContent: {
     flex: 1,
@@ -747,7 +980,7 @@ const styles = StyleSheet.create({
   },
   exerciseContainer: {
     paddingHorizontal: 24,
-    marginTop: 16,
+    marginTop: 32,
   },
   exerciseHeader: {
     flexDirection: 'row',
@@ -779,20 +1012,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   avatarCircle: {
-    width: 240,
-    height: 240,
-    borderRadius: 120,
+    width: 220,
+    height: 220,
+    borderRadius: 110,
     backgroundColor: AppColors.surface,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 8,
+    borderWidth: 6,
   },
-  avatarStateText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: AppColors.textSecondary,
-    marginTop: 16,
-    textTransform: 'capitalize',
+  companionImage: {
+    width: 230,
+    height: 230,
   },
   // Time Display styles
   timeDisplay: {

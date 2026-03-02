@@ -1,4 +1,5 @@
 import JourneyBadge from '@/components/JourneyBadge';
+import SanctumBackground from '@/components/Dashboard/SanctumBackground';
 import { AppColors } from '@/constants/theme';
 import { SOUL_NAME_OPTIONS, useOnboarding } from '@/lib/contexts/OnboardingContext';
 import * as Haptics from 'expo-haptics';
@@ -243,6 +244,7 @@ export default function SoulExtractionScreen() {
   };
 
   return (
+    <SanctumBackground focusCategory="Soul">
     <SafeAreaView style={styles.container}>
       {/* Summoning animation for Soul */}
       {showSummoning && (
@@ -350,13 +352,14 @@ export default function SoulExtractionScreen() {
         </Animated.View>
       )}
     </SafeAreaView>
+    </SanctumBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: AppColors.background,
+    backgroundColor: 'transparent',
   },
   badgeContainer: {
     paddingTop: 16,

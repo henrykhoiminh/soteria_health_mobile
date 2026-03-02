@@ -3,6 +3,10 @@ import { AppColors } from '@/constants/theme';
 import { getRoutineById } from '@/lib/utils/dashboard';
 import { deleteCustomRoutine } from '@/lib/utils/routine-builder';
 import { isHealthTeamMember } from '@/lib/utils/routine-builder';
+import { initAudio } from '@/lib/utils/audio';
+import { setRoutineCache } from '@/lib/utils/routine-cache';
+import { getAllAvatarStates } from '@/lib/utils/stats';
+import { getExerciseAvatarState } from '@/app/routines/[id]/execute';
 import { formatDuration } from '@/lib/utils/time';
 import { Routine } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
@@ -26,6 +30,7 @@ export default function RoutineDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [routine, setRoutine] = useState<Routine | null>(null);
   const [isHealthTeam, setIsHealthTeam] = useState(false);
+  const [preparing, setPreparing] = useState(false);
 
   useEffect(() => {
     loadRoutine();
@@ -52,13 +57,48 @@ export default function RoutineDetailScreen() {
     }
   };
 
-  const handleStartRoutine = () => {
+  const navigateToExecute = () => {
     if (!routine) return;
-    // Pass circleId to execute screen if present (for circle routine completions)
     if (circleId) {
       router.push(`/routines/${routine.id}/execute?circleId=${circleId}` as any);
     } else {
       router.push(`/routines/${routine.id}/execute`);
+    }
+  };
+
+  const handleStartRoutine = async () => {
+    if (!routine || !user) {
+      navigateToExecute();
+      return;
+    }
+
+    setPreparing(true);
+    try {
+      // Prefetch avatar states and warm up audio in parallel
+      const [avatarStates] = await Promise.all([
+        getAllAvatarStates(user.id),
+        initAudio(),
+      ]);
+
+      // Compute starting light state (same logic as execute.tsx's loadRoutine)
+      const categoryState = avatarStates.find(s => s.category === routine.category);
+      const currentLightState = categoryState?.lightState ?? 'Dormant';
+      const startingLightState: 'Dormant' | 'Sleepy' =
+        currentLightState === 'Dormant' ? 'Dormant' : 'Sleepy';
+      const initialAvatarState = getExerciseAvatarState(
+        0,
+        routine.exercises?.length ?? 1,
+        startingLightState,
+      );
+
+      // Store in cache for execute page to consume
+      setRoutineCache({ routine, startingLightState, initialAvatarState });
+    } catch (error) {
+      console.error('Error prefetching routine data:', error);
+      // Navigate anyway — execute page will fall back to its own loading
+    } finally {
+      setPreparing(false);
+      navigateToExecute();
     }
   };
 
@@ -261,12 +301,21 @@ export default function RoutineDetailScreen() {
       {/* Footer with Start and Customize Buttons */}
       <View style={styles.footer}>
         <HapticPressable
-          style={styles.startButton}
+          style={[styles.startButton, preparing && styles.startButtonPreparing]}
           onPress={handleStartRoutine}
-          disabled={!user}
+          disabled={!user || preparing}
         >
-          <Ionicons name="play" size={24} color={AppColors.primaryText} />
-          <Text style={styles.startButtonText}>Start Routine</Text>
+          {preparing ? (
+            <>
+              <ActivityIndicator size="small" color={AppColors.primaryText} />
+              <Text style={styles.startButtonText}>Preparing...</Text>
+            </>
+          ) : (
+            <>
+              <Ionicons name="play" size={24} color={AppColors.primaryText} />
+              <Text style={styles.startButtonText}>Start Routine</Text>
+            </>
+          )}
         </HapticPressable>
 
         {/* Customize Button - allows users to create their own version */}
@@ -530,6 +579,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     gap: 8,
+  },
+  startButtonPreparing: {
+    opacity: 0.7,
   },
   startButtonText: {
     color: AppColors.primaryText,

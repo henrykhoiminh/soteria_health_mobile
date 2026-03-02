@@ -1,6 +1,7 @@
 import { AppColors } from '@/constants/theme';
 import { getUserProfile, signIn } from '@/lib/utils/auth';
 import HapticPressable from '@/components/HapticPressable';
+import SanctumBackground from '@/components/Dashboard/SanctumBackground';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -73,109 +74,105 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-    >
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+    <SanctumBackground>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.container}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
-        <View style={styles.content}>
-          <Image
-            source={require('@/assets/images/soteria-logo.png')}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-          <Text style={styles.subtitle}>Sign in to continue your journey to a pain-free life!</Text>
-
-        <View style={styles.form}>
-          <TextInput
-            style={styles.input}
-            placeholder="Email"
-            placeholderTextColor={AppColors.textPlaceholder}
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-            editable={!loading}
-          />
-
-          <View style={styles.passwordContainer}>
-            <TextInput
-              style={styles.passwordInput}
-              placeholder="Password"
-              placeholderTextColor={AppColors.textPlaceholder}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
-              editable={!loading}
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.content}>
+            <Image
+              source={require('@/assets/images/soteria-logo.png')}
+              style={styles.logo}
+              resizeMode="contain"
             />
-            <HapticPressable
-              style={styles.eyeIcon}
-              onPress={() => setShowPassword(!showPassword)}
-            >
-              <Ionicons
-                name={showPassword ? 'eye-off' : 'eye'}
-                size={24}
-                color={AppColors.textSecondary}
+
+            <View style={styles.form}>
+              <TextInput
+                style={styles.input}
+                placeholder="Email"
+                placeholderTextColor={AppColors.textPlaceholder}
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                editable={!loading}
               />
-            </HapticPressable>
+
+              <View style={styles.passwordContainer}>
+                <TextInput
+                  style={styles.passwordInput}
+                  placeholder="Password"
+                  placeholderTextColor={AppColors.textPlaceholder}
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  editable={!loading}
+                />
+                <HapticPressable
+                  style={styles.eyeIcon}
+                  onPress={() => setShowPassword(!showPassword)}
+                >
+                  <Ionicons
+                    name={showPassword ? 'eye-off' : 'eye'}
+                    size={24}
+                    color={AppColors.textSecondary}
+                  />
+                </HapticPressable>
+              </View>
+
+              <HapticPressable
+                style={[styles.button, loading && styles.buttonDisabled]}
+                onPress={handleLogin}
+                disabled={loading}
+              >
+                <Text style={styles.buttonText}>
+                  {loading ? 'Entering...' : 'Enter Soteria'}
+                </Text>
+              </HapticPressable>
+
+              <HapticPressable
+                style={styles.linkButton}
+                onPress={() => router.push('/(auth)/signup')}
+                disabled={loading}
+              >
+                <Text style={styles.linkText}>
+                  Don't have an account? Sign up
+                </Text>
+              </HapticPressable>
+            </View>
           </View>
-
-          <HapticPressable
-            style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={handleLogin}
-            disabled={loading}
-          >
-            <Text style={styles.buttonText}>
-              {loading ? 'Signing in...' : 'Sign In'}
-            </Text>
-          </HapticPressable>
-
-          <HapticPressable
-            style={styles.linkButton}
-            onPress={() => router.push('/(auth)/signup')}
-            disabled={loading}
-          >
-            <Text style={styles.linkText}>
-              Don't have an account? Sign up
-            </Text>
-          </HapticPressable>
-        </View>
-      </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SanctumBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: AppColors.background,
+    backgroundColor: 'transparent',
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
     paddingHorizontal: 24,
+    paddingBottom: 40,
   },
   content: {
     paddingVertical: 24,
   },
   logo: {
     width: '100%',
-    height: 350,
-    marginBottom: 0,
+    height: 440,
+    marginBottom: 16,
     marginTop: 24,
     alignSelf: 'center',
-  },
-  subtitle: {
-    fontSize: 16,
-    color: AppColors.textSecondary,
-    marginBottom: 32,
-    textAlign: 'center',
   },
   form: {
     width: '100%',
@@ -188,7 +185,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     fontSize: 16,
     color: AppColors.textPrimary,
-    backgroundColor: AppColors.inputBackground,
+    backgroundColor: 'rgba(30, 30, 30, 0.8)',
   },
   passwordContainer: {
     position: 'relative',
@@ -202,7 +199,7 @@ const styles = StyleSheet.create({
     paddingRight: 50,
     fontSize: 16,
     color: AppColors.textPrimary,
-    backgroundColor: AppColors.inputBackground,
+    backgroundColor: 'rgba(30, 30, 30, 0.8)',
   },
   eyeIcon: {
     position: 'absolute',

@@ -1,3 +1,4 @@
+import SanctumBackground from '@/components/Dashboard/SanctumBackground';
 import { AppColors } from '@/constants/theme';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
@@ -286,6 +287,7 @@ export default function ThreeLightsScreen() {
   };
 
   return (
+    <SanctumBackground>
     <SafeAreaView style={styles.container}>
       <OnboardingProgress currentStep="three-lights" />
 
@@ -350,13 +352,14 @@ export default function ThreeLightsScreen() {
         visible={showButton}
       />
     </SafeAreaView>
+    </SanctumBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: AppColors.background,
+    backgroundColor: 'transparent',
   },
   content: {
     flex: 1,
