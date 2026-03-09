@@ -3,6 +3,7 @@ import { Session, User } from '@supabase/supabase-js'
 import { supabase } from '../supabase/client'
 import { Profile } from '@/types'
 import { getUserProfile } from '../utils/auth'
+import { registerPushToken, unregisterPushToken, scheduleStreakReminder, cancelStreakReminder } from '../utils/notifications'
 
 interface AuthContextType {
   user: User | null
@@ -52,6 +53,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const profileData = await getUserProfile(userId)
       setProfile(profileData)
+      // Register push token and schedule streak reminder after login
+      registerPushToken(userId).catch(() => {})
+      scheduleStreakReminder().catch(() => {})
     } catch (error) {
       console.error('Error loading profile:', error)
     } finally {
@@ -66,6 +70,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const handleSignOut = async () => {
+    if (user) {
+      unregisterPushToken(user.id).catch(() => {})
+      cancelStreakReminder().catch(() => {})
+    }
     await supabase.auth.signOut()
   }
 

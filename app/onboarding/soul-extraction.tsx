@@ -2,11 +2,11 @@ import JourneyBadge from '@/components/JourneyBadge';
 import SanctumBackground from '@/components/Dashboard/SanctumBackground';
 import { AppColors } from '@/constants/theme';
 import { SOUL_NAME_OPTIONS, useOnboarding } from '@/lib/contexts/OnboardingContext';
+import { getSoulStateImage } from '@/lib/utils/companion-images';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Animated, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import AvatarOrb from './components/AvatarOrb';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, Image, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import NameSelector from './components/NameSelector';
 import OnboardingProgress from './components/OnboardingProgress';
 import SoteriaDialogueBox from './components/SoteriaDialogueBox';
@@ -64,6 +64,21 @@ export default function SoulExtractionScreen() {
   const continueButtonScale = useRef(new Animated.Value(0.8)).current;
   const typingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const charIndexRef = useRef(0);
+
+  const soulImage = useMemo(() => getSoulStateImage('Dormant'), []);
+
+  // Breathing animation
+  const breathAnim = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(breathAnim, { toValue: 1.03, duration: 2000, useNativeDriver: true }),
+        Animated.timing(breathAnim, { toValue: 1, duration: 2000, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [breathAnim]);
 
   const captions = isResetFlow ? resetUserCaptions : newUserCaptions;
   const isValid = data.soulName.trim().length > 0;
@@ -252,11 +267,7 @@ export default function SoulExtractionScreen() {
           characterColor={AppColors.soul}
           onAnimationComplete={handleSummoningComplete}
         >
-          <AvatarOrb
-            type="Soul"
-            size="large"
-            animate={true}
-          />
+          <Image source={soulImage} style={styles.companionImage} resizeMode="contain" />
         </CharacterSummoningAnimation>
       )}
 
@@ -273,13 +284,12 @@ export default function SoulExtractionScreen() {
         {/* Soul orb - only show after summoning completes */}
         {summoningComplete && (
           <View style={styles.orbContainer}>
-            <AvatarOrb
-              type="Soul"
-              size="large"
-              animate={true}
-              name={data.soulName || undefined}
-              showName={data.soulName.length > 0}
-            />
+            {data.soulName.length > 0 && (
+              <Text style={styles.companionName}>{data.soulName}</Text>
+            )}
+            <Animated.View style={{ transform: [{ scale: breathAnim }] }}>
+              <Image source={soulImage} style={styles.companionImage} resizeMode="contain" />
+            </Animated.View>
             {data.soulName && nameDescriptions[data.soulName] && (
               <Text style={styles.nameDescription}>
                 {nameDescriptions[data.soulName]}
@@ -375,11 +385,22 @@ const styles = StyleSheet.create({
   orbContainer: {
     marginBottom: 32,
     alignItems: 'center',
-    minHeight: 200, // Fixed height to prevent layout shift
+    minHeight: 200,
+  },
+  companionImage: {
+    width: 140,
+    height: 140,
+  },
+  companionName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginBottom: 4,
+    letterSpacing: 1,
   },
   nameDescription: {
-    position: 'absolute',
-    bottom: 0,
+    marginTop: 8,
     fontSize: 14,
     fontStyle: 'italic',
     color: 'rgba(255, 255, 255, 0.6)',

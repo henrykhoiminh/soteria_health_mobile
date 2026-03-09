@@ -592,6 +592,7 @@ export default function DashboardScreen() {
               <DailyRecommendationsSection
                 todayProgress={todayProgress ?? { id: '', user_id: '', date: '', mind_complete: false, body_complete: false, soul_complete: false }}
                 onRecommendationPress={handleRecommendationPress}
+                onBonusRoutinePress={() => router.push('/(tabs)/routines')}
                 companionNames={{
                   Mind: profile?.mind_name,
                   Body: profile?.body_name,

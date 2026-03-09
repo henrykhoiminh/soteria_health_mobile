@@ -10,21 +10,28 @@ export async function sendCircleMessage(
   circleId: string,
   userId: string,
   content: string
-): Promise<void> {
+): Promise<CircleMessageWithProfile> {
   const trimmed = content.trim();
   if (!trimmed || trimmed.length > 2000) {
     throw new Error('Message must be between 1 and 2000 characters');
   }
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('circle_messages')
     .insert({
       circle_id: circleId,
       user_id: userId,
       content: trimmed,
-    });
+    })
+    .select('id, circle_id, user_id, content, created_at')
+    .single();
 
   if (error) throw error;
+
+  // Enrich with sender profile
+  const profile = await getUserProfileForMessage(userId);
+
+  return { ...data, profile };
 }
 
 /**

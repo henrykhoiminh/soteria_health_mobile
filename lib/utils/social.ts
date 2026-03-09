@@ -1440,3 +1440,172 @@ export async function searchCircleRoutines(
 
   return results.map(({ routine, circle_routine_id }) => ({ routine, circle_routine_id }));
 }
+
+// =====================================================
+// ROUTINE OF THE DAY
+// =====================================================
+
+export interface RoutineOfTheDay {
+  routine: Routine;
+  setAt: string;
+  completedCount: number;
+  memberCount: number;
+  completedByUserIds: string[];
+  bonusAwarded: boolean;
+}
+
+/**
+ * Set a routine as the circle's Routine of the Day (admin only).
+ */
+export async function setRoutineOfTheDay(circleId: string, routineId: string): Promise<void> {
+  const { error } = await supabase
+    .from('circles')
+    .update({
+      routine_of_the_day_id: routineId,
+      routine_of_the_day_set_at: new Date().toISOString(),
+    })
+    .eq('id', circleId);
+
+  if (error) throw error;
+}
+
+/**
+ * Clear the Routine of the Day for a circle.
+ */
+export async function clearRoutineOfTheDay(circleId: string): Promise<void> {
+  const { error } = await supabase
+    .from('circles')
+    .update({
+      routine_of_the_day_id: null,
+      routine_of_the_day_set_at: null,
+    })
+    .eq('id', circleId);
+
+  if (error) throw error;
+}
+
+/**
+ * Get the Routine of the Day for a circle, including today's completion count.
+ */
+export async function getRoutineOfTheDay(circleId: string): Promise<RoutineOfTheDay | null> {
+  // Fetch circle with routine of the day
+  const { data: circle, error: circleError } = await supabase
+    .from('circles')
+    .select('routine_of_the_day_id, routine_of_the_day_set_at')
+    .eq('id', circleId)
+    .single();
+
+  if (circleError) throw circleError;
+  if (!circle?.routine_of_the_day_id) return null;
+
+  // Fetch the routine details
+  const { data: routine, error: routineError } = await supabase
+    .from('routines')
+    .select('*')
+    .eq('id', circle.routine_of_the_day_id)
+    .single();
+
+  if (routineError || !routine) return null;
+
+  // Fetch circle members
+  const { data: members } = await supabase
+    .from('circle_members')
+    .select('user_id')
+    .eq('circle_id', circleId);
+
+  const memberCount = members?.length ?? 0;
+  const memberIds = members?.map(m => m.user_id) ?? [];
+
+  // Get today's completions of this routine by circle members (full user_id list)
+  const today = new Date().toISOString().split('T')[0];
+  let completedByUserIds: string[] = [];
+
+  if (memberIds.length > 0) {
+    const { data: completions } = await supabase
+      .from('routine_completions')
+      .select('user_id')
+      .eq('routine_id', circle.routine_of_the_day_id)
+      .in('user_id', memberIds)
+      .gte('completed_at', `${today}T00:00:00`)
+      .lt('completed_at', `${today}T23:59:59.999`);
+
+    // Deduplicate — a user may have multiple completions today
+    const uniqueIds = new Set(completions?.map(c => c.user_id) ?? []);
+    completedByUserIds = Array.from(uniqueIds);
+  }
+
+  // Check if bonus XP was already awarded today
+  const { data: bonusRow } = await supabase
+    .from('circle_rotd_bonus_log')
+    .select('id')
+    .eq('circle_id', circleId)
+    .eq('bonus_date', today)
+    .maybeSingle();
+
+  return {
+    routine: routine as Routine,
+    setAt: circle.routine_of_the_day_set_at!,
+    completedCount: completedByUserIds.length,
+    memberCount,
+    completedByUserIds,
+    bonusAwarded: !!bonusRow,
+  };
+}
+
+/**
+ * Bonus XP awarded to each member when ALL circle members complete the ROTD
+ */
+export const CIRCLE_ROTD_BONUS_XP = 50;
+
+/**
+ * Award bonus XP to all circle members when everyone completes the Routine of the Day.
+ * Idempotent — unique constraint on (circle_id, bonus_date) prevents double-awarding.
+ * @returns true if bonus was newly awarded, false if already awarded
+ */
+export async function awardRotdBonusXp(
+  circleId: string,
+  routineId: string,
+  category: string,
+  memberIds: string[]
+): Promise<boolean> {
+  const today = new Date().toISOString().split('T')[0];
+
+  // Try to insert bonus log row — fails silently on duplicate (already awarded today)
+  const { error: insertError } = await supabase
+    .from('circle_rotd_bonus_log')
+    .insert({
+      circle_id: circleId,
+      routine_id: routineId,
+      bonus_date: today,
+      bonus_xp: CIRCLE_ROTD_BONUS_XP,
+    });
+
+  if (insertError) {
+    // Unique constraint violation = already awarded
+    if (insertError.code === '23505') return false;
+    throw insertError;
+  }
+
+  // Award bonus XP to each member's category companion
+  const categoryXpField = category === 'Mind' ? 'mind_xp' : category === 'Body' ? 'body_xp' : 'soul_xp';
+
+  for (const userId of memberIds) {
+    const { data: stats } = await supabase
+      .from('user_stats')
+      .select(`total_xp, ${categoryXpField}`)
+      .eq('user_id', userId)
+      .single();
+
+    if (stats) {
+      await supabase
+        .from('user_stats')
+        .update({
+          total_xp: (stats.total_xp ?? 0) + CIRCLE_ROTD_BONUS_XP,
+          [categoryXpField]: ((stats as any)[categoryXpField] ?? 0) + CIRCLE_ROTD_BONUS_XP,
+        })
+        .eq('user_id', userId);
+    }
+  }
+
+  return true;
+}

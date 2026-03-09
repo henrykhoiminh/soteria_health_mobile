@@ -5,12 +5,14 @@ import {
   StyleSheet,
   Animated,
   Dimensions,
+  Image,
 } from 'react-native';
 import HapticPressable from '@/components/HapticPressable';
 import { Ionicons } from '@expo/vector-icons';
 import { AppColors } from '@/constants/theme';
 import { LevelUpInfo, RoutineCategory } from '@/types';
 import { LinearGradient } from 'expo-linear-gradient';
+import { getCompanionImage } from '@/lib/utils/companion-images';
 
 interface LevelUpCelebrationModalProps {
   visible: boolean;
@@ -26,15 +28,6 @@ const getCategoryColor = (category: 'soteria' | RoutineCategory): string => {
     case 'Body': return AppColors.body;
     case 'Soul': return AppColors.soul;
     case 'soteria': return AppColors.primary;
-  }
-};
-
-const getCategoryIcon = (category: 'soteria' | RoutineCategory): string => {
-  switch (category) {
-    case 'Mind': return 'bulb-outline';
-    case 'Body': return 'body';
-    case 'Soul': return 'flame-outline';
-    case 'soteria': return 'trophy';
   }
 };
 
@@ -185,14 +178,24 @@ export default function LevelUpCelebrationModal({
             </Text>
           </View>
 
-          {/* Icon */}
-          <View style={[styles.iconContainer, { backgroundColor: color + '20' }]}>
-            <Ionicons
-              name={getCategoryIcon(levelUp.category) as any}
-              size={56}
-              color={color}
-            />
-          </View>
+          {/* Companion image or fallback icon */}
+          {levelUp.category !== 'soteria' ? (
+            <View style={[styles.companionContainer, { shadowColor: color }]}>
+              <Image
+                source={getCompanionImage(levelUp.category as RoutineCategory, 'Radiant')!}
+                style={styles.companionImage}
+                resizeMode="contain"
+              />
+            </View>
+          ) : (
+            <View style={[styles.iconContainer, { backgroundColor: color + '20' }]}>
+              <Ionicons
+                name="trophy"
+                size={56}
+                color={color}
+              />
+            </View>
+          )}
 
           {/* Title */}
           <Text style={styles.title}>Level Up!</Text>
@@ -277,6 +280,21 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+  },
+  companionContainer: {
+    width: 130,
+    height: 130,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  companionImage: {
+    width: 130,
+    height: 130,
   },
   iconContainer: {
     width: 110,

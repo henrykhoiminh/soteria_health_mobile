@@ -34,12 +34,14 @@ interface EnhancedCircleRoutinesTabProps {
   circleId: string;
   isAdmin: boolean;
   onRefresh?: () => void;
+  onSetRoutineOfTheDay?: (routineId: string, routineName: string) => void;
 }
 
 export default function EnhancedCircleRoutinesTab({
   circleId,
   isAdmin,
   onRefresh,
+  onSetRoutineOfTheDay,
 }: EnhancedCircleRoutinesTabProps) {
   const router = useRouter();
   const { user } = useAuth();
@@ -228,13 +230,23 @@ export default function EnhancedCircleRoutinesTab({
 
             if (isAdmin) {
               return (
-                <Swipeable
-                  key={item.circle_routine_id}
-                  renderRightActions={(progress, dragX) => renderRightActions(progress, dragX, item)}
-                  overshootRight={false}
-                >
-                  {card}
-                </Swipeable>
+                <View key={item.circle_routine_id} style={styles.routineCardWrapper}>
+                  <Swipeable
+                    renderRightActions={(progress, dragX) => renderRightActions(progress, dragX, item)}
+                    overshootRight={false}
+                  >
+                    {card}
+                  </Swipeable>
+                  {onSetRoutineOfTheDay && (
+                    <HapticPressable
+                      style={styles.rotdIconOverlay}
+                      onPress={() => onSetRoutineOfTheDay(item.routine.id, item.routine.name)}
+                      hapticStyle="selection"
+                    >
+                      <Ionicons name="add-circle" size={26} color="#F59E0B" />
+                    </HapticPressable>
+                  )}
+                </View>
               );
             }
 
@@ -755,5 +767,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: AppColors.primaryText,
+  },
+  routineCardWrapper: {
+    position: 'relative',
+  },
+  rotdIconOverlay: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    zIndex: 2,
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

@@ -2,12 +2,11 @@ import JourneyBadge from '@/components/JourneyBadge';
 import SanctumBackground from '@/components/Dashboard/SanctumBackground';
 import { AppColors } from '@/constants/theme';
 import { useOnboarding } from '@/lib/contexts/OnboardingContext';
-import { getMindStateImage, getBodyStateImage } from '@/lib/utils/companion-images';
+import { getMindStateImage, getBodyStateImage, getSoulStateImage } from '@/lib/utils/companion-images';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Image, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import AvatarOrb from './components/AvatarOrb';
 import OnboardingProgress from './components/OnboardingProgress';
 import SoteriaDialogueBox from './components/SoteriaDialogueBox';
 
@@ -26,6 +25,7 @@ export default function IntroduceYourselfScreen() {
   const [showButton, setShowButton] = useState(false);
   const mindImage = useMemo(() => getMindStateImage('Dormant'), []);
   const bodyImage = useMemo(() => getBodyStateImage('Dormant'), []);
+  const soulImage = useMemo(() => getSoulStateImage('Dormant'), []);
   const buttonOpacity = useRef(new Animated.Value(0)).current;
   const buttonScale = useRef(new Animated.Value(0.8)).current;
   const typingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -147,7 +147,7 @@ export default function IntroduceYourselfScreen() {
           </View>
 
           <View style={styles.orbWrapper}>
-            <AvatarOrb type="Soul" size="medium" state="glowing" />
+            <Image source={soulImage} style={styles.companionImage} resizeMode="contain" />
             <Text style={[styles.orbLabel, { color: '#F59E0B' }]}>{data.soulName}</Text>
           </View>
         </View>

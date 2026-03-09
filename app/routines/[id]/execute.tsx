@@ -18,7 +18,6 @@ import { AvatarLightState, Exercise, LevelUpInfo, Routine, RoutineCategory } fro
 import { Ionicons } from '@expo/vector-icons';
 import { ResizeMode, Video } from 'expo-av';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import LottieView from 'lottie-react-native';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -37,10 +36,6 @@ import {
 import Svg, { Circle } from 'react-native-svg';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
-
-// Completion animation - add your Lottie JSON file to assets/animations/
-// Expected file: assets/animations/routine_complete.json
-const COMPLETION_ANIMATION = require('@/assets/animations/routine_complete.json');
 
 // Helper function to get category icon
 const getCategoryIcon = (category: RoutineCategory) => {
@@ -156,7 +151,6 @@ export default function ExecuteRoutineScreen() {
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const loadingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const animationRef = useRef<LottieView>(null);
   const breatheAnim = useRef(new Animated.Value(1)).current;
   const progressAnim = useRef(new Animated.Value(RING_CIRCUMFERENCE)).current;
 
@@ -599,40 +593,45 @@ export default function ExecuteRoutineScreen() {
   if (isComplete) {
     // Done button is enabled when both animation is done AND dashboard data is preloaded
     const canNavigate = animationFinished && dashboardPreloaded;
+    const categoryColor = getCategoryColor(routine.category);
+    const completionImage = getCompanionImage(routine.category, 'Awakening');
+    const companionName = profile?.[`${routine.category.toLowerCase()}_name` as keyof typeof profile] as string | null || routine.category;
 
     return (
-      <View style={styles.completeContainer}>
-        {/* Lottie Animation - plays automatically */}
-        <LottieView
-          ref={animationRef}
-          source={COMPLETION_ANIMATION}
-          autoPlay
-          loop={false}
-          style={styles.completionAnimation}
-          onAnimationFinish={() => setAnimationFinished(true)}
-        />
-        <Text style={styles.completeTitle}>Routine Complete!</Text>
-        <Text style={styles.completeMessage}>Great work on completing {routine.name}</Text>
-
-        {/* Done Button - enabled after animation finishes AND dashboard is preloaded */}
-        <HapticPressable
-          style={[
-            styles.doneButton,
-            !canNavigate && styles.doneButtonLoading,
-          ]}
-          onPress={handleDonePress}
-          disabled={!canNavigate}
-        >
-          {canNavigate ? (
-            <Text style={styles.doneButtonText}>Done</Text>
-          ) : (
-            <View style={styles.doneButtonLoadingContent}>
-              <ActivityIndicator size="small" color={AppColors.textPrimary} />
-              <Text style={styles.doneButtonText}>{loadingSeconds}s</Text>
-            </View>
+      <SanctumBackground focusCategory={routine.category}>
+        <ParticleField color={categoryColor} alwaysVisible />
+        <SafeAreaView style={styles.completeContainer}>
+          {/* Companion image with scale-in animation */}
+          {completionImage && (
+            <Animated.View style={{ transform: [{ scale: breatheAnim }] }}>
+              <Image source={completionImage} style={styles.completionCompanionImage} resizeMode="contain" />
+            </Animated.View>
           )}
-        </HapticPressable>
-      </View>
+          <Text style={[styles.completeTitle, { color: categoryColor }]}>Routine Complete!</Text>
+          <Text style={styles.completeMessage}>{companionName} is awakening!</Text>
+          <Text style={styles.completeSubMessage}>{routine.name}</Text>
+
+          {/* Done Button */}
+          <HapticPressable
+            style={[
+              styles.doneButton,
+              { backgroundColor: categoryColor },
+              !canNavigate && styles.doneButtonLoading,
+            ]}
+            onPress={handleDonePress}
+            disabled={!canNavigate}
+          >
+            {canNavigate ? (
+              <Text style={styles.doneButtonText}>Done</Text>
+            ) : (
+              <View style={styles.doneButtonLoadingContent}>
+                <ActivityIndicator size="small" color={AppColors.textPrimary} />
+                <Text style={styles.doneButtonText}>{loadingSeconds}s</Text>
+              </View>
+            )}
+          </HapticPressable>
+        </SafeAreaView>
+      </SanctumBackground>
     );
   }
 
@@ -898,23 +897,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
-    backgroundColor: AppColors.background,
   },
-  completionAnimation: {
-    width: 250,
-    height: 250,
+  completionCompanionImage: {
+    width: 200,
+    height: 200,
   },
   completeTitle: {
     fontSize: 28,
     fontWeight: 'bold',
     color: AppColors.textPrimary,
     marginTop: 24,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   completeMessage: {
-    fontSize: 16,
+    fontSize: 18,
+    color: AppColors.textPrimary,
+    textAlign: 'center',
+  },
+  completeSubMessage: {
+    fontSize: 14,
     color: AppColors.textSecondary,
     textAlign: 'center',
+    marginTop: 4,
   },
   doneButton: {
     backgroundColor: AppColors.primary,

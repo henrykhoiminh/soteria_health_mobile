@@ -61,6 +61,9 @@ app/routines/
 ├── [id].tsx            # Routine detail view
 └── [id]/execute.tsx    # Routine execution with timer
 
+app/circles/
+└── [id].tsx            # Circle detail page (Activity/Chat/Routines/Members tabs, ROTD card)
+
 components/
 ├── Dashboard/
 │   ├── GlassCard.tsx              # Frosted glass card with gold top edge glow (blur on iOS)
@@ -73,6 +76,9 @@ components/
 ├── FilterOptionEditorModal.tsx    # Modal for adding/editing body parts and groups
 ├── HapticPressable.tsx            # Drop-in TouchableOpacity replacement with haptic feedback
 ├── JourneyBadge.tsx               # Journey type badge with icon
+├── LevelUpCelebrationModal.tsx    # Level-up celebration with companion art (Radiant state)
+├── MilestoneCelebrationModal.tsx  # Milestone achievement celebration modal
+├── MilestoneCard.tsx              # Milestone progress/achievement card
 ├── PainCheckInModal.tsx           # 3-step pain check-in modal
 ├── UserProfileModal.tsx           # Bottom-sheet profile modal (Circles & Friends)
 └── HealthTeamInvitationCard.tsx   # Health team invitation UI
@@ -84,19 +90,24 @@ lib/
 └── utils/
     ├── auth.ts                  # Auth, profile, upload
     ├── audio.ts                 # Audio playback for countdown beeps
-    ├── companion-images.ts      # PNG image mapping for companion characters (Mind states)
+    ├── companion-images.ts      # PNG image mapping for all 3 companions (Mind/Body/Soul × 5 light states)
     ├── dashboard.ts             # Dashboard data, recommendations
     ├── dashboard-cache.ts       # In-memory cache for fluid navigation
     ├── haptics.ts               # Centralized haptic feedback (light/medium/heavy/selection)
     ├── harmony.ts               # Harmony status checking
+    ├── leveling.ts              # XP calculation, level-from-XP, titles, addXpForCompletion
+    ├── milestones.ts            # Milestone CRUD, rarity/category helpers, progress tracking
     ├── pain-checkin.ts          # Pain check-in logic
     ├── filter-options.ts        # Filter options CRUD (body parts management)
     ├── routine-builder.ts       # Builder utilities & validation
+    ├── social.ts                # Friendships, circles, activity feed, ROTD, bonus XP
     └── health-team.ts           # Health team functions
 
 assets/
 ├── images/
-│   └── mind_states/             # Mind companion PNG art (7 images for 5 light states)
+│   ├── mind_states/             # Mind companion PNG art (7 images for 5 light states)
+│   ├── body_states/             # Body companion PNG art (5 images for 5 light states)
+│   └── soul_states/             # Soul companion PNG art (3 unique + 2 fallbacks — Glowing/Radiant needed)
 ├── sounds/
 │   └── count_down_beep.mp3      # Countdown timer beep sound
 └── animations/
@@ -108,6 +119,9 @@ sql/migrations/
 ├── add_health_team_stats.sql            # Stats tracking
 ├── add_leave_health_team_function.sql   # Leave/demote function
 └── add_health_team_delete_policy.sql    # Delete RLS policy
+
+sql/social_migration/
+└── add_routine_of_the_day.sql           # ROTD columns + circle_rotd_bonus_log table
 ```
 
 ## Database Schema Reference
@@ -150,6 +164,20 @@ sql/migrations/
 - `pain_level` (integer) - 0-10
 - `pain_locations` (text[]) - Body parts, Mind, Soul
 - `notes` (text, optional)
+
+**user_stats**
+- `user_id` (uuid, PK)
+- `total_xp`, `mind_xp`, `body_xp`, `soul_xp` (integer)
+- Used by leveling system for XP tracking per category
+
+**circle_rotd_bonus_log**
+- `id` (uuid, PK)
+- `circle_id` (uuid) - References circles
+- `routine_id` (uuid) - References routines
+- `bonus_date` (date) - Unique per circle per day
+- `bonus_xp` (integer) - Amount awarded (50 XP)
+- `awarded_at` (timestamptz)
+- Constraint: `unique_circle_rotd_bonus_per_day (circle_id, bonus_date)`
 ---
 
 ## Common Commands
@@ -203,37 +231,57 @@ lsof -ti:8081 | xargs kill -9
 
 ## Session History Summary
 
-**Last Updated:** 2026-03-01
+**Last Updated:** 2026-03-09
 **Current Version:** Expo SDK 54, React Native 0.76+
+
+### Recent Completions (2026-03-09)
+- **Daily Circle Routine card** — Renamed header to "Daily Circle Routine!", added bonus XP subheader, member completion avatar tracker with detail modal, celebration state with golden glow when all members complete, auto-awarding 50 bonus XP (category-specific) via idempotent `circle_rotd_bonus_log` table
+- **Level-up celebration companion art** — `LevelUpCelebrationModal` now shows the companion PNG at Radiant state for Mind/Body/Soul level-ups (trophy icon kept for Soteria overall level)
+- **SQL migration** — Added `circle_rotd_bonus_log` table to `sql/social_migration/add_routine_of_the_day.sql`
+- **Data layer** — Extended `RoutineOfTheDay` interface with `completedByUserIds[]` and `bonusAwarded`, added `awardRotdBonusXp()` function to `social.ts`
 
 ## Next Objectives
 
-### 1. Soteria Level on Friend Cards (Social/Friends Tab)
+### 1. Soul Companion Assets — Glowing & Radiant States
+- **Status:** 2 assets needed — `soul_glowing.png` and `soul_radiant.png`
+- Currently `companion-images.ts` falls back to `soul_awakening.png` for both Glowing and Radiant
+- After creating the art, update `SOUL_STATE_IMAGES` in `lib/utils/companion-images.ts`:
+  - `Glowing: [require('@/assets/images/soul_states/soul_glowing.png')]`
+  - `Radiant: [require('@/assets/images/soul_states/soul_radiant.png')]`
+- These will automatically propagate to: dashboard Avatar, LevelUpCelebrationModal, loading slideshows
+
+### 2. Routine Builder UI/UX Overhaul
+- Current flow: `app/(tabs)/builder.tsx` → mode select → exercise library + builder
+- Key areas to improve:
+  - **Builder entry point** — streamline the mode selection screen for clearer user intent
+  - **Exercise selection flow** — make adding exercises to a routine more intuitive
+  - **Routine configuration** — improve the name/description/category/difficulty form
+  - **Exercise ordering** — `DraggableExerciseList.tsx` uses tap-based reorder (no gestures) — evaluate if this is sufficient
+  - **Preview & save** — better routine preview before saving
+- Related files: `app/(tabs)/builder.tsx`, `components/ExerciseLibrary.tsx`, `components/DraggableExerciseList.tsx`, `lib/utils/routine-builder.ts`
+
+### 3. Soteria Level on Friend Cards (Social/Friends Tab)
 - Replace "Friends since [date]" text on friend cards with the friend's Soteria level
 - Use `getLevelFromXp()` or `getUserLevelSummary()` from `lib/utils/leveling.ts`
 - Requires fetching friend's XP data (may need `get_user_public_stats` RPC since `user_stats` has RLS)
-- Display format TBD: level number, title (e.g., "Lv. 5 Seeker"), or compact XP bar
 
-### 2. Routine Completion Animations & Loading Screens
+### 4. Routine Completion Animations & Loading Screens
 - Update routine completion animations to be category-specific (Mind/Body/Soul)
 - Update loading screens per category with unique visuals
 
-### 3. All Three Companions Completed Animation
+### 5. All Three Companions Completed Animation
 - Update animation and loading for when all three companions are completed daily
 - Should inform the user that they have completed all three categories for the day
 
-### 4. Push Notifications (Mobile)
+### 6. Push Notifications (Mobile)
 - Implement push notifications using `expo-notifications`
 - Register device push tokens and store in Supabase (new `push_tokens` table)
 - Notification triggers: friend requests, circle invitations, health team invitations, streak reminders
 - Handle notification permissions, foreground/background handling
 - Deep linking from notifications to relevant screens
 
-### 5. Onboarding Soul icon
-- Update onboarding to use Soul assets for the onboarding icons. 
+### 7. Onboarding Soul Icon
+- Update onboarding to use Soul assets for the onboarding icons
 
-### 6. Clean up specific circles page
-- Remove unnecessary icon on top of the specified circles page. 
-- The page should be optimized for activity and action promoting member participation in the circle.
-- Reorganize the page to make more sense by moving the Leave Circle button to an icon to the top right. 
-- Have a slot where a member can add a "Routine of the Day" for all members to do. There should be a progress bar indicating how many members have completed the routine of the day. If all memebers complete that routine, then their companion on that routine category gets a major boost in allocated points that feeds their level up.
+### 8. Update Today's Focus to add routine recommendation
+- Once all companion categories have been completed, recommend another routine to invite continued user engagement

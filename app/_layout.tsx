@@ -8,6 +8,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider, useAuth } from '@/lib/contexts/AuthContext';
 import { FilterOptionsProvider } from '@/lib/contexts/FilterOptionsContext';
 import { ChatNotificationsProvider } from '@/lib/contexts/ChatNotificationsContext';
+import * as Notifications from 'expo-notifications';
 import WellnessCheckInModal from '@/components/WellnessCheckInModal';
 import MilestoneCelebrationModal from '@/components/MilestoneCelebrationModal';
 import { hasCheckedInToday } from '@/lib/utils/pain-checkin';
@@ -29,6 +30,26 @@ function RootLayoutNav() {
 
   // Check if navigation is ready
   const navigationReady = navigationState?.key != null;
+
+  // Handle notification tap deep links
+  useEffect(() => {
+    const subscription = Notifications.addNotificationResponseReceivedListener(response => {
+      const data = response.notification.request.content.data;
+      if (!data || !navigationReady) return;
+
+      if (data.screen === 'social') {
+        router.push('/(tabs)/social');
+      } else if (data.screen === 'routines') {
+        router.push('/(tabs)/routines');
+      } else if (data.routineId) {
+        router.push(`/routines/${data.routineId}`);
+      } else if (data.circleId) {
+        router.push(`/circles/${data.circleId}`);
+      }
+    });
+
+    return () => subscription.remove();
+  }, [navigationReady, router]);
 
   // Check if daily wellness check-in is needed (first login of the day)
   useEffect(() => {

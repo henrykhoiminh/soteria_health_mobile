@@ -161,7 +161,12 @@ export default function CircleChatTab({ circleId }: CircleChatTabProps) {
     setSending(true);
 
     try {
-      await sendCircleMessage(circleId, user.id, text);
+      const sentMessage = await sendCircleMessage(circleId, user.id, text);
+      // Add to list immediately so the sender sees their own bubble
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === sentMessage.id)) return prev;
+        return [sentMessage, ...prev];
+      });
     } catch (error) {
       console.error('Error sending message:', error);
       setInputText(text);
@@ -178,11 +183,15 @@ export default function CircleChatTab({ circleId }: CircleChatTabProps) {
     try {
       await shareRoutineToCircle(circleId, routine.id, user.id);
       // Send a chat message with embedded routine ID for navigation
-      await sendCircleMessage(
+      const sentMessage = await sendCircleMessage(
         circleId,
         user.id,
         `Shared a routine: ${routine.name}\n(${routine.category} - ${routine.duration_minutes} min) [[routine:${routine.id}:${routine.category}]]`
       );
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === sentMessage.id)) return prev;
+        return [sentMessage, ...prev];
+      });
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to share routine');
     }
@@ -234,7 +243,7 @@ export default function CircleChatTab({ circleId }: CircleChatTabProps) {
               {displayName}
             </Text>
           )}
-          <Text style={[styles.messageText, (isOwn || isRoutineShare) && styles.messageTextLight]}>
+          <Text style={[styles.messageText, isOwn && styles.messageTextOwn, isRoutineShare && styles.messageTextLight]}>
             {displayContent}
           </Text>
           {routineId && (
@@ -243,7 +252,7 @@ export default function CircleChatTab({ circleId }: CircleChatTabProps) {
               <Ionicons name="chevron-forward" size={14} color="rgba(255,255,255,0.85)" />
             </View>
           )}
-          <Text style={[styles.timestamp, (isOwn || isRoutineShare) && styles.timestampLight]}>
+          <Text style={[styles.timestamp, isOwn && styles.timestampOwn, isRoutineShare && styles.timestampLight]}>
             {formatTime(item.created_at)}
           </Text>
         </>
@@ -501,7 +510,7 @@ function ShareRoutineModal({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: AppColors.background,
+    backgroundColor: 'transparent',
   },
   loadingContainer: {
     flex: 1,
@@ -649,7 +658,7 @@ const styles = StyleSheet.create({
   inputBarWrapper: {
     paddingHorizontal: 12,
     paddingTop: 8,
-    backgroundColor: AppColors.background,
+    backgroundColor: 'rgba(18, 18, 18, 0.95)',
   },
   inputBarContainer: {
     flexDirection: 'row',

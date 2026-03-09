@@ -30,7 +30,8 @@ import {
   ActivityFeedItem,
   CircleInvitation,
 } from '@/types';
-import { getLevelFromXp } from '@/lib/utils/leveling';
+import { getLevelFromXp, getSoteriaTitle } from '@/lib/utils/leveling';
+import { supabase } from '@/lib/supabase/client';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import ActivityCard from '@/components/ActivityCard';
@@ -160,6 +161,7 @@ export default function SocialScreen() {
 function FriendsTab({ userId, onRefresh }: { userId: string; onRefresh: () => void }) {
   const { profile } = useAuth();
   const [friends, setFriends] = useState<FriendWithProfile[]>([]);
+  const [friendLevels, setFriendLevels] = useState<Record<string, { level: number; title: string }>>({});
   const [pendingRequests, setPendingRequests] = useState<FriendRequest[]>([]);
   const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -184,6 +186,18 @@ function FriendsTab({ userId, onRefresh }: { userId: string; onRefresh: () => vo
       ]);
       setFriends(friendsData);
       setPendingRequests(requestsData);
+
+      // Batch-fetch Soteria levels for all friends
+      const levels: Record<string, { level: number; title: string }> = {};
+      await Promise.all(
+        friendsData.map(async (f) => {
+          const { data } = await supabase.rpc('get_user_public_stats', { p_user_id: f.friend_id });
+          const totalXp = data?.[0]?.total_xp ?? 0;
+          const { level } = getLevelFromXp(totalXp);
+          levels[f.friend_id] = { level, title: getSoteriaTitle(level) };
+        })
+      );
+      setFriendLevels(levels);
     } catch (error) {
       console.error('Error loading friends:', error);
     } finally {
@@ -509,7 +523,9 @@ function FriendsTab({ userId, onRefresh }: { userId: string; onRefresh: () => vo
                     </Text>
                   )}
                   <Text style={styles.userMeta}>
-                    Friends since {new Date(friendship.accepted_at!).toLocaleDateString()}
+                    {friendLevels[friendship.friend_id]
+                      ? `Lv. ${friendLevels[friendship.friend_id].level} ${friendLevels[friendship.friend_id].title}`
+                      : `Friends since ${new Date(friendship.accepted_at!).toLocaleDateString()}`}
                   </Text>
                 </View>
                 <HapticPressable
