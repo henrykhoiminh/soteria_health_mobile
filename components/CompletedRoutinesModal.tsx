@@ -161,7 +161,7 @@ export default function CompletedRoutinesModal({
             <View style={styles.headerContent}>
               {categoryFilter && levelInfo ? (
               <>
-                <Text style={styles.title}>{categoryFilter}</Text>
+                <Text style={[styles.title, { color: filterColor }]}>{companionName || categoryFilter}</Text>
                 <View style={[styles.headerDivider, { backgroundColor: filterColor + '40' }]} />
                 {/* Companion + Stats Card Row */}
                 <View style={styles.companionRow}>
@@ -193,16 +193,12 @@ export default function CompletedRoutinesModal({
                   {/* Stats Card */}
                   <View style={styles.companionDetails}>
                     <Text style={styles.companionStatRow}>
-                      <Text style={[styles.companionStatLabel, { color: filterColor }]}>Name: </Text>
-                      <Text style={styles.companionStatValue}>{companionName || categoryFilter}</Text>
+                      <Text style={[styles.companionStatLabel, { color: filterColor }]}>Origin: </Text>
+                      <Text style={styles.companionStatValue}>{userName ? `${userName}'s ${categoryFilter}` : categoryFilter}</Text>
                     </Text>
                     <Text style={styles.companionStatRow}>
                       <Text style={[styles.companionStatLabel, { color: filterColor }]}>Class: </Text>
                       <Text style={styles.companionStatValue}>{levelInfo.title}</Text>
-                    </Text>
-                    <Text style={styles.companionStatRow}>
-                      <Text style={[styles.companionStatLabel, { color: filterColor }]}>Origin: </Text>
-                      <Text style={styles.companionStatValue}>{userName ? `${userName}'s ${categoryFilter}` : categoryFilter}</Text>
                     </Text>
                     <Text style={[styles.companionStatLabel, { color: filterColor, marginBottom: 2 }]}>Description:</Text>
                     <Text style={styles.companionDescValue}>{getCategoryTale(categoryFilter)}</Text>
@@ -382,10 +378,10 @@ const styles = StyleSheet.create({
   companionImageLarge: {
     width: 132,
     height: 132,
-    borderRadius: 66,
   },
   companionDetails: {
     flex: 1,
+    paddingTop: 16,
   },
   companionStatRow: {
     fontSize: 15,

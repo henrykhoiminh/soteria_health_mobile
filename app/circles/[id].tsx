@@ -42,8 +42,10 @@ import FriendInviteModal from '@/components/FriendInviteModal';
 import ActivityCard from '@/components/ActivityCard';
 import EnhancedCircleRoutinesTab from '@/components/EnhancedCircleRoutinesTab';
 import UserProfileModal from '@/components/UserProfileModal';
+import CircleChatTab from '@/components/CircleChatTab';
+import { useChatNotifications } from '@/lib/contexts/ChatNotificationsContext';
 
-type Tab = 'members' | 'routines' | 'activity';
+type Tab = 'members' | 'routines' | 'activity' | 'chat';
 
 export default function CircleDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -54,10 +56,19 @@ export default function CircleDetailScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [circle, setCircle] = useState<CircleWithMembers | null>(null);
   const [userRole, setUserRole] = useState<CircleRole | null>(null);
-  const [activeTab, setActiveTab] = useState<Tab>('members');
+  const [activeTab, setActiveTab] = useState<Tab>('activity');
+  const { unreadCircles, markCircleAsRead } = useChatNotifications();
+  const hasUnreadChat = id ? unreadCircles.get(id) === true : false;
 
   const [showEditModal, setShowEditModal] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
+
+  // Mark as read when switching to chat tab
+  useEffect(() => {
+    if (activeTab === 'chat' && id) {
+      markCircleAsRead(id);
+    }
+  }, [activeTab, id, markCircleAsRead]);
 
   useEffect(() => {
     if (id && user) {
@@ -190,6 +201,98 @@ export default function CircleDetailScreen() {
   const isAdmin = userRole === 'admin';
   const isCreator = circle.created_by === user.id;
 
+  const tabBar = (
+    <View style={styles.tabBar}>
+      <HapticPressable
+        style={[styles.tab, activeTab === 'activity' && styles.tabActive]}
+        onPress={() => setActiveTab('activity')}
+      >
+        <Text style={[styles.tabText, activeTab === 'activity' && styles.tabTextActive]}>
+          Activity
+        </Text>
+      </HapticPressable>
+      <HapticPressable
+        style={[styles.tab, activeTab === 'chat' && styles.tabActive]}
+        onPress={() => setActiveTab('chat')}
+      >
+        <View style={styles.tabLabelRow}>
+          <Text style={[styles.tabText, activeTab === 'chat' && styles.tabTextActive]}>
+            Chat
+          </Text>
+          {hasUnreadChat && <View style={styles.unreadDot} />}
+        </View>
+      </HapticPressable>
+      <HapticPressable
+        style={[styles.tab, activeTab === 'routines' && styles.tabActive]}
+        onPress={() => setActiveTab('routines')}
+      >
+        <Text style={[styles.tabText, activeTab === 'routines' && styles.tabTextActive]}>
+          Routines
+        </Text>
+      </HapticPressable>
+      <HapticPressable
+        style={[styles.tab, activeTab === 'members' && styles.tabActive]}
+        onPress={() => setActiveTab('members')}
+      >
+        <Text style={[styles.tabText, activeTab === 'members' && styles.tabTextActive]}>
+          Members
+        </Text>
+      </HapticPressable>
+    </View>
+  );
+
+  // Chat tab needs its own layout (FlatList cannot be nested inside ScrollView)
+  if (activeTab === 'chat') {
+    return (
+      <View style={styles.container}>
+        {/* Compact header for chat */}
+        <View style={styles.chatHeader}>
+          <HapticPressable style={styles.backIcon} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color={AppColors.textPrimary} />
+          </HapticPressable>
+          <Text style={styles.chatHeaderTitle} numberOfLines={1}>{circle.name}</Text>
+          {isAdmin && (
+            <HapticPressable
+              style={styles.actionButton}
+              onPress={() => setShowEditModal(true)}
+            >
+              <Ionicons name="create-outline" size={24} color={AppColors.primary} />
+            </HapticPressable>
+          )}
+        </View>
+
+        {tabBar}
+
+        <CircleChatTab circleId={id!} />
+
+        {/* Edit Circle Modal */}
+        {showEditModal && (
+          <EditCircleModal
+            visible={showEditModal}
+            circle={circle}
+            onClose={() => setShowEditModal(false)}
+            onSuccess={() => {
+              setShowEditModal(false);
+              handleRefresh();
+            }}
+            isCreator={isCreator}
+            onDelete={handleDeleteCircle}
+          />
+        )}
+
+        {/* Friend Invite Modal */}
+        <FriendInviteModal
+          visible={showInviteModal}
+          onClose={() => setShowInviteModal(false)}
+          onInvite={handleInviteFriend}
+          currentMemberIds={circle.members.map(m => m.user_id)}
+          userId={user.id}
+          circleId={id!}
+        />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <ScrollView
@@ -249,33 +352,7 @@ export default function CircleDetailScreen() {
           )}
         </View>
 
-        {/* Tab Navigation */}
-        <View style={styles.tabBar}>
-          <HapticPressable
-            style={[styles.tab, activeTab === 'members' && styles.tabActive]}
-            onPress={() => setActiveTab('members')}
-          >
-            <Text style={[styles.tabText, activeTab === 'members' && styles.tabTextActive]}>
-              Members
-            </Text>
-          </HapticPressable>
-          <HapticPressable
-            style={[styles.tab, activeTab === 'routines' && styles.tabActive]}
-            onPress={() => setActiveTab('routines')}
-          >
-            <Text style={[styles.tabText, activeTab === 'routines' && styles.tabTextActive]}>
-              Routines
-            </Text>
-          </HapticPressable>
-          <HapticPressable
-            style={[styles.tab, activeTab === 'activity' && styles.tabActive]}
-            onPress={() => setActiveTab('activity')}
-          >
-            <Text style={[styles.tabText, activeTab === 'activity' && styles.tabTextActive]}>
-              Activity
-            </Text>
-          </HapticPressable>
-        </View>
+        {tabBar}
 
         {/* Tab Content */}
         {activeTab === 'members' && (
@@ -779,6 +856,20 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingTop: 60,
   },
+  chatHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    paddingTop: 60,
+    gap: 12,
+    backgroundColor: AppColors.background,
+  },
+  chatHeaderTitle: {
+    flex: 1,
+    fontSize: 18,
+    fontWeight: '600',
+    color: AppColors.textPrimary,
+  },
   backIcon: {
     width: 40,
     height: 40,
@@ -899,6 +990,17 @@ const styles = StyleSheet.create({
   },
   tabTextActive: {
     color: AppColors.primary,
+  },
+  tabLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  unreadDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: AppColors.success,
   },
   tabContent: {
     padding: 16,

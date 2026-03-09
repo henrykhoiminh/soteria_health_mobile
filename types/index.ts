@@ -443,6 +443,24 @@ export interface CircleInvitation {
   inviter_profile?: Profile
 }
 
+// Circle Chat Types
+export interface CircleMessage {
+  id: string
+  circle_id: string
+  user_id: string
+  content: string
+  created_at: string
+}
+
+export interface CircleMessageWithProfile extends CircleMessage {
+  profile: {
+    first_name: string | null
+    last_name: string | null
+    username: string | null
+    profile_picture_url: string | null
+  }
+}
+
 // Search Types
 export interface UserSearchResult {
   id: string

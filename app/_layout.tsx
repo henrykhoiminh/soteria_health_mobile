@@ -7,6 +7,7 @@ import 'react-native-reanimated';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider, useAuth } from '@/lib/contexts/AuthContext';
 import { FilterOptionsProvider } from '@/lib/contexts/FilterOptionsContext';
+import { ChatNotificationsProvider } from '@/lib/contexts/ChatNotificationsContext';
 import WellnessCheckInModal from '@/components/WellnessCheckInModal';
 import MilestoneCelebrationModal from '@/components/MilestoneCelebrationModal';
 import { hasCheckedInToday } from '@/lib/utils/pain-checkin';
@@ -95,8 +96,11 @@ function RootLayoutNav() {
         return; // Don't redirect, let them complete verification
       }
 
+      // Wait for profile to load before deciding — profile null means still loading
+      if (!profile) return;
+
       // Check if onboarding is complete
-      if (!profile?.onboarding_completed) {
+      if (!profile.onboarding_completed) {
         // Onboarding incomplete, redirect to narrative onboarding
         router.replace('/onboarding');
       } else {
@@ -104,9 +108,12 @@ function RootLayoutNav() {
         router.replace('/(tabs)');
       }
     } else if (user && !inAuthGroup && !inOnboardingGroup) {
+      // Wait for profile to load before deciding
+      if (!profile) return;
+
       // User is logged in and not in auth/onboarding groups
       // Check if they need to complete onboarding
-      if (!profile?.onboarding_completed) {
+      if (!profile.onboarding_completed) {
         router.replace('/onboarding');
       }
     }
@@ -204,8 +211,10 @@ export default function RootLayout() {
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <AuthProvider>
         <FilterOptionsProvider>
-          <RootLayoutNav />
-          <StatusBar style="light" />
+          <ChatNotificationsProvider>
+            <RootLayoutNav />
+            <StatusBar style="light" />
+          </ChatNotificationsProvider>
         </FilterOptionsProvider>
       </AuthProvider>
     </ThemeProvider>

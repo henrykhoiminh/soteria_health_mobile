@@ -3,16 +3,16 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {
-    "start": "expo start",
-    "start:fast": "expo start --max-workers 4",
-    "start:tunnel": "expo start --tunnel",
+    "start": "npx expo start",
+    "start:fast": "npx expo start --max-workers 4",
+    "start:tunnel": "npx expo start --tunnel",
     "reset-project": "node ./scripts/reset-project.js",
-    "android": "expo run:android",
-    "ios": "expo run:ios",
-    "web": "expo start --web",
-    "lint": "expo lint",
-    "clean": "watchman watch-del-all && rm -rf .expo .metro-cache /tmp/metro-* /tmp/haste-map-* && expo start --clear",
-    "nuke": "watchman watch-del-all && rm -rf node_modules .expo .metro-cache /tmp/metro-* /tmp/haste-map-* && npm install && expo start"
+    "android": "npx expo run:android",
+    "ios": "npx expo run:ios",
+    "web": "npx expo start --web",
+    "lint": "npx expo lint",
+    "clean": "watchman watch-del-all && rm -rf .expo .metro-cache /tmp/metro-* /tmp/haste-map-* && npx expo start --clear",
+    "nuke": "watchman watch-del-all && rm -rf node_modules .expo .metro-cache /tmp/metro-* /tmp/haste-map-* && npm install && npx expo start"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",

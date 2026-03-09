@@ -38,8 +38,6 @@ This file contains technical context, architectural decisions, and implementatio
 }
 ```
 
----
-
 ## File Structure
 
 ### Critical Files & Their Purposes
@@ -205,119 +203,37 @@ lsof -ti:8081 | xargs kill -9
 
 ## Session History Summary
 
-### Session 32 (Latest - Mind Companion Character Art)
-
-- **Companion Image System (`lib/utils/companion-images.ts`) - New Utility:**
-  - `getMindStateImage(lightState)` returns correct PNG `require()` for given light state
-  - `getCompanionImage(category, lightState?)` returns image source or `null` (null for Body/Soul - no assets yet)
-  - Sleepy and Awakening states have 2 variants each, randomly selected via `Math.random()`
-  - Default fallback is Glowing state when no lightState provided
-
-- **Mind Companion PNG Assets (`assets/images/mind_states/`):**
-  - 7 images covering all 5 light states:
-    | Light State | File(s) |
-    |-------------|---------|
-    | Dormant | `mind_dormant.png` |
-    | Sleepy | `mind_sleepy_1.png`, `mind_sleepy_2.png` |
-    | Awakening | `mind_awakening_1.png`, `mind_awakening_2.png` |
-    | Glowing | `mind_glowing.png` |
-    | Radiant | `mind_radiant.png` |
-
-- **Dashboard Avatar (`components/Avatar.tsx`):**
-  - Mind companion renders as 115px static `<Image>` (no circle border, no glow ring)
-  - Subtle breathing animation: scales 1.0 to 1.03 over 4s loop for liveliness
-  - Name label moved above the character (was below)
-  - Reduced gap between name and character (marginBottom 8 -> 4)
-  - Body/Soul keep existing 80px animated icon circles with glow ring
-  - `useMemo` ensures random Sleepy/Awakening variant stays stable across re-renders
-
-- **Companion Stats Badge (`components/Dashboard/LevelsSection.tsx`):**
-  - Mind badge shows Glowing-state PNG filling the 40px rounded badge
-  - Body/Soul keep Ionicons
-
-- **Bio Modal (`components/CompletedRoutinesModal.tsx`):**
-  - Added `lightState?: AvatarLightState` prop
-  - Mind companion shows state-mapped PNG (132px) - no animated circle
-  - Body/Soul keep pulsating animated circle with Ionicons
-  - `index.tsx` passes `avatarStates` lightState to the modal
-
-- **Profile Companion Card (`app/(tabs)/profile.tsx`):**
-  - Mind card shows Glowing-state PNG (88px) - no animated circle
-  - Body/Soul keep pulsating animated circle with Ionicons
-
-- **Key Files Created:**
-  - `lib/utils/companion-images.ts` - Image mapping utility
-
-- **Key Files Modified:**
-  - `components/Avatar.tsx` - Image rendering, name above character, breathing animation
-  - `components/Dashboard/LevelsSection.tsx` - Image badge for Mind
-  - `components/CompletedRoutinesModal.tsx` - lightState prop, image rendering
-  - `app/(tabs)/profile.tsx` - Image rendering in CompanionStatsCard
-  - `app/(tabs)/index.tsx` - Pass lightState to CompletedRoutinesModal
-
-### Session 31 (User Profile Modal in Circles & Friends)
-
-- **User Profile Modal (`components/UserProfileModal.tsx`) - New Component:**
-  - Bottom-sheet modal triggered by tapping a member card in Circles or a friend card in Social
-  - Two-column profile header: left column (120px) with 88px avatar + full name + @username; right column with detail rows (journey focus, circle admin, health team, join dates)
-  - Soteria Level card with XP progress bar and title (e.g., "Wanderer", "Seeker")
-  - Companion levels section: Mind, Body, Soul XP rows with category-colored dots
-  - Last 3 activity items with inline message formatting
-  - Conditional "Remove from Circle" button (admin only, non-self, non-admin target)
-  - Uses `supabase.rpc()` calls to bypass RLS for viewing other users' data
-
-- **RLS Bypass RPC Functions (`sql/migrations/add_public_stats_rpc.sql`):**
-  - `get_user_public_stats(p_user_id)` — returns total_xp, mind_xp, body_xp, soul_xp (SECURITY DEFINER)
-  - `get_user_recent_activity(p_user_id, p_limit)` — returns last N activity items with joined profile/routine/circle data
-  - **NOTE:** Migration must be run in Supabase SQL Editor for RPC functions to work
-
-- **Circle Member Cards - Profile Pictures (`app/circles/[id].tsx`):**
-  - Replaced generic `<Ionicons name="person">` with actual profile pictures
-  - Shows profile image if available, or first initial (gold text) as fallback
-  - Added `Image` import, `memberAvatarImage` and `memberAvatarText` styles
-  - Member cards are `<HapticPressable>` — tap opens UserProfileModal
-
-- **Friends Tab - Profile Modal (`app/(tabs)/social.tsx`):**
-  - Friend cards changed from `<View>` to `<HapticPressable>` — tap opens UserProfileModal
-  - Added `selectedFriend` state, `UserProfileModal` import and render
-  - Modal shows friend profile with stats/activity (no admin actions in friends context)
-
-- **Key Files Created:**
-  - `components/UserProfileModal.tsx` - Profile modal with stats, levels, activity
-  - `sql/migrations/add_public_stats_rpc.sql` - RPC functions for cross-user data access
-
-- **Key Files Modified:**
-  - `app/circles/[id].tsx` - Profile pictures on member cards, HapticPressable member cards, UserProfileModal integration
-  - `app/(tabs)/social.tsx` - UserProfileModal integration in FriendsTab, tappable friend cards
-
 **Last Updated:** 2026-03-01
 **Current Version:** Expo SDK 54, React Native 0.76+
 
 ## Next Objectives
 
-### 1. Finish Companion Character Designs
-- Create PNG character art for Body and Soul companions (matching Mind's 7-image pattern)
-- Each needs: Dormant, Sleepy (x2 variants), Awakening (x2 variants), Glowing, Radiant
-- Place assets in `assets/images/body_states/` and `assets/images/soul_states/`
-- `getCompanionImage()` in `companion-images.ts` already returns `null` for Body/Soul - just add mappings
-- All 4 rendering locations (Avatar, LevelsSection, CompletedRoutinesModal, profile CompanionStatsCard) already handle the image vs icon fallback
-
-### 2. Circle Chat Functionality
-- Add real-time chat/messaging within Circles (social groups)
-- Likely requires new `circle_messages` table in Supabase with RLS policies
-- Consider Supabase Realtime for live message delivery
-- UI: Chat tab within circle detail view, message input, message list with timestamps
-- Handle read receipts, typing indicators (optional)
-
-### 2. Soteria Level on Friend Cards (Social/Friends Tab)
+### 1. Soteria Level on Friend Cards (Social/Friends Tab)
 - Replace "Friends since [date]" text on friend cards with the friend's Soteria level
 - Use `getLevelFromXp()` or `getUserLevelSummary()` from `lib/utils/leveling.ts`
 - Requires fetching friend's XP data (may need `get_user_public_stats` RPC since `user_stats` has RLS)
 - Display format TBD: level number, title (e.g., "Lv. 5 Seeker"), or compact XP bar
 
-### 3. Push Notifications (Mobile)
+### 2. Routine Completion Animations & Loading Screens
+- Update routine completion animations to be category-specific (Mind/Body/Soul)
+- Update loading screens per category with unique visuals
+
+### 3. All Three Companions Completed Animation
+- Update animation and loading for when all three companions are completed daily
+- Should inform the user that they have completed all three categories for the day
+
+### 4. Push Notifications (Mobile)
 - Implement push notifications using `expo-notifications`
 - Register device push tokens and store in Supabase (new `push_tokens` table)
 - Notification triggers: friend requests, circle invitations, health team invitations, streak reminders
 - Handle notification permissions, foreground/background handling
 - Deep linking from notifications to relevant screens
+
+### 5. Onboarding Soul icon
+- Update onboarding to use Soul assets for the onboarding icons. 
+
+### 6. Clean up specific circles page
+- Remove unnecessary icon on top of the specified circles page. 
+- The page should be optimized for activity and action promoting member participation in the circle.
+- Reorganize the page to make more sense by moving the Leave Circle button to an icon to the top right. 
+- Have a slot where a member can add a "Routine of the Day" for all members to do. There should be a progress bar indicating how many members have completed the routine of the day. If all memebers complete that routine, then their companion on that routine category gets a major boost in allocated points that feeds their level up.

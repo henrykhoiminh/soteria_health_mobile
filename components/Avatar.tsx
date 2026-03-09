@@ -15,9 +15,12 @@ interface AvatarProps {
   lightState: AvatarLightState;
   name?: string | null; // User's chosen name for this avatar companion
   onPress?: () => void;
+  level?: number;
+  progress?: number; // 0-1 fraction for XP bar
+  categoryColor?: string;
 }
 
-export default function Avatar({ category, lightState, name, onPress }: AvatarProps) {
+export default function Avatar({ category, lightState, name, onPress, level, progress, categoryColor }: AvatarProps) {
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const subtlePulseAnim = useRef(new Animated.Value(1)).current;
   const glowAnim = useRef(new Animated.Value(0)).current;
@@ -238,6 +241,26 @@ export default function Avatar({ category, lightState, name, onPress }: AvatarPr
         )}
       </View>
 
+      {/* Compact Level Indicator */}
+      {level != null && (
+        <View style={styles.levelIndicator}>
+          <Text style={[styles.levelText, { color: categoryColor || config.color }]}>
+            Lv.{level}
+          </Text>
+          <View style={styles.xpBarBg}>
+            <View
+              style={[
+                styles.xpBarFill,
+                {
+                  width: `${Math.round((progress ?? 0) * 100)}%`,
+                  backgroundColor: categoryColor || config.color,
+                },
+              ]}
+            />
+          </View>
+        </View>
+      )}
+
       {/* Light State Status */}
       {!HIDE_LIGHT_STATE_LABELS && (
         <Text style={[styles.statusText, { color: stateConfig.statusColor }]}>
@@ -277,13 +300,32 @@ const styles = StyleSheet.create({
   companionImage: {
     width: 115,
     height: 115,
-    borderRadius: 58,
   },
   label: {
     fontSize: 16,
     fontWeight: '600',
     color: AppColors.textPrimary,
     marginBottom: 4,
+  },
+  levelIndicator: {
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  levelText: {
+    fontSize: 12,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  xpBarBg: {
+    width: 70,
+    height: 4,
+    backgroundColor: AppColors.border,
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  xpBarFill: {
+    height: '100%',
+    borderRadius: 2,
   },
   statusText: {
     fontSize: 12,

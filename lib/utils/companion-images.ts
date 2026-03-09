@@ -18,7 +18,15 @@ const BODY_STATE_IMAGES = {
   Sleepy: [require('@/assets/images/body_states/body_sleepy.png')],
   Awakening: [require('@/assets/images/body_states/body_awakening.png')],
   Glowing: [require('@/assets/images/body_states/body_glowing.png')],
-  Radiant: [require('@/assets/images/body_states/body_glowing.png')], // fallback to Glowing
+  Radiant: [require('@/assets/images/body_states/body_radiant.png')],
+} as const;
+
+const SOUL_STATE_IMAGES = {
+  Dormant: [require('@/assets/images/soul_states/soul_dormant.png')],
+  Sleepy: [require('@/assets/images/soul_states/soul_sleepy.png')],
+  Awakening: [require('@/assets/images/soul_states/soul_awakening.png')],
+  Glowing: [require('@/assets/images/soul_states/soul_awakening.png')], // fallback to Awakening
+  Radiant: [require('@/assets/images/soul_states/soul_awakening.png')], // fallback to Awakening
 } as const;
 
 /** Returns the PNG source for a given state image map. */
@@ -41,6 +49,11 @@ export function getBodyStateImage(lightState: AvatarLightState): ImageSourceProp
   return getStateImage(BODY_STATE_IMAGES, lightState);
 }
 
+/** Returns the PNG source for a Soul companion at the given light state. */
+export function getSoulStateImage(lightState: AvatarLightState): ImageSourcePropType {
+  return getStateImage(SOUL_STATE_IMAGES, lightState);
+}
+
 export interface SlideshowEntry {
   image: ImageSourcePropType | null;
   category: RoutineCategory;
@@ -57,17 +70,19 @@ export function getAllCompanionSlides(): SlideshowEntry[] {
     }
   }
 
-  // Body states (skip duplicate Radiant→Glowing)
-  const bodyStates = ['Dormant', 'Sleepy', 'Awakening', 'Glowing'] as const;
-  for (const state of bodyStates) {
-    for (const img of BODY_STATE_IMAGES[state]) {
+  // Body states
+  for (const variants of Object.values(BODY_STATE_IMAGES)) {
+    for (const img of variants) {
       slides.push({ image: img, category: 'Body' });
     }
   }
 
-  // Soul placeholder states
-  for (let i = 0; i < 4; i++) {
-    slides.push({ image: null, category: 'Soul' });
+  // Soul states (skip duplicate Glowing/Radiant→Awakening fallbacks)
+  const soulStates = ['Dormant', 'Sleepy', 'Awakening'] as const;
+  for (const state of soulStates) {
+    for (const img of SOUL_STATE_IMAGES[state]) {
+      slides.push({ image: img, category: 'Soul' });
+    }
   }
 
   // Shuffle
@@ -90,7 +105,7 @@ export function getCompanionImage(
   const state = lightState ?? 'Glowing';
   if (category === 'Mind') return getMindStateImage(state);
   if (category === 'Body') return getBodyStateImage(state);
-  // Soul doesn't have PNG assets yet
+  if (category === 'Soul') return getSoulStateImage(state);
   return null;
 }
 
@@ -118,6 +133,8 @@ export async function preloadDashboardAssets(): Promise<void> {
     ...Object.values(MIND_STATE_IMAGES).flat(),
     // Body states
     ...Object.values(BODY_STATE_IMAGES).flat(),
+    // Soul states
+    ...Object.values(SOUL_STATE_IMAGES).flat(),
   ];
 
   await Asset.loadAsync(allImages as number[]);

@@ -1,5 +1,6 @@
 import React from 'react';
 import SwipeableTabs from '@/components/SwipeableTabs';
+import { useChatNotifications } from '@/lib/contexts/ChatNotificationsContext';
 import DashboardScreen from './index';
 import RoutinesScreen from './routines';
 import BuilderScreen from './builder';
@@ -7,6 +8,8 @@ import SocialScreen from './social';
 import ProfileScreen from './profile';
 
 export default function TabLayout() {
+  const { hasAnyUnread } = useChatNotifications();
+
   const tabs = [
     {
       name: 'index',
@@ -16,10 +19,12 @@ export default function TabLayout() {
       component: DashboardScreen,
     },
     {
-      name: 'routines',
-      title: 'Routines',
-      icon: 'list.bullet',
-      component: RoutinesScreen,
+      name: 'social',
+      title: 'Circles',
+      icon: 'person.3.fill',
+      iconOutline: 'person.3',
+      component: SocialScreen,
+      showBadge: hasAnyUnread,
     },
     {
       name: 'builder',
@@ -29,11 +34,10 @@ export default function TabLayout() {
       component: BuilderScreen,
     },
     {
-      name: 'social',
-      title: 'Social',
-      icon: 'person.3.fill',
-      iconOutline: 'person.3',
-      component: SocialScreen,
+      name: 'routines',
+      title: 'Routines',
+      icon: 'list.bullet',
+      component: RoutinesScreen,
     },
     {
       name: 'profile',

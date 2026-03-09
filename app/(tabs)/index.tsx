@@ -1,7 +1,7 @@
 import CompletedRoutinesModal from '@/components/CompletedRoutinesModal';
 import FriendActivitySection from '@/components/Dashboard/FriendActivitySection';
 import GlassCard from '@/components/Dashboard/GlassCard';
-import LevelsSection from '@/components/Dashboard/LevelsSection';
+import DailyRecommendationsSection from '@/components/Dashboard/DailyRecommendationsSection';
 import PainProgressSection from '@/components/Dashboard/PainProgressSection';
 import SanctumBackground from '@/components/Dashboard/SanctumBackground';
 import SanctumScene from '@/components/Dashboard/SanctumScene';
@@ -20,6 +20,7 @@ import { checkHarmonyRequirements } from '@/lib/utils/harmony';
 import { hasPendingInvitation, sendHealthTeamInvitation } from '@/lib/utils/health-team';
 import { getPainCheckInHistory, getPainStatistics } from '@/lib/utils/pain-checkin';
 import { getFormattedFriendActivity, searchUsers } from '@/lib/utils/social';
+import { getUserLevelSummary } from '@/lib/utils/leveling';
 import { getAllAvatarStates } from '@/lib/utils/stats';
 import { getDisplayName } from '@/lib/utils/username';
 import { ActivityFeedItem, AvatarState, CategoryLevelInfo, DailyProgress, HarmonyStatus, PainCheckIn, PainStatistics, Routine, RoutineCategory, UserSearchResult, UserStats } from '@/types';
@@ -202,15 +203,39 @@ export default function DashboardScreen() {
     }
   };
 
-  const handleAvatarClick = async (category: RoutineCategory) => {
+  const handleAvatarClick = (category: RoutineCategory) => {
+    if (!user) return;
+
+    const levelSummary = getUserLevelSummary(stats);
+    const info = category === 'Mind' ? levelSummary.mind
+      : category === 'Body' ? levelSummary.body
+      : levelSummary.soul;
+
+    setLevelModalCategory(category);
+    setLevelModalInfo(info);
+    setCompletedRoutinesLoading(true);
+    setShowCompletedRoutinesModal(true);
+
+    getUniqueCompletedRoutines(user.id)
+      .then(routines => setCompletedRoutines(routines))
+      .catch(error => console.error('Error fetching completed routines:', error))
+      .finally(() => setCompletedRoutinesLoading(false));
+  };
+
+  const handleStartRoutine = () => {
+    if (selectedRoutine) {
+      setShowRecommendedModal(false);
+      router.push(`/routines/${selectedRoutine.id}`);
+    }
+  };
+
+  const handleBrowseMore = () => {
+    setShowRecommendedModal(false);
+    router.push(`/(tabs)/routines?category=${selectedCategory}`);
+  };
+
+  const handleRecommendationPress = async (category: RoutineCategory) => {
     try {
-      const avatarState = avatarStates.find(state => state.category === category);
-
-      if (avatarState && (avatarState.lightState === 'Glowing' || avatarState.lightState === 'Radiant')) {
-        router.push(`/(tabs)/routines?category=${category}`);
-        return;
-      }
-
       const recommendation = await getCategoryRecommendation(
         category,
         user!.id,
@@ -233,38 +258,11 @@ export default function DashboardScreen() {
     }
   };
 
-  const handleStartRoutine = () => {
-    if (selectedRoutine) {
-      setShowRecommendedModal(false);
-      router.push(`/routines/${selectedRoutine.id}`);
-    }
-  };
-
-  const handleBrowseMore = () => {
-    setShowRecommendedModal(false);
-    router.push(`/(tabs)/routines?category=${selectedCategory}`);
-  };
-
   const handleCloseModal = () => {
     setShowRecommendedModal(false);
     setSelectedRoutine(null);
     setRecommendationMessage('');
     setRecommendationSubtitle('');
-  };
-
-  const handleLevelBadgeTap = (category: RoutineCategory, info: CategoryLevelInfo) => {
-    if (!user) return;
-
-    // Show modal immediately, load routines in background
-    setLevelModalCategory(category);
-    setLevelModalInfo(info);
-    setCompletedRoutinesLoading(true);
-    setShowCompletedRoutinesModal(true);
-
-    getUniqueCompletedRoutines(user.id)
-      .then(routines => setCompletedRoutines(routines))
-      .catch(error => console.error('Error fetching completed routines:', error))
-      .finally(() => setCompletedRoutinesLoading(false));
   };
 
   const handleSelectCompletedRoutine = (routineId: string) => {
@@ -377,8 +375,11 @@ export default function DashboardScreen() {
         routines={completedRoutines}
         onClose={() => {
           setShowCompletedRoutinesModal(false);
-          setLevelModalCategory(undefined);
-          setLevelModalInfo(undefined);
+          // Delay clearing so content doesn't flash during slide-out animation
+          setTimeout(() => {
+            setLevelModalCategory(undefined);
+            setLevelModalInfo(undefined);
+          }, 350);
         }}
         onSelectRoutine={handleSelectCompletedRoutine}
         categoryFilter={levelModalCategory}
@@ -581,19 +582,23 @@ export default function DashboardScreen() {
             profile={profile}
             avatarStates={avatarStates}
             onAvatarClick={handleAvatarClick}
+            stats={stats}
           />
 
           {/* Glass Card Data Sections */}
           <View style={styles.glassCardsContainer}>
-            {/* Companion Stats - Mind/Body/Soul XP */}
-            {stats && (
-              <GlassCard>
-                <LevelsSection
-                  stats={stats}
-                  onLevelBadgeTap={handleLevelBadgeTap}
-                />
-              </GlassCard>
-            )}
+            {/* Today's Focus - Daily Recommendations */}
+            <GlassCard>
+              <DailyRecommendationsSection
+                todayProgress={todayProgress ?? { id: '', user_id: '', date: '', mind_complete: false, body_complete: false, soul_complete: false }}
+                onRecommendationPress={handleRecommendationPress}
+                companionNames={{
+                  Mind: profile?.mind_name,
+                  Body: profile?.body_name,
+                  Soul: profile?.soul_name,
+                }}
+              />
+            </GlassCard>
 
             {/* User Journey - Profile, Streak, Harmony, Level */}
             <GlassCard>

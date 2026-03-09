@@ -7,7 +7,8 @@ import {
 import HapticPressable from '@/components/HapticPressable';
 import PagerView from 'react-native-pager-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
+import { Ionicons } from '@expo/vector-icons';
+import { Colors, AppColors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useSegments } from 'expo-router';
 import { CurrentTabProvider, OwnTabIndexProvider } from '@/lib/contexts/TabVisibilityContext';
@@ -19,6 +20,7 @@ interface TabConfig {
   icon: any; // Icon name from IconSymbol (active/filled state)
   iconOutline?: any; // Icon name for inactive/outline state
   component: React.ComponentType<any>;
+  showBadge?: boolean;
 }
 
 interface SwipeableTabsProps {
@@ -125,11 +127,18 @@ export default function SwipeableTabs({ tabs, initialPage = 0 }: SwipeableTabsPr
               activeOpacity={0.7}
               hapticStyle="selection"
             >
-              <IconSymbol
-                size={28}
-                name={isActive ? tab.icon : (tab.iconOutline ?? tab.icon)}
-                color={isActive ? activeColor : inactiveColor}
-              />
+              <View style={styles.tabIconContainer}>
+                <IconSymbol
+                  size={28}
+                  name={isActive ? tab.icon : (tab.iconOutline ?? tab.icon)}
+                  color={isActive ? activeColor : inactiveColor}
+                />
+                {tab.showBadge && (
+                  <View style={styles.badgeBubble}>
+                    <Ionicons name="chatbubble-ellipses" size={10} color="#FFFFFF" />
+                  </View>
+                )}
+              </View>
             </HapticPressable>
           );
         })}
@@ -166,5 +175,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingTop: 8,
+  },
+  tabIconContainer: {
+    position: 'relative',
+  },
+  badgeBubble: {
+    position: 'absolute',
+    top: -6,
+    right: -8,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: AppColors.success,
+    borderWidth: 2,
+    borderColor: '#000000',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

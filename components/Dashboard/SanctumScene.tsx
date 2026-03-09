@@ -1,20 +1,30 @@
 import Avatar from '@/components/Avatar';
 import ParticleField from '@/components/Dashboard/ParticleField';
-import { AvatarState, RoutineCategory } from '@/types';
+import { AppColors } from '@/constants/theme';
+import { getUserLevelSummary } from '@/lib/utils/leveling';
+import { AvatarState, RoutineCategory, UserStats } from '@/types';
 import { LinearGradient } from 'expo-linear-gradient';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 interface SanctumSceneProps {
   profile: any;
   avatarStates: AvatarState[];
   onAvatarClick: (category: RoutineCategory) => void;
+  stats?: UserStats | null;
 }
+
+const CATEGORY_COLORS: Record<RoutineCategory, string> = {
+  Mind: AppColors.mind,
+  Body: AppColors.body,
+  Soul: AppColors.soul,
+};
 
 export default function SanctumScene({
   profile,
   avatarStates,
   onAvatarClick,
+  stats,
 }: SanctumSceneProps) {
   const getCompanionName = (category: RoutineCategory): string | null | undefined => {
     switch (category) {
@@ -23,6 +33,20 @@ export default function SanctumScene({
       case 'Soul': return profile?.soul_name;
       default: return null;
     }
+  };
+
+  const levelSummary = useMemo(() => stats ? getUserLevelSummary(stats) : null, [stats]);
+
+  const getCategoryLevel = (category: RoutineCategory) => {
+    if (!levelSummary) return {};
+    const info = category === 'Mind' ? levelSummary.mind
+      : category === 'Body' ? levelSummary.body
+      : levelSummary.soul;
+    return {
+      level: info.level,
+      progress: info.progress,
+      categoryColor: CATEGORY_COLORS[category],
+    };
   };
 
   return (
@@ -45,6 +69,7 @@ export default function SanctumScene({
               lightState={avatarState.lightState}
               name={getCompanionName(avatarState.category)}
               onPress={() => onAvatarClick(avatarState.category)}
+              {...getCategoryLevel(avatarState.category)}
             />
           </View>
         ))}

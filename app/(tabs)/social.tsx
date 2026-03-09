@@ -51,6 +51,7 @@ import {
 import SanctumBackground from '@/components/Dashboard/SanctumBackground';
 import HapticPressable from '@/components/HapticPressable';
 import UserProfileModal from '@/components/UserProfileModal';
+import { useChatNotifications } from '@/lib/contexts/ChatNotificationsContext';
 
 type Tab = 'friends' | 'circles' | 'activity';
 
@@ -546,6 +547,7 @@ function FriendsTab({ userId, onRefresh }: { userId: string; onRefresh: () => vo
 
 function CirclesTab({ userId, onRefresh }: { userId: string; onRefresh: () => void }) {
   const router = useRouter();
+  const { unreadCircles } = useChatNotifications();
   const [myCircles, setMyCircles] = useState<Circle[]>([]);
   const [publicCircles, setPublicCircles] = useState<Circle[]>([]);
   const [pendingInvitations, setPendingInvitations] = useState<CircleInvitation[]>([]);
@@ -674,29 +676,41 @@ function CirclesTab({ userId, onRefresh }: { userId: string; onRefresh: () => vo
               <Text style={styles.emptySubtext}>Create or join a circle to get started</Text>
             </View>
           ) : (
-            myCircles.map((circle) => (
-              <HapticPressable
-                key={circle.id}
-                style={styles.circleCard}
-                onPress={() => router.push(`/circles/${circle.id}`)}
-              >
-                <View style={styles.circleIcon}>
-                  <Ionicons
-                    name={circle.is_private ? 'lock-closed' : 'globe'}
-                    size={24}
-                    color={AppColors.primary}
-                  />
-                </View>
-                <View style={styles.circleInfo}>
-                  <Text style={styles.circleName}>{circle.name}</Text>
-                  <Text style={styles.circleDescription} numberOfLines={2}>
-                    {circle.description || 'No description'}
-                  </Text>
-                  <Text style={styles.circleMeta}>{circle.member_count || 0} members</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color={AppColors.textSecondary} />
-              </HapticPressable>
-            ))
+            myCircles.map((circle) => {
+              const isUnread = unreadCircles.get(circle.id) === true;
+              return (
+                <HapticPressable
+                  key={circle.id}
+                  style={styles.circleCard}
+                  onPress={() => router.push(`/circles/${circle.id}`)}
+                >
+                  <View style={styles.circleIcon}>
+                    <Ionicons
+                      name={circle.is_private ? 'lock-closed' : 'globe'}
+                      size={24}
+                      color={AppColors.primary}
+                    />
+                  </View>
+                  <View style={styles.circleInfo}>
+                    <View style={styles.circleNameRow}>
+                      <Text style={[styles.circleName, isUnread && styles.circleNameUnread]}>
+                        {circle.name}
+                      </Text>
+                      {isUnread && (
+                        <View style={styles.circleUnreadBadge}>
+                          <Ionicons name="chatbubble-ellipses" size={10} color="#FFFFFF" />
+                        </View>
+                      )}
+                    </View>
+                    <Text style={styles.circleDescription} numberOfLines={2}>
+                      {circle.description || 'No description'}
+                    </Text>
+                    <Text style={styles.circleMeta}>{circle.member_count || 0} members</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={AppColors.textSecondary} />
+                </HapticPressable>
+              );
+            })
           )}
         </View>
 
@@ -1230,11 +1244,28 @@ const styles = StyleSheet.create({
   circleInfo: {
     flex: 1,
   },
+  circleNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   circleName: {
     fontSize: 16,
     fontWeight: '600',
     color: AppColors.textPrimary,
     marginBottom: 2,
+  },
+  circleNameUnread: {
+    fontWeight: '700',
+    color: AppColors.success,
+  },
+  circleUnreadBadge: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: AppColors.success,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   circleDescription: {
     fontSize: 13,

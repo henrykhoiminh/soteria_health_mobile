@@ -113,8 +113,8 @@ function CompanionStatsCard({
 
   return (
     <View style={styles.companionCard}>
-      {/* Category Title */}
-      <Text style={styles.companionCardTitle}>{category}</Text>
+      {/* Companion Name Title */}
+      <Text style={[styles.companionCardTitle, { color }]}>{companionName}</Text>
       <View style={[styles.companionCardDivider, { backgroundColor: color + '40' }]} />
 
       {/* Icon + Stats Row */}
@@ -148,16 +148,12 @@ function CompanionStatsCard({
         {/* Stats Report */}
         <View style={styles.companionDetails}>
           <Text style={styles.companionStatRow}>
-            <Text style={[styles.companionStatLabel, { color }]}>Name: </Text>
-            <Text style={styles.companionStatValue}>{companionName}</Text>
+            <Text style={[styles.companionStatLabel, { color }]}>Origin: </Text>
+            <Text style={styles.companionStatValue}>{userName ? `${userName}'s ${category}` : category}</Text>
           </Text>
           <Text style={styles.companionStatRow}>
             <Text style={[styles.companionStatLabel, { color }]}>Class: </Text>
             <Text style={styles.companionStatValue}>{title}</Text>
-          </Text>
-          <Text style={styles.companionStatRow}>
-            <Text style={[styles.companionStatLabel, { color }]}>Origin: </Text>
-            <Text style={styles.companionStatValue}>{userName ? `${userName}'s ${category}` : category}</Text>
           </Text>
           <Text style={[styles.companionStatLabel, { color, marginBottom: 2 }]}>Description:</Text>
           <Text style={styles.companionDescValue}>{getCategoryTale(category)}</Text>
@@ -1117,10 +1113,10 @@ const styles = StyleSheet.create({
   companionCardImage: {
     width: 88,
     height: 88,
-    borderRadius: 44,
   },
   companionDetails: {
     flex: 1,
+    paddingTop: 12,
   },
   companionStatRow: {
     fontSize: 15,
