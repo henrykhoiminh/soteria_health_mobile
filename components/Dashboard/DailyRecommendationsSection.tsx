@@ -1,15 +1,18 @@
 import HapticPressable from '@/components/HapticPressable';
 import { AppColors } from '@/constants/theme';
-import { getCompanionImage } from '@/lib/utils/companion-images';
 import { DailyProgress, RoutineCategory } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef } from 'react';
-import { Animated, Image, StyleSheet, Text, View } from 'react-native';
+import { Animated, StyleSheet, Text, View } from 'react-native';
 
 interface DailyRecommendationsSectionProps {
   todayProgress: DailyProgress;
   onRecommendationPress: (category: RoutineCategory) => void;
-  onBonusRoutinePress?: () => void;
+  onBonusRoutinePress?: (category: RoutineCategory) => void;
+  onHarmonyPress?: () => void;
+  bonusCategory?: RoutineCategory;
+  bonusMessage?: string;
+  bonusSubtitle?: string;
   companionNames?: Record<RoutineCategory, string | null | undefined>;
 }
 
@@ -19,7 +22,7 @@ const CATEGORIES: { key: RoutineCategory; field: keyof DailyProgress; color: str
   { key: 'Soul', field: 'soul_complete', color: AppColors.soul },
 ];
 
-function AllCompanionsAwakened({ companionNames }: { companionNames?: Record<RoutineCategory, string | null | undefined> }) {
+function AllCompanionsAwakened({ onHarmonyPress }: { onHarmonyPress?: () => void }) {
   const scaleAnim = useRef(new Animated.Value(0.5)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
 
@@ -30,23 +33,24 @@ function AllCompanionsAwakened({ companionNames }: { companionNames?: Record<Rou
     ]).start();
   }, []);
 
-  const categories: RoutineCategory[] = ['Mind', 'Body', 'Soul'];
-  const names = categories.map(c => companionNames?.[c] || c).join(', ');
-
   return (
-    <Animated.View style={[styles.celebrationContainer, { opacity: opacityAnim, transform: [{ scale: scaleAnim }] }]}>
-      <View style={styles.companionRow}>
-        {categories.map((category, i) => {
-          const img = getCompanionImage(category, 'Glowing');
-          return img ? (
-            <React.Fragment key={i}>
-              <Image source={img} style={styles.celebrationCompanion} resizeMode="contain" />
-            </React.Fragment>
-          ) : null;
-        })}
-      </View>
+    <Animated.View style={[styles.rows, { opacity: opacityAnim, transform: [{ scale: scaleAnim }] }]}>
       <Text style={styles.celebrationTitle}>All Companions Awakened!</Text>
-      <Text style={styles.celebrationSubtitle}>{names}</Text>
+      {onHarmonyPress && (
+        <HapticPressable style={styles.row} onPress={onHarmonyPress} activeOpacity={0.7}>
+          <View style={styles.iconContainer}>
+            <Ionicons name="sparkles" size={14} color="#F59E0B" />
+          </View>
+          <View style={styles.textContainer}>
+            <Text style={styles.rowPrimaryText}>Check your Harmony status</Text>
+            <Text style={styles.rowSubtext}>See how your Mind, Body & Soul align</Text>
+          </View>
+          <View style={styles.ctaContainer}>
+            <Text style={[styles.ctaText, { color: '#F59E0B' }]}>Go</Text>
+            <Ionicons name="chevron-forward" size={16} color="#F59E0B" />
+          </View>
+        </HapticPressable>
+      )}
     </Animated.View>
   );
 }
@@ -55,10 +59,15 @@ export default function DailyRecommendationsSection({
   todayProgress,
   onRecommendationPress,
   onBonusRoutinePress,
+  onHarmonyPress,
+  bonusCategory,
+  bonusMessage,
+  bonusSubtitle,
   companionNames,
 }: DailyRecommendationsSectionProps): React.ReactElement {
   const incomplete = CATEGORIES.filter(c => !todayProgress[c.field]);
   const allComplete = incomplete.length === 0;
+  const bonusCategoryColor = bonusCategory ? CATEGORIES.find(c => c.key === bonusCategory)?.color ?? AppColors.primary : AppColors.primary;
 
   return (
     <View>
@@ -66,12 +75,24 @@ export default function DailyRecommendationsSection({
 
       {allComplete ? (
         <View>
-          <AllCompanionsAwakened companionNames={companionNames} />
-          {onBonusRoutinePress && (
-            <HapticPressable style={styles.bonusRow} onPress={onBonusRoutinePress} activeOpacity={0.7}>
-              <Ionicons name="add-circle-outline" size={20} color={AppColors.primary} />
-              <Text style={styles.bonusText}>Do another routine</Text>
-              <Ionicons name="chevron-forward" size={16} color={AppColors.primary} />
+          <AllCompanionsAwakened onHarmonyPress={onHarmonyPress} />
+          {onBonusRoutinePress && bonusCategory && (
+            <HapticPressable
+              style={styles.row}
+              onPress={() => onBonusRoutinePress(bonusCategory)}
+              activeOpacity={0.7}
+            >
+              <View style={styles.iconContainer}>
+                <View style={[styles.dot, { backgroundColor: bonusCategoryColor }]} />
+              </View>
+              <View style={styles.textContainer}>
+                <Text style={styles.rowPrimaryText}>{bonusMessage || `Continue with ${bonusCategory}`}</Text>
+                {bonusSubtitle ? <Text style={styles.rowSubtext}>{bonusSubtitle}</Text> : null}
+              </View>
+              <View style={styles.ctaContainer}>
+                <Text style={[styles.ctaText, { color: bonusCategoryColor }]}>Go</Text>
+                <Ionicons name="chevron-forward" size={16} color={bonusCategoryColor} />
+              </View>
             </HapticPressable>
           )}
         </View>
@@ -84,8 +105,10 @@ export default function DailyRecommendationsSection({
               onPress={() => onRecommendationPress(key)}
               activeOpacity={0.7}
             >
-              <View style={[styles.dot, { backgroundColor: color }]} />
-              <Text style={styles.categoryName}>{key}</Text>
+              <View style={styles.iconContainer}>
+                <View style={[styles.dot, { backgroundColor: color }]} />
+              </View>
+              <Text style={[styles.rowPrimaryText, { flex: 1 }]}>{key}</Text>
               <View style={styles.ctaContainer}>
                 <Text style={[styles.ctaText, { color }]}>Awaken {companionNames?.[key] || key}</Text>
                 <Ionicons name="chevron-forward" size={16} color={color} />
@@ -113,17 +136,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 8,
   },
+  iconContainer: {
+    width: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
   dot: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    marginRight: 12,
   },
-  categoryName: {
+  textContainer: {
+    flex: 1,
+  },
+  rowPrimaryText: {
     fontSize: 16,
     fontWeight: '600',
     color: AppColors.textPrimary,
-    flex: 1,
+  },
+  rowSubtext: {
+    fontSize: 13,
+    color: AppColors.textSecondary,
+    marginTop: 2,
   },
   ctaContainer: {
     flexDirection: 'row',
@@ -134,44 +169,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
-  celebrationContainer: {
-    alignItems: 'center',
-    paddingVertical: 16,
-  },
-  companionRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 16,
-    marginBottom: 12,
-  },
-  celebrationCompanion: {
-    width: 56,
-    height: 56,
-  },
   celebrationTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
     color: '#F59E0B',
-    textAlign: 'center',
-  },
-  celebrationSubtitle: {
-    fontSize: 13,
-    color: AppColors.textSecondary,
-    textAlign: 'center',
-    marginTop: 4,
-  },
-  bonusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 12,
-    marginTop: 8,
-  },
-  bonusText: {
-    flex: 1,
-    fontSize: 15,
-    fontWeight: '500',
-    color: AppColors.primary,
+    marginBottom: 4,
   },
 });

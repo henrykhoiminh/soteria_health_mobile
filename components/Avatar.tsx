@@ -13,14 +13,13 @@ const HIDE_LIGHT_STATE_LABELS = true;
 interface AvatarProps {
   category: RoutineCategory;
   lightState: AvatarLightState;
-  name?: string | null; // User's chosen name for this avatar companion
   onPress?: () => void;
   level?: number;
   progress?: number; // 0-1 fraction for XP bar
   categoryColor?: string;
 }
 
-export default function Avatar({ category, lightState, name, onPress, level, progress, categoryColor }: AvatarProps) {
+export default function Avatar({ category, lightState, onPress, level, progress, categoryColor }: AvatarProps) {
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const subtlePulseAnim = useRef(new Animated.Value(1)).current;
   const glowAnim = useRef(new Animated.Value(0)).current;
@@ -182,9 +181,6 @@ export default function Avatar({ category, lightState, name, onPress, level, pro
 
   return (
     <HapticPressable style={styles.container} onPress={onPress} activeOpacity={0.7}>
-      {/* Companion Name or Category Label */}
-      <Text style={[styles.label, { color: config.color }]}>{name || config.label}</Text>
-
       {/* Avatar */}
       <View style={styles.avatarWrapper}>
         {companionImage ? (
@@ -300,12 +296,6 @@ const styles = StyleSheet.create({
   companionImage: {
     width: 115,
     height: 115,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: AppColors.textPrimary,
-    marginBottom: 4,
   },
   levelIndicator: {
     alignItems: 'center',

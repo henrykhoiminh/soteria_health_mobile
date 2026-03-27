@@ -25,8 +25,8 @@ const SOUL_STATE_IMAGES = {
   Dormant: [require('@/assets/images/soul_states/soul_dormant.png')],
   Sleepy: [require('@/assets/images/soul_states/soul_sleepy.png')],
   Awakening: [require('@/assets/images/soul_states/soul_awakening.png')],
-  Glowing: [require('@/assets/images/soul_states/soul_awakening.png')], // fallback to Awakening
-  Radiant: [require('@/assets/images/soul_states/soul_awakening.png')], // fallback to Awakening
+  Glowing: [require('@/assets/images/soul_states/soul_glowing.png')],
+  Radiant: [require('@/assets/images/soul_states/soul_radiant.png')],
 } as const;
 
 /** Returns the PNG source for a given state image map. */
@@ -59,27 +59,28 @@ export interface SlideshowEntry {
   category: RoutineCategory;
 }
 
-/** Returns a shuffled array of all companion state images for loading slideshows. */
+/** Returns a shuffled array of companion state images for loading slideshows.
+ *  Only includes Awakening, Glowing, and Radiant states. */
 export function getAllCompanionSlides(): SlideshowEntry[] {
   const slides: SlideshowEntry[] = [];
+  const slideshowStates: AvatarLightState[] = ['Awakening', 'Glowing', 'Radiant'];
 
   // Mind states
-  for (const variants of Object.values(MIND_STATE_IMAGES)) {
-    for (const img of variants) {
+  for (const state of slideshowStates) {
+    for (const img of MIND_STATE_IMAGES[state]) {
       slides.push({ image: img, category: 'Mind' });
     }
   }
 
   // Body states
-  for (const variants of Object.values(BODY_STATE_IMAGES)) {
-    for (const img of variants) {
+  for (const state of slideshowStates) {
+    for (const img of BODY_STATE_IMAGES[state]) {
       slides.push({ image: img, category: 'Body' });
     }
   }
 
-  // Soul states (skip duplicate Glowing/Radiant→Awakening fallbacks)
-  const soulStates = ['Dormant', 'Sleepy', 'Awakening'] as const;
-  for (const state of soulStates) {
+  // Soul states
+  for (const state of slideshowStates) {
     for (const img of SOUL_STATE_IMAGES[state]) {
       slides.push({ image: img, category: 'Soul' });
     }

@@ -1,10 +1,10 @@
 import SanctumBackground from '@/components/Dashboard/SanctumBackground';
 import { AppColors } from '@/constants/theme';
+import { getCompanionImage } from '@/lib/utils/companion-images';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Animated, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import AvatarOrb from './components/AvatarOrb';
+import { Animated, Image, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import OnboardingButton from './components/OnboardingButton';
 import OnboardingProgress from './components/OnboardingProgress';
 import SoteriaDialogueBox from './components/SoteriaDialogueBox';
@@ -300,18 +300,18 @@ export default function ThreeLightsScreen() {
           ]}
         >
           <Animated.View style={[styles.orbWrapper, { opacity: mindOrbOpacity }]}>
-            <AvatarOrb type="Mind" size="medium" state="glowing" />
-            <Text style={[styles.orbLabel, { color: '#3B82F6' }]}>Mind</Text>
+            <Image source={getCompanionImage('Mind', 'Dormant')!} style={styles.companionImage} resizeMode="contain" />
+            <Text style={[styles.orbLabel, { color: AppColors.mind }]}>Mind</Text>
           </Animated.View>
 
           <Animated.View style={[styles.orbWrapper, { opacity: bodyOrbOpacity }]}>
-            <AvatarOrb type="Body" size="medium" state="glowing" />
-            <Text style={[styles.orbLabel, { color: '#EF4444' }]}>Body</Text>
+            <Image source={getCompanionImage('Body', 'Dormant')!} style={styles.companionImage} resizeMode="contain" />
+            <Text style={[styles.orbLabel, { color: AppColors.body }]}>Body</Text>
           </Animated.View>
 
           <Animated.View style={[styles.orbWrapper, { opacity: soulOrbOpacity }]}>
-            <AvatarOrb type="Soul" size="medium" state="glowing" />
-            <Text style={[styles.orbLabel, { color: '#F59E0B' }]}>Soul</Text>
+            <Image source={getCompanionImage('Soul', 'Dormant')!} style={styles.companionImage} resizeMode="contain" />
+            <Text style={[styles.orbLabel, { color: AppColors.soul }]}>Soul</Text>
           </Animated.View>
         </Animated.View>
 
@@ -380,6 +380,10 @@ const styles = StyleSheet.create({
   },
   orbWrapper: {
     alignItems: 'center',
+  },
+  companionImage: {
+    width: 90,
+    height: 90,
   },
   orbLabel: {
     marginTop: 12,

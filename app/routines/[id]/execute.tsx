@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/contexts/AuthContext';
 import { initAudio, playCountdownBeep } from '@/lib/utils/audio';
 import { getAllCompanionSlides, getCompanionImage } from '@/lib/utils/companion-images';
 import { completeRoutine, getRoutineById, getTodayProgress, getUserStats } from '@/lib/utils/dashboard';
+import { calculateXpForCompletion, getLevelFromXp } from '@/lib/utils/leveling';
 import { setDashboardCache } from '@/lib/utils/dashboard-cache';
 import { clearRoutineCache, getRoutineCache } from '@/lib/utils/routine-cache';
 import { checkHarmonyRequirements } from '@/lib/utils/harmony';
@@ -134,6 +135,21 @@ export default function ExecuteRoutineScreen() {
   const [dashboardPreloaded, setDashboardPreloaded] = useState(false);
   const [loadingSeconds, setLoadingSeconds] = useState(0);
 
+  // Evolution animation state for completion screen
+  const [evolutionPhase, setEvolutionPhase] = useState<'awakening' | 'evolving' | 'glowed'>('awakening');
+  const evolutionFlash = useRef(new Animated.Value(0)).current;
+  const evolutionScale = useRef(new Animated.Value(1)).current;
+  const evolutionTextOpacity = useRef(new Animated.Value(1)).current;
+  const buttonFadeIn = useRef(new Animated.Value(0)).current;
+
+  // XP reveal animation
+  const [displayedXp, setDisplayedXp] = useState(0);
+  const [showXpReveal, setShowXpReveal] = useState(false);
+  const [categoryXpBefore, setCategoryXpBefore] = useState(0);
+  const xpRevealOpacity = useRef(new Animated.Value(0)).current;
+  const xpRevealScale = useRef(new Animated.Value(0.5)).current;
+  const xpBarProgress = useRef(new Animated.Value(0)).current;
+
   // Streak tracking for animation
   const [showStreakUpdate, setShowStreakUpdate] = useState(false);
   const [previousStreak, setPreviousStreak] = useState<number>(0);
@@ -143,6 +159,9 @@ export default function ExecuteRoutineScreen() {
   const [levelUpData, setLevelUpData] = useState<LevelUpInfo[]>([]);
   const [showLevelUp, setShowLevelUp] = useState(false);
   const [currentLevelUpIndex, setCurrentLevelUpIndex] = useState(0);
+
+  // Loading ellipsis animation
+  const [ellipsis, setEllipsis] = useState('');
 
   // Loading slideshow
   const [slideshowIndex, setSlideshowIndex] = useState(0);
@@ -169,6 +188,15 @@ export default function ExecuteRoutineScreen() {
       }
     };
   }, [id]);
+
+  // Animated ellipsis for loading text
+  useEffect(() => {
+    if (!loading) return;
+    const interval = setInterval(() => {
+      setEllipsis((prev) => (prev.length >= 3 ? '' : prev + '.'));
+    }, 500);
+    return () => clearInterval(interval);
+  }, [loading]);
 
   // Loading slideshow - cycle through companion states with crossfade
   useEffect(() => {
@@ -249,16 +277,121 @@ export default function ExecuteRoutineScreen() {
     };
   }, [isPaused, timeRemaining]);
 
-  // Fallback: if animation callback doesn't fire, mark as finished after 3 seconds
+  // Evolution animation sequence when completion screen appears
   useEffect(() => {
-    if (isComplete && !animationFinished) {
-      const fallbackTimer = setTimeout(() => {
-        setAnimationFinished(true);
-      }, 3000); // 3 second fallback for animation callback
+    if (!isComplete) return;
 
-      return () => clearTimeout(fallbackTimer);
-    }
-  }, [isComplete, animationFinished]);
+    // Phase 1: Show Awakening for 2 seconds
+    const startEvolution = setTimeout(() => {
+      setEvolutionPhase('evolving');
+
+      // Fade out the text
+      Animated.timing(evolutionTextOpacity, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+
+      // Scale up + flash white
+      Animated.parallel([
+        Animated.sequence([
+          Animated.timing(evolutionScale, {
+            toValue: 1.2,
+            duration: 600,
+            useNativeDriver: true,
+          }),
+          Animated.timing(evolutionScale, {
+            toValue: 1,
+            duration: 400,
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.sequence([
+          Animated.timing(evolutionFlash, {
+            toValue: 1,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+          Animated.delay(200),
+          Animated.timing(evolutionFlash, {
+            toValue: 0,
+            duration: 600,
+            useNativeDriver: true,
+          }),
+        ]),
+      ]).start(() => {
+        // Evolution complete - show glowing state
+        setEvolutionPhase('glowed');
+
+        // Fade text back in with new content
+        Animated.timing(evolutionTextOpacity, {
+          toValue: 1,
+          duration: 400,
+          useNativeDriver: true,
+        }).start();
+
+        // Start XP reveal after a brief pause
+        setTimeout(() => {
+          const earnedXp = routine ? calculateXpForCompletion(routine.duration_minutes) : 20;
+          const beforeLevel = getLevelFromXp(categoryXpBefore);
+          const afterLevel = getLevelFromXp(categoryXpBefore + earnedXp);
+
+          // Set initial bar position to "before" progress
+          xpBarProgress.setValue(beforeLevel.progress);
+
+          setShowXpReveal(true);
+
+          // Animate XP badge in (scale + fade)
+          Animated.parallel([
+            Animated.spring(xpRevealScale, {
+              toValue: 1,
+              friction: 6,
+              tension: 80,
+              useNativeDriver: true,
+            }),
+            Animated.timing(xpRevealOpacity, {
+              toValue: 1,
+              duration: 300,
+              useNativeDriver: true,
+            }),
+          ]).start(() => {
+            // Count up XP from 0 to earned amount
+            const steps = Math.min(earnedXp, 30);
+            const stepDuration = 600 / steps;
+            let step = 0;
+
+            const counter = setInterval(() => {
+              step++;
+              setDisplayedXp(Math.round((step / steps) * earnedXp));
+              if (step >= steps) {
+                clearInterval(counter);
+                setDisplayedXp(earnedXp);
+              }
+            }, stepDuration);
+
+            // Animate progress bar from before → after
+            Animated.timing(xpBarProgress, {
+              toValue: afterLevel.progress,
+              duration: 800,
+              useNativeDriver: false,
+            }).start(() => {
+              // Mark animation finished and fade in Continue button
+              setAnimationFinished(true);
+              setTimeout(() => {
+                Animated.timing(buttonFadeIn, {
+                  toValue: 1,
+                  duration: 500,
+                  useNativeDriver: true,
+                }).start();
+              }, 300);
+            });
+          });
+        }, 500);
+      });
+    }, 2000);
+
+    return () => clearTimeout(startEvolution);
+  }, [isComplete]);
 
   // Loading timer - counts seconds while waiting for data to load
   useEffect(() => {
@@ -377,9 +510,18 @@ export default function ExecuteRoutineScreen() {
     }
 
     try {
-      // Get current streak BEFORE completing the routine
-      const streakBefore = await calculateActivityStreak(user.id);
+      // Get current streak and stats BEFORE completing the routine
+      const [streakBefore, statsBefore] = await Promise.all([
+        calculateActivityStreak(user.id),
+        getUserStats(user.id),
+      ]);
       setPreviousStreak(streakBefore.currentStreak);
+
+      // Capture category XP before completion for progress bar animation
+      if (statsBefore) {
+        const categoryKey = `${routine.category.toLowerCase()}_xp` as keyof typeof statsBefore;
+        setCategoryXpBefore((statsBefore[categoryKey] as number) ?? 0);
+      }
 
       // Complete routine for individual daily progress
       const result = await completeRoutine(user.id, routine.id, routine.category, routine.duration_minutes);
@@ -525,8 +667,7 @@ export default function ExecuteRoutineScreen() {
             </View>
           )}
         </Animated.View>
-        <Text style={styles.loadingText}>Loading...</Text>
-        <ActivityIndicator size="small" color={AppColors.textTertiary} style={{ marginTop: 16 }} />
+        <Text style={styles.loadingText}>Loading{ellipsis}</Text>
       </View>
     );
   }
@@ -591,45 +732,113 @@ export default function ExecuteRoutineScreen() {
   }
 
   if (isComplete) {
-    // Done button is enabled when both animation is done AND dashboard data is preloaded
     const canNavigate = animationFinished && dashboardPreloaded;
     const categoryColor = getCategoryColor(routine.category);
-    const completionImage = getCompanionImage(routine.category, 'Awakening');
     const companionName = profile?.[`${routine.category.toLowerCase()}_name` as keyof typeof profile] as string | null || routine.category;
+
+    // Show Awakening image during start/evolving, switch to Glowing after evolution
+    const completionImage = getCompanionImage(
+      routine.category,
+      evolutionPhase === 'glowed' ? 'Glowing' : 'Awakening',
+    );
+
+    const evolutionMessage = evolutionPhase === 'glowed'
+      ? `${companionName} is glowing!`
+      : `${companionName} is awakening...`;
 
     return (
       <SanctumBackground focusCategory={routine.category}>
         <ParticleField color={categoryColor} alwaysVisible />
         <SafeAreaView style={styles.completeContainer}>
-          {/* Companion image with scale-in animation */}
+          {/* Companion image with evolution animation */}
           {completionImage && (
-            <Animated.View style={{ transform: [{ scale: breatheAnim }] }}>
+            <Animated.View style={{
+              transform: [
+                { scale: Animated.multiply(breatheAnim, evolutionScale) },
+              ],
+            }}>
               <Image source={completionImage} style={styles.completionCompanionImage} resizeMode="contain" />
+              {/* White flash overlay */}
+              <Animated.View
+                style={[
+                  styles.evolutionFlashOverlay,
+                  { opacity: evolutionFlash },
+                ]}
+                pointerEvents="none"
+              />
             </Animated.View>
           )}
+
           <Text style={[styles.completeTitle, { color: categoryColor }]}>Routine Complete!</Text>
-          <Text style={styles.completeMessage}>{companionName} is awakening!</Text>
+
+          <Animated.Text style={[styles.completeMessage, { opacity: evolutionTextOpacity }]}>
+            {evolutionMessage}
+          </Animated.Text>
+
           <Text style={styles.completeSubMessage}>{routine.name}</Text>
 
-          {/* Done Button */}
-          <HapticPressable
-            style={[
-              styles.doneButton,
-              { backgroundColor: categoryColor },
-              !canNavigate && styles.doneButtonLoading,
-            ]}
-            onPress={handleDonePress}
-            disabled={!canNavigate}
-          >
-            {canNavigate ? (
-              <Text style={styles.doneButtonText}>Done</Text>
-            ) : (
-              <View style={styles.doneButtonLoadingContent}>
-                <ActivityIndicator size="small" color={AppColors.textPrimary} />
-                <Text style={styles.doneButtonText}>{loadingSeconds}s</Text>
-              </View>
-            )}
-          </HapticPressable>
+          {/* XP Earned Reveal with Progress Bar */}
+          {showXpReveal && (() => {
+            const earnedXp = calculateXpForCompletion(routine.duration_minutes);
+            const afterLevel = getLevelFromXp(categoryXpBefore + earnedXp);
+            return (
+              <Animated.View style={[
+                styles.xpRevealContainer,
+                {
+                  opacity: xpRevealOpacity,
+                  transform: [{ scale: xpRevealScale }],
+                },
+              ]}>
+                <Text style={[styles.xpRevealValue, { color: categoryColor }]}>
+                  +{displayedXp} XP
+                </Text>
+                {/* Progress bar */}
+                <View style={styles.xpBarContainer}>
+                  <View style={styles.xpBarTrack}>
+                    <Animated.View
+                      style={[
+                        styles.xpBarFill,
+                        {
+                          backgroundColor: categoryColor,
+                          width: xpBarProgress.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: ['0%', '100%'],
+                          }),
+                        },
+                      ]}
+                    />
+                  </View>
+                  <Text style={styles.xpBarLabel}>
+                    Lv. {afterLevel.level} — {afterLevel.currentXp}/{afterLevel.xpForNextLevel} XP
+                  </Text>
+                </View>
+              </Animated.View>
+            );
+          })()}
+
+          {/* Continue Button - only appears after evolution completes */}
+          {animationFinished && (
+            <Animated.View style={{ opacity: buttonFadeIn }}>
+              <HapticPressable
+                style={[
+                  styles.doneButton,
+                  { backgroundColor: categoryColor },
+                  !canNavigate && styles.doneButtonLoading,
+                ]}
+                onPress={handleDonePress}
+                disabled={!canNavigate}
+              >
+                {canNavigate ? (
+                  <Text style={styles.doneButtonText}>Continue</Text>
+                ) : (
+                  <View style={styles.doneButtonLoadingContent}>
+                    <ActivityIndicator size="small" color={AppColors.textPrimary} />
+                    <Text style={styles.doneButtonText}>{loadingSeconds}s</Text>
+                  </View>
+                )}
+              </HapticPressable>
+            </Animated.View>
+          )}
         </SafeAreaView>
       </SanctumBackground>
     );
@@ -901,6 +1110,43 @@ const styles = StyleSheet.create({
   completionCompanionImage: {
     width: 200,
     height: 200,
+  },
+  evolutionFlashOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 100,
+  },
+  xpRevealContainer: {
+    alignItems: 'center',
+    marginTop: 24,
+    width: '100%',
+    paddingHorizontal: 40,
+  },
+  xpRevealValue: {
+    fontSize: 36,
+    fontWeight: 'bold',
+    letterSpacing: 1,
+  },
+  xpBarContainer: {
+    width: '100%',
+    marginTop: 12,
+    alignItems: 'center',
+  },
+  xpBarTrack: {
+    width: '100%',
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    overflow: 'hidden',
+  },
+  xpBarFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  xpBarLabel: {
+    fontSize: 13,
+    color: AppColors.textSecondary,
+    marginTop: 6,
   },
   completeTitle: {
     fontSize: 28,

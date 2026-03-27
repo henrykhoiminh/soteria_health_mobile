@@ -6,7 +6,6 @@ import { Animated, StyleSheet } from 'react-native';
 interface OrbitingCompanionProps {
   category: RoutineCategory;
   lightState: AvatarLightState;
-  name?: string | null;
   positionIndex: number; // 0=Mind(top), 1=Body(bottom-left), 2=Soul(bottom-right)
   orbitRadius: number;
   centerX: number;
@@ -22,7 +21,6 @@ const COMPANION_HEIGHT = 120; // Avatar circle (80) + label + status
 export default function OrbitingCompanion({
   category,
   lightState,
-  name,
   positionIndex,
   orbitRadius,
   centerX,
@@ -75,7 +73,6 @@ export default function OrbitingCompanion({
       <Avatar
         category={category}
         lightState={lightState}
-        name={name}
         onPress={onPress}
       />
     </Animated.View>

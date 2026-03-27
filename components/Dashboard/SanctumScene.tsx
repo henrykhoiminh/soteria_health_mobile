@@ -26,15 +26,6 @@ export default function SanctumScene({
   onAvatarClick,
   stats,
 }: SanctumSceneProps) {
-  const getCompanionName = (category: RoutineCategory): string | null | undefined => {
-    switch (category) {
-      case 'Mind': return profile?.mind_name;
-      case 'Body': return profile?.body_name;
-      case 'Soul': return profile?.soul_name;
-      default: return null;
-    }
-  };
-
   const levelSummary = useMemo(() => stats ? getUserLevelSummary(stats) : null, [stats]);
 
   const getCategoryLevel = (category: RoutineCategory) => {
@@ -67,7 +58,6 @@ export default function SanctumScene({
             <Avatar
               category={avatarState.category}
               lightState={avatarState.lightState}
-              name={getCompanionName(avatarState.category)}
               onPress={() => onAvatarClick(avatarState.category)}
               {...getCategoryLevel(avatarState.category)}
             />

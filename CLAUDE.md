@@ -239,6 +239,9 @@ lsof -ti:8081 | xargs kill -9
 - **Level-up celebration companion art** — `LevelUpCelebrationModal` now shows the companion PNG at Radiant state for Mind/Body/Soul level-ups (trophy icon kept for Soteria overall level)
 - **SQL migration** — Added `circle_rotd_bonus_log` table to `sql/social_migration/add_routine_of_the_day.sql`
 - **Data layer** — Extended `RoutineOfTheDay` interface with `completedByUserIds[]` and `bonusAwarded`, added `awardRotdBonusXp()` function to `social.ts`
+- **Today's Focus bonus recommendation** — When all 3 companions are complete, "Today's Focus" now shows a wellness-aware category recommendation (using `getBonusCategory()`) instead of a generic "Do another routine" button. Tapping opens `RecommendedRoutineModal` with a personalized routine.
+- **Onboarding companion art** — `three-lights.tsx` now shows actual companion PNGs (Dormant state) instead of abstract Ionicon orbs
+- **Soteria Level on Friend Cards** — Already done: `social.tsx` shows `Lv. X Title` on friend cards
 
 ## Next Objectives
 
@@ -260,10 +263,8 @@ lsof -ti:8081 | xargs kill -9
   - **Preview & save** — better routine preview before saving
 - Related files: `app/(tabs)/builder.tsx`, `components/ExerciseLibrary.tsx`, `components/DraggableExerciseList.tsx`, `lib/utils/routine-builder.ts`
 
-### 3. Soteria Level on Friend Cards (Social/Friends Tab)
-- Replace "Friends since [date]" text on friend cards with the friend's Soteria level
-- Use `getLevelFromXp()` or `getUserLevelSummary()` from `lib/utils/leveling.ts`
-- Requires fetching friend's XP data (may need `get_user_public_stats` RPC since `user_stats` has RLS)
+### ~~3. Soteria Level on Friend Cards~~ (DONE)
+- Already implemented: `social.tsx` shows `Lv. X Title` on friend cards
 
 ### 4. Routine Completion Animations & Loading Screens
 - Update routine completion animations to be category-specific (Mind/Body/Soul)
@@ -280,8 +281,10 @@ lsof -ti:8081 | xargs kill -9
 - Handle notification permissions, foreground/background handling
 - Deep linking from notifications to relevant screens
 
-### 7. Onboarding Soul Icon
-- Update onboarding to use Soul assets for the onboarding icons
+### ~~7. Onboarding Companion Art~~ (DONE)
+- `three-lights.tsx` now uses companion PNGs (Dormant state) via `getCompanionImage()` instead of abstract Ionicon orbs
 
-### 8. Update Today's Focus to add routine recommendation
-- Once all companion categories have been completed, recommend another routine to invite continued user engagement
+### ~~8. Today's Focus Bonus Recommendation~~ (DONE)
+- `getBonusCategory()` in `dashboard.ts` picks the highest-need category based on wellness check-in
+- `DailyRecommendationsSection` shows category-specific recommendation row with dot, message, and subtitle
+- Tapping opens `RecommendedRoutineModal` via the existing `handleRecommendationPress` flow

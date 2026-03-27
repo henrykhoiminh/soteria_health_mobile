@@ -1,11 +1,10 @@
+import { DailyProgress, JourneyFocus, LevelUpInfo, Routine, RoutineCategory, RoutineDifficulty, UserStats } from '@/types'
 import { supabase } from '../supabase/client'
-import { DailyProgress, Routine, RoutineCategory, RoutineDifficulty, UserStats, JourneyFocus, PainCheckIn, LevelUpInfo } from '@/types'
-import { format } from 'date-fns'
+import { addXpForCompletion } from './leveling'
+import { getTodayCheckIn } from './pain-checkin'
 import { recordActivity } from './social'
 import { updateEnhancedStats } from './stats'
-import { getLocalDateString, getCurrentTimestamp } from './timezone'
-import { getTodayCheckIn } from './pain-checkin'
-import { addXpForCompletion } from './leveling'
+import { getCurrentTimestamp, getLocalDateString } from './timezone'
 
 // Wellness-aware recommendation types
 export interface WellnessContext {
@@ -135,10 +134,11 @@ export function getMaxDifficultyForScore(score: number): RoutineDifficulty[] {
 export function getCategoryMessage(
   category: RoutineCategory,
   score: number,
-  recoveryAreas?: string[] | null
+  recoveryAreas?: string[] | null,
+  companionName?: string | null
 ): { message: string; subtitle: string } {
+  const name = companionName || category
   const physicalAreas = getPhysicalRecoveryAreas(recoveryAreas)
-  const isRecoveryFocus = isCategoryRecoveryFocus(category, recoveryAreas)
 
   // Format body parts for display (e.g., "Wrist & Lower Back")
   const formatBodyParts = (areas: string[]) => {
@@ -154,37 +154,37 @@ export function getCategoryMessage(
     if (score <= 3) {
       return {
         message: `Your ${areaText} is feeling good`,
-        subtitle: 'Keep up the progress with a strengthening routine',
+        subtitle: `${name} is ready for a strengthening routine`,
       }
     } else if (score <= 6) {
       return {
         message: `Let's work on your ${areaText}`,
-        subtitle: 'A targeted routine to support your recovery',
+        subtitle: `${name} wants to support your recovery`,
       }
     } else {
       return {
         message: `Your ${areaText} needs gentle attention`,
-        subtitle: 'Easy movements to help with recovery',
+        subtitle: `${name} recommends easy movements`,
       }
     }
   }
 
-  // Default messages
+  // Default messages using companion name
   const messages: Record<RoutineCategory, { low: { message: string; subtitle: string }; mid: { message: string; subtitle: string }; high: { message: string; subtitle: string } }> = {
     Mind: {
-      low: { message: 'Your mind is feeling clear', subtitle: 'Challenge yourself with something new' },
-      mid: { message: 'Give your mind some attention', subtitle: 'A mindful routine could help' },
-      high: { message: 'Your mind needs extra care', subtitle: 'Try a gentle, calming routine' },
+      low: { message: `${name} is feeling clear`, subtitle: 'Challenge yourself with something new' },
+      mid: { message: `${name} needs some attention`, subtitle: 'A mindful routine could help' },
+      high: { message: `${name} needs extra care`, subtitle: 'Try a gentle, calming routine' },
     },
     Body: {
-      low: { message: 'Your body is feeling strong', subtitle: 'Ready for any challenge' },
-      mid: { message: 'Your body could use some movement', subtitle: 'A moderate routine might help' },
-      high: { message: 'Your body needs gentle care', subtitle: 'Take it easy with restorative movements' },
+      low: { message: `${name} is feeling strong`, subtitle: 'Ready for any challenge' },
+      mid: { message: `${name} could use some movement`, subtitle: 'A moderate routine might help' },
+      high: { message: `${name} needs gentle care`, subtitle: 'Take it easy with restorative movements' },
     },
     Soul: {
-      low: { message: 'Your spirit feels connected', subtitle: 'Explore something meaningful' },
-      mid: { message: 'Nurture your inner self', subtitle: 'A soulful practice awaits' },
-      high: { message: 'Your soul needs nourishment', subtitle: 'Find peace with a gentle practice' },
+      low: { message: `${name} feels connected`, subtitle: 'Explore something meaningful' },
+      mid: { message: `${name} needs nurturing`, subtitle: 'A soulful practice awaits' },
+      high: { message: `${name} needs nourishment`, subtitle: 'Find peace with a gentle practice' },
     },
   }
 
@@ -361,13 +361,14 @@ export async function getCategoryRecommendation(
   category: RoutineCategory,
   userId: string,
   journeyFocus?: JourneyFocus | null,
-  recoveryAreas?: string[] | null
+  recoveryAreas?: string[] | null,
+  companionName?: string | null
 ): Promise<CategoryRecommendation> {
   const wellness = await getWellnessContext(userId)
 
   // If no wellness check-in, use default score of 0 (assume feeling fine)
   const score = wellness ? getCategoryScore(category, wellness) : 0
-  const { message, subtitle } = getCategoryMessage(category, score, recoveryAreas)
+  const { message, subtitle } = getCategoryMessage(category, score, recoveryAreas, companionName)
 
   const routines = await getWellnessAwareRoutines(category, score, journeyFocus, recoveryAreas)
 
@@ -425,6 +426,32 @@ export async function getBalancedRoutines(
   }
 
   return routines
+}
+
+/**
+ * Get a bonus category recommendation for when all three companions are complete.
+ * Picks the category with the highest wellness need, or a random one if no check-in exists.
+ */
+export async function getBonusCategory(
+  userId: string,
+  recoveryAreas?: string[] | null,
+  companionNames?: Record<RoutineCategory, string | null | undefined>
+): Promise<{ category: RoutineCategory; message: string; subtitle: string }> {
+  const wellness = await getWellnessContext(userId)
+
+  if (wellness) {
+    const prioritized = getPrioritizedCategories(wellness)
+    const category = prioritized[0]
+    const score = getCategoryScore(category, wellness)
+    const { message, subtitle } = getCategoryMessage(category, score, recoveryAreas, companionNames?.[category])
+    return { category, message, subtitle }
+  }
+
+  // No wellness data — pick a random category
+  const categories: RoutineCategory[] = ['Mind', 'Body', 'Soul']
+  const category = categories[Math.floor(Math.random() * categories.length)]
+  const { message, subtitle } = getCategoryMessage(category, 0, recoveryAreas, companionNames?.[category])
+  return { category, message, subtitle }
 }
 
 export async function getRoutineById(routineId: string): Promise<Routine | null> {

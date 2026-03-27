@@ -14,7 +14,7 @@ import UsernameSetupModal from '@/components/UsernameSetupModal';
 import WellnessCheckInModal from '@/components/WellnessCheckInModal';
 import { AppColors } from '@/constants/theme';
 import { useAuth } from '@/lib/contexts/AuthContext';
-import { getCategoryRecommendation, getTodayProgress, getUniqueCompletedRoutines, getUserStats } from '@/lib/utils/dashboard';
+import { getBonusCategory, getCategoryRecommendation, getTodayProgress, getUniqueCompletedRoutines, getUserStats } from '@/lib/utils/dashboard';
 import { clearDashboardCache, getDashboardCache } from '@/lib/utils/dashboard-cache';
 import { checkHarmonyRequirements } from '@/lib/utils/harmony';
 import { hasPendingInvitation, sendHealthTeamInvitation } from '@/lib/utils/health-team';
@@ -84,6 +84,9 @@ export default function DashboardScreen() {
   const [activeTooltip, setActiveTooltip] = useState<'streak' | 'harmony' | 'routines' | 'level' | null>(null);
   const [painStatsUpdating, setPainStatsUpdating] = useState(false);
   const painUpdatePulse = useRef(new Animated.Value(1)).current;
+  const [bonusCat, setBonusCat] = useState<RoutineCategory | undefined>(undefined);
+  const [bonusMsg, setBonusMsg] = useState('');
+  const [bonusSub, setBonusSub] = useState('');
 
   const isHealthTeam = profile?.role === 'health_team' || profile?.role === 'admin';
 
@@ -133,6 +136,25 @@ export default function DashboardScreen() {
       }
     }, [user, profile])
   );
+
+  // Load bonus category when all companions are complete
+  useEffect(() => {
+    if (!user || !todayProgress) return;
+    const allComplete = todayProgress.mind_complete && todayProgress.body_complete && todayProgress.soul_complete;
+    if (allComplete) {
+      getBonusCategory(user.id, profile?.recovery_areas, {
+        Mind: profile?.mind_name,
+        Body: profile?.body_name,
+        Soul: profile?.soul_name,
+      }).then(({ category, message, subtitle }) => {
+        setBonusCat(category);
+        setBonusMsg(message);
+        setBonusSub(subtitle);
+      }).catch(err => console.error('Error fetching bonus category:', err));
+    } else {
+      setBonusCat(undefined);
+    }
+  }, [user, todayProgress, profile?.recovery_areas]);
 
   // Loading slideshow - cycle through companion states
   useEffect(() => {
@@ -236,11 +258,13 @@ export default function DashboardScreen() {
 
   const handleRecommendationPress = async (category: RoutineCategory) => {
     try {
+      const companionNameKey = `${category.toLowerCase()}_name` as keyof typeof profile;
       const recommendation = await getCategoryRecommendation(
         category,
         user!.id,
         profile?.journey_focus,
-        profile?.recovery_areas
+        profile?.recovery_areas,
+        profile?.[companionNameKey] as string | null | undefined
       );
 
       if (recommendation.routines && recommendation.routines.length > 0) {
@@ -592,7 +616,11 @@ export default function DashboardScreen() {
               <DailyRecommendationsSection
                 todayProgress={todayProgress ?? { id: '', user_id: '', date: '', mind_complete: false, body_complete: false, soul_complete: false }}
                 onRecommendationPress={handleRecommendationPress}
-                onBonusRoutinePress={() => router.push('/(tabs)/routines')}
+                onBonusRoutinePress={handleRecommendationPress}
+                onHarmonyPress={() => setShowHarmonyModal(true)}
+                bonusCategory={bonusCat}
+                bonusMessage={bonusMsg}
+                bonusSubtitle={bonusSub}
                 companionNames={{
                   Mind: profile?.mind_name,
                   Body: profile?.body_name,
